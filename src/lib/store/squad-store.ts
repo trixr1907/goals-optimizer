@@ -23,22 +23,41 @@ interface SquadState {
   setHasHydrated: (state: boolean) => void;
 }
 
-// Numeric stat keys we track for upgrade-detection
-const TRACKED_STATS = ['pac', 'sho', 'pas', 'dri', 'def', 'phy'] as const;
-type TrackedStat = typeof TRACKED_STATS[number];
-const THRESHOLD = 1; // minimum change to count as update
+const THRESHOLD = 1; // minimum numeric change to count as an update
 
 function detectChangedStats(
   prev: PlayerWithScores,
   next: PlayerWithScores,
 ): string[] {
   const changed: string[] = [];
+
+  // ── Top-level player fields ────────────────────────────────────────────────
   if (Math.abs(prev.overall - next.overall) >= THRESHOLD) changed.push('overall');
-  for (const key of TRACKED_STATS) {
-    const a = prev.stats[key as TrackedStat] ?? 0;
-    const b = next.stats[key as TrackedStat] ?? 0;
+  if (prev.name     !== next.name)     changed.push('name');
+  if (prev.position !== next.position) changed.push('position');
+  if (prev.rarity   !== next.rarity)   changed.push('rarity');
+
+  // ── All numeric stats from PlayerStats ────────────────────────────────────
+  // We iterate over the union of keys from both objects so we catch new stats
+  // that weren't present in the previously stored version.
+  // Double-cast through unknown: PlayerStats has no index signature,
+  // but at runtime all values are numbers so this is safe.
+  const prevMap = prev.stats as unknown as Record<string, number>;
+  const nextMap = next.stats as unknown as Record<string, number>;
+
+  // Union of all keys from both snapshots — catches newly-added stats too
+  const allStatKeys = Array.from(
+    new Set([...Object.keys(prevMap), ...Object.keys(nextMap)])
+  );
+
+  for (const key of allStatKeys) {
+    const a = prevMap[key] ?? 0;
+    const b = nextMap[key] ?? 0;
+    // Skip non-numeric values (e.g. future string fields) gracefully
+    if (typeof a !== 'number' || typeof b !== 'number') continue;
     if (Math.abs(a - b) >= THRESHOLD) changed.push(key);
   }
+
   return changed;
 }
 
