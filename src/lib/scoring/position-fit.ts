@@ -1,69 +1,119 @@
 import { Player, PlayerWithScores, Position, ALL_POSITIONS } from '@/lib/scraper/types';
-import posWeights from '@/config/position-weights.json';
+import type { PlayerStats } from '@/lib/scraper/types';
+import detailedWeights from '@/config/position-weights-detailed.json';
 
-const WEIGHTS = posWeights as Record<string, Record<string, number>>;
-const MAX_RAW_WEIGHT = 5.0;
+// Raw JSON has a _meta key we must exclude at runtime (filter in loop via `stat !== '_meta'`).
+// Double-cast through unknown to satisfy TS — the _meta object is never accessed as weights.
+const WEIGHTS = detailedWeights as unknown as Record<string, Record<string, number>>;
 
-// GOALS weak-foot works like a multiplier on technical actions with the weak foot.
-// If the real stat is unknown, assume a conservative 70% weak-foot.
-function weakFootMultiplier(player: Player): number {
-  const value = player.weak_foot ?? 70;
-  if (value <= 5) return Math.max(0.45, Math.min(1, value / 5)); // star-like fallback
-  return Math.max(0.45, Math.min(1, value / 99));
+// ─────────────────────────────────────────────────────────────
+// Context modifiers: return a *copy* of the weight map with
+// per-player adjustments applied before scoring.
+// All modifiers multiply individual stat weights — the formula
+// stays purely additive afterwards.
+// ─────────────────────────────────────────────────────────────
+
+function applyContextModifiers(
+  baseWeights: Record<string, number>,
+  player: Player,
+  position: Position,
+): Record<string, number> {
+  // Shallow copy so we never mutate the imported constant.
+  const w = { ...baseWeights };
+
+  if (position === 'GK') return w; // GK scoring is purely technical, no context mods
+
+  const height = player.height_cm ?? 181; // assume average if unknown
+  const foot = player.preferred_foot;
+  // weak_foot stat is stored on player.stats.weak_foot (0-99 range in GOALS)
+  const wfStat = player.stats.weak_foot ?? 70;
+
+  // ── Height modifiers ──────────────────────────────────────
+  if (height >= 185) {
+    // Tall players win more headers and out-jump opponents
+    w['heading'] = (w['heading'] ?? 0) * 1.3;
+    w['jumping'] = (w['jumping'] ?? 0) * 1.3;
+  } else if (height < 178) {
+    // Shorter players are quicker in tight spaces
+    w['sprint_speed']    = (w['sprint_speed']    ?? 0) * 1.2;
+    w['agility']         = (w['agility']         ?? 0) * 1.3;
+    w['close_dribbling'] = (w['close_dribbling'] ?? 0) * 1.2;
+  }
+
+  // ── Foot / wide position modifiers ───────────────────────
+  if (foot) {
+    const isInvertedLeft  = position === 'LW' && foot === 'right';
+    const isInvertedRight = position === 'RW' && foot === 'left';
+    const isNaturalLeft   = position === 'LW' && foot === 'left';
+    const isNaturalRight  = position === 'RW' && foot === 'right';
+
+    if (isInvertedLeft || isInvertedRight) {
+      // Inside-forward: cuts inside → finishing & curve are the money stats
+      w['finishing'] = (w['finishing'] ?? 0) * 1.4;
+      w['curve']     = (w['curve']     ?? 0) * 1.4;
+    }
+
+    if (isNaturalLeft || isNaturalRight) {
+      // Traditional winger: hugs the line → crossing is the primary weapon
+      w['crossing'] = (w['crossing'] ?? 0) * 1.5;
+    }
+
+    // ── Weak-foot quality scaling ─────────────────────────
+    // wfStat < 70: penalise all stats normally executed with the weak foot.
+    //   The penalty shrinks the weights of the *wrong* foot's dominant actions,
+    //   simulating reduced reliability. We scale down bilateral technical stats.
+    // wfStat > 85: both feet are reliable → no asymmetric modifier needed.
+    if (wfStat < 70) {
+      // Determine which side the player's weak foot is
+      const isOnWrongSide =
+        (['LB','LWB','LM','LW'].includes(position) && foot === 'right') ||
+        (['RB','RWB','RM','RW'].includes(position) && foot === 'left');
+
+      if (isOnWrongSide) {
+        // Actions requiring the weak foot under pressure are less reliable
+        const penalty = 0.5 + (wfStat / 70) * 0.4; // 0.50 at wf=0 … 0.90 at wf=70
+        w['crossing']  = (w['crossing']  ?? 0) * penalty;
+        w['finishing'] = (w['finishing'] ?? 0) * penalty;
+        w['curve']     = (w['curve']     ?? 0) * penalty;
+        w['through_pass'] = (w['through_pass'] ?? 0) * penalty;
+      }
+    }
+    // wfStat > 85 → no change: both feet treated as equally good
+  }
+
+  return w;
 }
 
-function sideFootBonus(player: Player, position: Position): number {
-  if (!player.preferred_foot || position === 'GK') return 0;
-
-  const wf = weakFootMultiplier(player);
-  const technicalReliability = wf * 100;
-
-  // Traditional wide role: left foot on left / right foot on right improves crossing.
-  const isLeftWide = position === 'LB' || position === 'LWB' || position === 'LM' || position === 'LW';
-  const isRightWide = position === 'RB' || position === 'RWB' || position === 'RM' || position === 'RW';
-  const naturalSide =
-    (isLeftWide && player.preferred_foot === 'left') ||
-    (isRightWide && player.preferred_foot === 'right');
-
-  // Inverted winger / inside-forward: opposite foot on advanced wing helps shooting/cutting in.
-  const invertedForward =
-    (position === 'LW' && player.preferred_foot === 'right') ||
-    (position === 'RW' && player.preferred_foot === 'left');
-
-  if (naturalSide) {
-    // Bonus is larger for wing-backs/mids where crossing/clearance under pressure matters.
-    return ['LB', 'RB', 'LWB', 'RWB', 'LM', 'RM'].includes(position) ? 3 : 1;
-  }
-
-  if (invertedForward) {
-    // Inverted wingers are only a net-positive if weak-foot is good enough for passes/crosses.
-    return technicalReliability >= 75 ? 3 : -2;
-  }
-
-  // Central roles tolerate footedness well if weak-foot is solid.
-  if (position === 'CM' || position === 'CAM' || position === 'CF' || position === 'ST') {
-    return technicalReliability >= 80 ? 1 : 0;
-  }
-
-  // Wrong side with weak weak-foot: passing/crossing out of pressure suffers.
-  return technicalReliability < 70 ? -4 : -1;
-}
+// ─────────────────────────────────────────────────────────────
+// Core scoring formula
+//
+//   score = Σ(stat_value × weight) / Σ(99 × weight) × 100
+//
+// Result is clamped to [1, 99].
+// ─────────────────────────────────────────────────────────────
 
 export function calcPositionFitScore(player: Player, position: Position): number {
-  const w = WEIGHTS[position as string];
-  if (!w) return 50;
+  const base = WEIGHTS[position as string];
+  if (!base) return 50;
 
-  const raw =
-    player.stats.pac * (w.pac ?? 0) +
-    player.stats.sho * (w.sho ?? 0) +
-    player.stats.pas * (w.pas ?? 0) +
-    player.stats.dri * (w.dri ?? 0) +
-    player.stats.def * (w.def ?? 0) +
-    player.stats.phy * (w.phy ?? 0);
+  const w = applyContextModifiers(base, player, position);
 
-  const norm = raw / MAX_RAW_WEIGHT;
-  const adjusted = norm + sideFootBonus(player, position);
-  return Math.round(Math.max(1, Math.min(adjusted, 99)));
+  const stats = player.stats as unknown as Record<string, number>;
+
+  let numerator   = 0;
+  let denominator = 0;
+
+  for (const [stat, weight] of Object.entries(w)) {
+    if (weight <= 0 || stat === '_meta') continue;
+    const value = stats[stat] ?? 0;
+    numerator   += value  * weight;
+    denominator += 99     * weight;
+  }
+
+  if (denominator === 0) return 50;
+
+  const raw = (numerator / denominator) * 100;
+  return Math.round(Math.max(1, Math.min(raw, 99)));
 }
 
 export function enrichPlayerWithScores(player: Player): PlayerWithScores {
@@ -74,10 +124,68 @@ export function enrichPlayerWithScores(player: Player): PlayerWithScores {
   return { ...player, fit_scores };
 }
 
+// ─────────────────────────────────────────────────────────────
+// Human-readable explanation of why a foot/side combo is good
+// or bad — used in the UI tooltip.
+// ─────────────────────────────────────────────────────────────
+
 export function explainFootFit(player: Player, position: Position): string | null {
   if (!player.preferred_foot || position === 'GK') return null;
-  const bonus = sideFootBonus(player, position);
-  if (bonus >= 3) return 'Starker Foot-Fit: Rolle passt gut zum bevorzugten Fuß.';
-  if (bonus <= -3) return 'Weak-Foot-Risiko: falsche Seite kann Pässe/Flanken/Abschlüsse schwächen.';
+
+  const foot   = player.preferred_foot;
+  const wfStat = player.stats.weak_foot ?? 70;
+
+  const isInverted =
+    (position === 'LW' && foot === 'right') ||
+    (position === 'RW' && foot === 'left');
+  const isNatural =
+    (position === 'LW' && foot === 'left') ||
+    (position === 'RW' && foot === 'right');
+  const isWrongSideWide =
+    (['LB','LWB','LM'].includes(position) && foot === 'right') ||
+    (['RB','RWB','RM'].includes(position) && foot === 'left');
+
+  if (isInverted) {
+    return wfStat < 70
+      ? 'Invertierter Flügelstürmer — schwache Flanken, aber Cut-Inside-Stärke.'
+      : 'Guter Inverted Winger: Abschluss & Kurve profitieren.';
+  }
+  if (isNatural) {
+    return 'Natürliche Seite: Flanken & Liniendribblings werden verstärkt.';
+  }
+  if (isWrongSideWide && wfStat < 70) {
+    return 'Weak-Foot-Risiko: Flanken & Pässe auf dieser Seite weniger verlässlich.';
+  }
   return null;
 }
+
+// ─────────────────────────────────────────────────────────────
+// Debug helper: returns top-N weighted stats for a player/pos
+// ─────────────────────────────────────────────────────────────
+
+export function topWeightedStats(
+  player: Player,
+  position: Position,
+  n = 5,
+): Array<{ stat: string; value: number; weight: number; contribution: number }> {
+  const base = WEIGHTS[position as string];
+  if (!base) return [];
+
+  const w = applyContextModifiers(base, player, position);
+  const stats = player.stats as unknown as Record<string, number>;
+
+  const entries = Object.entries(w)
+    .filter(([stat, weight]) => weight > 0 && stat !== '_meta')
+    .map(([stat, weight]) => ({
+      stat,
+      value:        stats[stat] ?? 0,
+      weight,
+      contribution: (stats[stat] ?? 0) * weight,
+    }))
+    .sort((a, b) => b.contribution - a.contribution);
+
+  return entries.slice(0, n);
+}
+
+// Re-export PlayerStats so callers can import it from this module
+export type { PlayerStats };
