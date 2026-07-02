@@ -9,26 +9,69 @@ export type Position = (typeof ALL_POSITIONS)[number];
 export type Rarity = 'Basic' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary' | 'Mythic' | 'Iconic';
 
 export interface PlayerStats {
+  // Category averages (used for quick overview)
   pac: number;
   sho: number;
   pas: number;
   dri: number;
   def: number;
   phy: number;
-  // Extended stats (optional — present in full scraper output)
-  heading?: number;
-  jumping?: number;
-  finishing?: number;
-  close_dribbling?: number;
-  skills?: number;
-  crossing?: number;
-  defensive_iq?: number;
-  interceptions?: number;
-  stamina?: number;
-  attacking_iq?: number;
-  div?: number;   // GK diving
-  spd?: number;   // GK speed
-  kic?: number;   // GK kicking
+
+  // ── Pace ──
+  acceleration: number;
+  sprint_speed: number;
+
+  // ── Shooting ──
+  finishing: number;
+  shot_power: number;
+  long_shots: number;
+  penalties: number;
+  weak_foot: number;
+  attacking_iq: number;
+
+  // ── Passing ──
+  ground_pass: number;
+  lofted_pass: number;
+  through_pass: number;
+  crossing: number;
+  curve: number;
+  free_kick_accuracy: number;
+
+  // ── Dribbling ──
+  sprint_dribbling: number;
+  close_dribbling: number;
+  skills: number;
+  agility: number;
+  balance: number;
+  first_touch: number;
+
+  // ── Defending ──
+  defensive_iq: number;
+  stand_tackle: number;
+  slide_tackle: number;
+  jockeying: number;
+  interceptions: number;
+  blocking: number;
+
+  // ── Physical ──
+  strength: number;
+  aggression: number;
+  stamina: number;
+  heading: number;
+  jumping: number;
+
+  // ── Goalkeeping ──
+  div: number;
+  kic: number;
+  reflexes: number;
+  positioning: number;
+  catching: number;
+  parrying: number;
+  rushing?: number;
+  command_of_area?: number;
+  penalty_saving?: number;
+  throwing?: number;
+  kicking_power?: number;
 }
 
 export interface Player {
@@ -38,12 +81,11 @@ export interface Player {
   overall: number;
   rarity: Rarity;
   stats: PlayerStats;
-  // Optional extended fields
   preferred_foot?: 'left' | 'right';
-  weak_foot?: number; // 1-99 or percentage-like GOALS weak-foot value; default 70 if unknown
+  weak_foot?: number;
   height_cm?: number;
-  age?: number;            // In-game age (increases via playtime)
-  training_value?: number; // 1–8, determines development ceiling
+  age?: number;
+  training_value?: number;
   xp_current?: number;
   xp_next_upgrade?: number;
   upgrade_count?: number;

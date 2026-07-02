@@ -201,13 +201,13 @@ export function analyzeTactics(
         priority: 5,
       });
     }
-    if (stat(gk, 'spd') > 60 && stat(gk, 'kic') > 72) {
+    if (stat(gk, 'sprint_speed') > 60 && stat(gk, 'kic') > 72) {
       tips.push({
         id: 'gk_sweeper',
         category: 'torwart',
         icon: '🏃',
         headline: 'Keeper kann als Sweeper agieren',
-        detail: `${gk.name} hat genug Pace (${stat(gk, 'spd')}) und gutes Kicking (${stat(gk, 'kic')}) für eine Sweeper-Keeper-Rolle. Eine hohe Linie der Abwehr wird damit sicherer.`,
+        detail: `${gk.name} hat genug Pace (${stat(gk, 'sprint_speed')}) und gutes Kicking (${stat(gk, 'kic')}) für eine Sweeper-Keeper-Rolle. Eine hohe Linie der Abwehr wird damit sicherer.`,
         priority: 5,
       });
     }

@@ -1,24 +1,32 @@
-import * as cheerio from 'cheerio';
-import { ALL_POSITIONS, Player, PlayerStats, Position, Rarity } from './types';
+import { Player, PlayerStats, Position, Rarity } from './types';
 
 const GOALSVERSE_BASE = 'https://goalsverse.com';
 const USER_AGENT = 'Mozilla/5.0 (compatible; GOALS Squad Optimizer/1.0)';
 
-const POSITION_ALIASES: Record<string, Position> = {
-  GK: 'GK',
-  CB: 'CB',
-  FB: 'RB',
-  WB: 'RWB',
-  DM: 'CDM',
-  CM: 'CM',
-  AM: 'CAM',
-  WM: 'RM',
-  WF: 'RW',
-  CF: 'CF',
-  ST: 'ST',
+// GOALS role IDs → Positionen
+const ROLE_MAP: Record<number, Position> = {
+  0: 'GK',
+  1: 'CB', 2: 'CB',
+  3: 'LB', 4: 'RB',
+  5: 'LWB', 6: 'RWB',
+  7: 'CDM',
+  8: 'CM', 9: 'CM',
+  10: 'CAM',
+  11: 'LM', 12: 'RM',
+  13: 'LW', 14: 'RW',
+  15: 'CF',
+  16: 'ST',
 };
 
-const POSITION_SET = new Set<string>(ALL_POSITIONS);
+const TIER_TO_RARITY: Record<number, Rarity> = {
+  0: 'Basic',
+  1: 'Uncommon',
+  2: 'Rare',
+  3: 'Epic',
+  4: 'Legendary',
+  5: 'Mythic',
+  6: 'Iconic',
+};
 
 type GoalsverseFetchResult = {
   players: Player[];
@@ -38,111 +46,36 @@ type GoalsverseSearchUser = {
   };
 };
 
-function clamp(value: number, fallback = 50): number {
-  if (!Number.isFinite(value)) return fallback;
-  return Math.max(1, Math.min(99, Math.round(value)));
-}
+/* ── Low-level fetch helpers ─────────────────────────────────────────────── */
 
-function rarityFromOverall(overall: number): Rarity {
-  if (overall >= 94) return 'Iconic';
-  if (overall >= 90) return 'Mythic';
-  if (overall >= 86) return 'Legendary';
-  if (overall >= 80) return 'Epic';
-  if (overall >= 72) return 'Rare';
-  if (overall >= 62) return 'Uncommon';
-  return 'Basic';
-}
-
-function normalizePosition(position: string, slotIndex: number): Position {
-  const mapped = POSITION_ALIASES[position.toUpperCase()] ?? position.toUpperCase();
-  if (mapped === 'RB' && slotIndex % 2 === 0) return 'LB';
-  if (mapped === 'RWB' && slotIndex % 2 === 0) return 'LWB';
-  if (mapped === 'RM' && slotIndex % 2 === 0) return 'LM';
-  if (mapped === 'RW' && slotIndex % 2 === 0) return 'LW';
-  return POSITION_SET.has(mapped) ? (mapped as Position) : 'CM';
-}
-
-function slugify(input: string): string {
-  return input
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-}
-
-async function fetchHtml(pathOrUrl: string): Promise<string> {
-  const url = pathOrUrl.startsWith('http') ? pathOrUrl : `${GOALSVERSE_BASE}${pathOrUrl}`;
-  const response = await fetch(url, {
-    headers: {
-      'user-agent': USER_AGENT,
-      accept: 'text/html,application/xhtml+xml',
-    },
-    next: { revalidate: 60 * 15 },
-  } as RequestInit & { next?: { revalidate: number } });
-
-  if (!response.ok) {
-    throw new Error(`goalsverse antwortet mit HTTP ${response.status}`);
-  }
-  return response.text();
-}
-
-async function fetchJson<T>(pathOrUrl: string): Promise<T> {
-  const url = pathOrUrl.startsWith('http') ? pathOrUrl : `${GOALSVERSE_BASE}${pathOrUrl}`;
-  const response = await fetch(url, {
+async function fetchJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, {
     headers: {
       'user-agent': USER_AGENT,
       accept: 'application/json',
     },
-    next: { revalidate: 60 * 15 },
-  } as RequestInit & { next?: { revalidate: number } });
-
-  if (!response.ok) {
-    throw new Error(`goalsverse API antwortet mit HTTP ${response.status}`);
-  }
-  return response.json() as Promise<T>;
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json() as Promise<T>;
 }
 
-function extractBodyText(html: string): string {
-  const $ = cheerio.load(html);
-  $('script,style,noscript').remove();
-  return $('body').text().replace(/\s+/g, ' ').trim();
+async function fetchRsc(path: string): Promise<string> {
+  const url = path.startsWith('http') ? path : `${GOALSVERSE_BASE}${path}`;
+  const res = await fetch(url, {
+    headers: {
+      'user-agent': USER_AGENT,
+      accept: 'text/x-component',
+      RSC: '1',
+    },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text();
 }
 
-function extractClubName(html: string, fallback: string): string {
-  const $ = cheerio.load(html);
-  const schema = $('script[type="application/ld+json"]').first().text();
-  const match = schema.match(/"name"\s*:\s*"([^"]+)\s+—\s+GOALS stats"/);
-  if (match?.[1]) return match[1];
-  const title = $('title').text().replace(/\s+[-—]\s+.*$/, '').trim();
-  return title || fallback;
-}
-
-function resolveDirectClubPath(input: string): string | null {
-  const raw = input.trim();
-  const uuid = raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0];
-  if (uuid) return `/v1/club/${uuid}`;
-
-  try {
-    const url = new URL(raw);
-    if (url.hostname.includes('goalsverse.com')) {
-      return `${url.pathname}${url.search}`;
-    }
-  } catch {
-    // Not a URL; continue with slug handling.
-  }
-
-  if (raw.startsWith('/v1/club/') || raw.startsWith('/p/')) return raw;
-  return null;
-}
+/* ── Search / resolve club ───────────────────────────────────────────────── */
 
 function normalizedName(input: string): string {
-  return input
-    .trim()
-    .toLowerCase()
-    .replace(/[’`]/g, "'")
-    .replace(/\s+/g, '');
+  return input.trim().toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, '');
 }
 
 function searchUserMatches(user: GoalsverseSearchUser, query: string): boolean {
@@ -155,136 +88,230 @@ function searchUserMatches(user: GoalsverseSearchUser, query: string): boolean {
     user.external_platforms?.epic?.display_name,
   ]
     .filter(Boolean)
-    .map((value) => normalizedName(String(value)));
-
-  return candidates.some((candidate) => candidate === wanted);
+    .map((v) => normalizedName(String(v)));
+  return candidates.some((c) => c === wanted);
 }
 
-async function resolveViaSearchApi(clubName: string): Promise<string | null> {
+async function resolveClubId(clubName: string): Promise<string | null> {
+  // Direct UUID
+  const uuid = clubName.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0];
+  if (uuid) return uuid;
+
+  // Search API
   const data = await fetchJson<{ users?: GoalsverseSearchUser[] }>(
-    `/api/v1/search?query=${encodeURIComponent(clubName.trim())}`
+    `${GOALSVERSE_BASE}/api/v1/search?query=${encodeURIComponent(clubName.trim())}`
   );
   const users = data.users ?? [];
-  const exact = users.find((user) => user.userId && searchUserMatches(user, clubName));
-  const fallback = exact ?? users.find((user) => user.userId);
-  return fallback?.userId ? `/v1/club/${fallback.userId}` : null;
+  const exact = users.find((u) => u.userId && searchUserMatches(u, clubName));
+  const fallback = exact ?? users.find((u) => u.userId);
+  return fallback?.userId ?? null;
 }
 
-async function resolveClubPath(clubName: string): Promise<string | null> {
-  const direct = resolveDirectClubPath(clubName);
-  if (direct) return direct;
+/* ── RSC parsing ─────────────────────────────────────────────────────────── */
 
-  const viaSearch = await resolveViaSearchApi(clubName);
-  if (viaSearch) return viaSearch;
+function extractJsonObject(text: string, startIndex: number): unknown | null {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let objStart = -1;
 
-  const html = await fetchHtml('/v1/clubs');
-  const $ = cheerio.load(html);
-  const wanted = clubName.trim().toLowerCase();
-  const wantedSlug = slugify(clubName);
-  let fallback: string | null = null;
+  for (let i = startIndex; i < text.length; i++) {
+    const ch = text[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === '\\') { escaped = true; continue; }
+    if (ch === '"' && !inString) { inString = true; continue; }
+    if (ch === '"' && inString) { inString = false; continue; }
+    if (inString) continue;
 
-  $('a[href^="/v1/club/"], a[href^="/p/"]').each((_, el) => {
-    if (fallback) return;
-    const href = String($(el).attr('href') ?? '');
-    const text = $(el).text().replace(/\s+/g, ' ').trim().toLowerCase();
-    const hrefSlug = slugify(href.split('/').pop() ?? '');
-    if (text.includes(wanted) || hrefSlug === wantedSlug || href.toLowerCase().includes(wantedSlug)) {
-      fallback = href;
+    if (ch === '{' || ch === '[') {
+      if (depth === 0) objStart = i;
+      depth++;
+    } else if (ch === '}' || ch === ']') {
+      depth--;
+      if (depth === 0 && objStart >= 0) {
+        try {
+          return JSON.parse(text.slice(objStart, i + 1));
+        } catch {
+          return null;
+        }
+      }
     }
-  });
-
-  return fallback;
-}
-
-function statMapFromChunk(chunk: string): Record<string, number> {
-  const stats: Record<string, number> = {};
-  const statPattern = /(\d{1,2})(PAC|DRI|SHO|DEF|PAS|PHY|DIV|REF|HAN|AWA|DIS|ATH)/g;
-  Array.from(chunk.matchAll(statPattern)).forEach((match) => {
-    stats[match[2]] = clamp(Number(match[1]));
-  });
-  return stats;
-}
-
-function playerStatsFromGoalsverse(position: Position, overall: number, chunk: string): PlayerStats {
-  const s = statMapFromChunk(chunk);
-
-  if (position === 'GK') {
-    return {
-      pac: clamp(s.ATH ?? s.DIS ?? overall - 20, 45),
-      sho: clamp(s.DIS ?? overall - 35, 25),
-      pas: clamp(s.DIS ?? overall - 10, 55),
-      dri: clamp(s.REF ?? overall - 25, 45),
-      def: clamp(((s.DIV ?? overall) + (s.HAN ?? overall) + (s.AWA ?? overall)) / 3, overall),
-      phy: clamp(s.ATH ?? overall - 5, 65),
-      div: s.DIV,
-      kic: s.DIS,
-    };
   }
+  return null;
+}
+
+function extractSquadFromRsc(rscText: string): { squad?: unknown; clubInfo?: unknown } {
+  // Find squad object
+  const squadIdx = rscText.indexOf('"squad":');
+  const squad = squadIdx >= 0 ? extractJsonObject(rscText, squadIdx + 7) : null;
+
+  // Find club info (first "data":{...} with username)
+  const dataIdx = rscText.indexOf('"data":');
+  const clubInfo = dataIdx >= 0 ? extractJsonObject(rscText, dataIdx + 6) : null;
+
+  return { squad, clubInfo };
+}
+
+/* ── Player mapping ──────────────────────────────────────────────────────── */
+
+function mapRoleToPosition(roleId: number): Position {
+  return ROLE_MAP[roleId] || 'CM';
+}
+
+function mapTierToRarity(tier: number): Rarity {
+  return TIER_TO_RARITY[tier] || 'Basic';
+}
+
+function extractStatValue(stats: Record<string, unknown>, path: string[]): number {
+  let current: unknown = stats;
+  for (const key of path) {
+    if (current && typeof current === 'object' && !Array.isArray(current)) {
+      current = (current as Record<string, unknown>)[key];
+    } else {
+      return 50;
+    }
+  }
+  return typeof current === 'number' ? Math.round(current) : 50;
+}
+
+function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
+  const stats = (raw.stats as Record<string, unknown>) || {};
+
+  // Build full name
+  const firstName = (raw.first_name as string) || '';
+  const lastName = (raw.last_name as string) || '';
+  const name = `${firstName} ${lastName}`.trim() || (raw.id as string)?.slice(0, 8) || 'Unknown';
+
+  const ovr = (raw.ovr as Record<string, unknown>) || {};
+  const role = typeof ovr.role === 'number' ? ovr.role : 8;
+  const overall = typeof ovr.overall_rating === 'number' ? ovr.overall_rating : 50;
+
+  const tier = typeof raw.tier === 'number' ? raw.tier : 0;
+  const height = typeof raw.height === 'number' ? raw.height : undefined;
+  const age = typeof raw.current_age === 'number' ? raw.current_age : undefined;
+  const foot = typeof raw.strong_foot === 'number' ? raw.strong_foot : undefined;
+
+  // Extract all individual stats
+  const playerStats: PlayerStats = {
+    // Pace
+    pac: extractStatValue(stats, ['pace', 'weighted_value']),
+    acceleration: extractStatValue(stats, ['pace', 'acceleration', 'value']),
+    sprint_speed: extractStatValue(stats, ['pace', 'sprint_speed', 'value']),
+
+    // Shooting
+    sho: extractStatValue(stats, ['shooting', 'weighted_value']),
+    finishing: extractStatValue(stats, ['shooting', 'finishing', 'value']),
+    shot_power: extractStatValue(stats, ['shooting', 'shot_power', 'value']),
+    long_shots: extractStatValue(stats, ['shooting', 'long_shots', 'value']),
+    penalties: extractStatValue(stats, ['shooting', 'penalties', 'value']),
+    weak_foot: extractStatValue(stats, ['shooting', 'weak_foot', 'value']),
+    attacking_iq: extractStatValue(stats, ['shooting', 'attacking_iq', 'value']),
+
+    // Passing
+    pas: extractStatValue(stats, ['passing', 'weighted_value']),
+    ground_pass: extractStatValue(stats, ['passing', 'ground_pass', 'value']),
+    lofted_pass: extractStatValue(stats, ['passing', 'lofted_pass', 'value']),
+    through_pass: extractStatValue(stats, ['passing', 'through_pass', 'value']),
+    crossing: extractStatValue(stats, ['passing', 'crossing', 'value']),
+    curve: extractStatValue(stats, ['passing', 'curve', 'value']),
+    free_kick_accuracy: extractStatValue(stats, ['passing', 'free_kicks', 'value']),
+
+    // Dribbling
+    dri: extractStatValue(stats, ['dribbling', 'weighted_value']),
+    sprint_dribbling: extractStatValue(stats, ['dribbling', 'sprint_dribbling', 'value']),
+    close_dribbling: extractStatValue(stats, ['dribbling', 'close_dribbling', 'value']),
+    skills: extractStatValue(stats, ['dribbling', 'skills', 'value']),
+    agility: extractStatValue(stats, ['dribbling', 'agility', 'value']),
+    balance: extractStatValue(stats, ['dribbling', 'balance', 'value']),
+    first_touch: extractStatValue(stats, ['dribbling', 'first_touch', 'value']),
+
+    // Defending
+    def: extractStatValue(stats, ['defending', 'weighted_value']),
+    defensive_iq: extractStatValue(stats, ['defending', 'defensive_iq', 'value']),
+    stand_tackle: extractStatValue(stats, ['defending', 'stand_tackle', 'value']),
+    slide_tackle: extractStatValue(stats, ['defending', 'slide_tackle', 'value']),
+    jockeying: extractStatValue(stats, ['defending', 'jockeying', 'value']),
+    interceptions: extractStatValue(stats, ['defending', 'interceptions', 'value']),
+    blocking: extractStatValue(stats, ['defending', 'blocking', 'value']),
+
+    // Physical
+    phy: extractStatValue(stats, ['physicality', 'weighted_value']),
+    strength: extractStatValue(stats, ['physicality', 'strength', 'value']),
+    aggression: extractStatValue(stats, ['physicality', 'aggression', 'value']),
+    stamina: extractStatValue(stats, ['physicality', 'stamina', 'value']),
+    heading: extractStatValue(stats, ['physicality', 'heading', 'value']),
+    jumping: extractStatValue(stats, ['physicality', 'jumping', 'value']),
+
+    // Goalkeeping
+    div: extractStatValue(stats, ['goalkeeping', 'diving', 'weighted_value']),
+    kic: extractStatValue(stats, ['goalkeeping', 'distribution', 'weighted_value']),
+    reflexes: extractStatValue(stats, ['goalkeeping', 'reflexes', 'weighted_value']),
+    positioning: extractStatValue(stats, ['goalkeeping', 'awareness', 'positioning', 'value']),
+    catching: extractStatValue(stats, ['goalkeeping', 'handling', 'catching', 'value']),
+    parrying: extractStatValue(stats, ['goalkeeping', 'handling', 'parrying', 'value']),
+    rushing: extractStatValue(stats, ['goalkeeping', 'awareness', 'rushing', 'value']),
+    command_of_area: extractStatValue(stats, ['goalkeeping', 'awareness', 'command_of_area', 'value']),
+    penalty_saving: extractStatValue(stats, ['goalkeeping', 'awareness', 'penalty_saving', 'value']),
+    throwing: extractStatValue(stats, ['goalkeeping', 'distribution', 'throwing', 'value']),
+    kicking_power: extractStatValue(stats, ['goalkeeping', 'distribution', 'kicking_power', 'value']),
+  };
 
   return {
-    pac: clamp(s.PAC ?? overall, overall),
-    sho: clamp(s.SHO ?? overall, overall),
-    pas: clamp(s.PAS ?? overall, overall),
-    dri: clamp(s.DRI ?? overall, overall),
-    def: clamp(s.DEF ?? overall, overall),
-    phy: clamp(s.PHY ?? overall, overall),
+    id: `goalsverse-${raw.id}`,
+    name,
+    position: mapRoleToPosition(role),
+    overall,
+    rarity: mapTierToRarity(tier),
+    stats: playerStats,
+    age,
+    height_cm: height,
+    preferred_foot: foot === 1 ? 'left' : foot === 2 ? 'right' : undefined,
+    training_value: typeof raw.potential === 'object' && raw.potential !== null
+      ? (raw.potential as Record<string, unknown>).training_value as number | undefined
+      : undefined,
+    xp_current: typeof raw.current_xp === 'number' ? raw.current_xp : undefined,
   };
 }
 
-function parseSquadFromText(text: string, clubPath: string): Player[] {
-  const start = text.indexOf('Current squad');
-  if (start === -1) return [];
-
-  const endCandidates = ['Accolades', 'VerseSight', 'Shot DNA', 'Recent matches']
-    .map((marker) => text.indexOf(marker, start + 20))
-    .filter((idx) => idx > start);
-  const end = endCandidates.length ? Math.min(...endCandidates) : Math.min(text.length, start + 9000);
-  const squadText = text.slice(start, end);
-
-  const tokenPattern = /([A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'’.-]{1,28})(GK|CB|FB|WB|DM|CM|AM|WM|WF|CF|ST)(\d{2})(?:\d)?(\d{2})(.*?)(?=[A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'’.-]{1,28}(?:GK|CB|FB|WB|DM|CM|AM|WM|WF|CF|ST)\d{2}(?:\d)?\d{2}|Defend|Balanced|Attack|Bench|$)/g;
-  const players: Player[] = [];
-  let slotIndex = 0;
-
-  Array.from(squadText.matchAll(tokenPattern)).forEach((match) => {
-    const rawName = match[1].trim();
-    const rawPosition = match[2];
-    const age = Number(match[3]);
-    const overall = clamp(Number(match[4]));
-    const statChunk = match[5];
-    const position = normalizePosition(rawPosition, slotIndex);
-
-    // Skip obvious UI fragments if the regex catches navigation/title text.
-    if (rawName.length < 2 || rawName === 'Bench') return;
-
-    players.push({
-      id: `goalsverse-${slugify(clubPath)}-${slotIndex}-${slugify(rawName)}`,
-      name: rawName,
-      position,
-      overall,
-      rarity: rarityFromOverall(overall),
-      stats: playerStatsFromGoalsverse(position, overall, statChunk),
-      age: Number.isFinite(age) ? age : undefined,
-    });
-    slotIndex += 1;
-  });
-
-  return players;
-}
+/* ── Public API ──────────────────────────────────────────────────────────── */
 
 export async function getClubRoster(clubName: string): Promise<GoalsverseFetchResult> {
-  const path = await resolveClubPath(clubName);
-  if (!path) {
+  const clubId = await resolveClubId(clubName);
+  if (!clubId) {
     return { players: [], reason: `Club "${clubName}" wurde auf goalsverse nicht gefunden.` };
   }
 
-  const html = await fetchHtml(path);
-  const text = extractBodyText(html);
-  const players = parseSquadFromText(text, path);
+  try {
+    const rscText = await fetchRsc(`/v1/club/${clubId}`);
+    const { squad, clubInfo } = extractSquadFromRsc(rscText);
 
-  return {
-    players,
-    clubUrl: `${GOALSVERSE_BASE}${path}`,
-    clubName: extractClubName(html, clubName),
-    reason: players.length ? undefined : 'Club gefunden, aber keine Current-squad-Spieler im HTML erkannt.',
-  };
+    if (!squad || typeof squad !== 'object') {
+      return { players: [], reason: 'Squad-Daten nicht im RSC-Payload gefunden.' };
+    }
+
+    const squadObj = squad as Record<string, unknown>;
+    const startingEleven = (squadObj.startingEleven as unknown[]) || [];
+    const bench = (squadObj.bench as unknown[]) || [];
+    const allRawPlayers = [...startingEleven, ...bench];
+
+    const players = allRawPlayers
+      .filter((p): p is Record<string, unknown> => typeof p === 'object' && p !== null)
+      .map(mapPlayerFromGoalsverse);
+
+    const clubUsername = clubInfo && typeof clubInfo === 'object'
+      ? (clubInfo as Record<string, unknown>).username as string | undefined
+      : undefined;
+
+    return {
+      players,
+      clubUrl: `${GOALSVERSE_BASE}/v1/club/${clubId}`,
+      clubName: clubUsername || clubName,
+      reason: players.length ? undefined : 'Squad gefunden, aber keine Spieler extrahiert.',
+    };
+  } catch (err) {
+    return {
+      players: [],
+      reason: `Fehler beim Abrufen: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
 }

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { ALL_POSITIONS, Player, PlayerWithScores, Position } from '@/lib/scraper/types';
 import { enrichPlayerWithScores } from '@/lib/scoring/position-fit';
+import { inferFullStats } from '@/lib/scraper/infer-stats';
 import { apiPath } from '@/lib/app-url';
 import { useSquadStore } from '@/lib/store/squad-store';
 
@@ -45,7 +46,7 @@ function clampStat(value: unknown, fallback: number): number {
 }
 
 function inferStats(draft: Draft, overall: number, position: Position): Player['stats'] {
-  const baseByPosition: Record<Position, Player['stats']> = {
+  const baseByPosition: Record<Position, { pac: number; sho: number; pas: number; dri: number; def: number; phy: number }> = {
     GK: { pac: 45, sho: 20, pas: 55, dri: 45, def: 80, phy: 70 },
     CB: { pac: 60, sho: 35, pas: 55, dri: 50, def: 82, phy: 80 },
     LB: { pac: 78, sho: 45, pas: 62, dri: 65, def: 72, phy: 68 },
@@ -65,14 +66,14 @@ function inferStats(draft: Draft, overall: number, position: Position): Player['
 
   const template = baseByPosition[position];
   const scale = overall / 70;
-  return {
-    pac: clampStat(draft.pac, template.pac * scale),
-    sho: clampStat(draft.sho, template.sho * scale),
-    pas: clampStat(draft.pas, template.pas * scale),
-    dri: clampStat(draft.dri, template.dri * scale),
-    def: clampStat(draft.def, template.def * scale),
-    phy: clampStat(draft.phy, template.phy * scale),
-  };
+  return inferFullStats(
+    clampStat(draft.pac, template.pac * scale),
+    clampStat(draft.sho, template.sho * scale),
+    clampStat(draft.pas, template.pas * scale),
+    clampStat(draft.dri, template.dri * scale),
+    clampStat(draft.def, template.def * scale),
+    clampStat(draft.phy, template.phy * scale)
+  );
 }
 
 function draftToPlayer(draft: Draft, index: number): PlayerWithScores {
