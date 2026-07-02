@@ -32,8 +32,9 @@ function byPos(filled: FilledSlot[], ...positions: Position[]) {
   return filled.filter((f) => set.has(f.slot.position)).map((f) => f.player);
 }
 
-function stat(player: PlayerWithScores, key: keyof typeof player.stats) {
-  return player.stats[key] ?? 0;
+// All callers use individual stats only — no more pac/sho/pas/dri/def/phy.
+function stat(player: PlayerWithScores, key: keyof typeof player.stats): number {
+  return (player.stats[key] as number) ?? 0;
 }
 
 export function analyzeTactics(
@@ -43,70 +44,101 @@ export function analyzeTactics(
   void customSettings;
   const tips: TacticsTip[] = [];
 
-  const gks = byPos(filled, 'GK');
-  const cbs = byPos(filled, 'CB', 'LWB', 'RWB');
-  const lbs = byPos(filled, 'LB');
-  const rbs = byPos(filled, 'RB');
+  const gks  = byPos(filled, 'GK');
+  const cbs  = byPos(filled, 'CB', 'LWB', 'RWB');
+  const lbs  = byPos(filled, 'LB');
+  const rbs  = byPos(filled, 'RB');
   const cdms = byPos(filled, 'CDM');
-  const cms = byPos(filled, 'CM', 'LM', 'RM');
+  const cms  = byPos(filled, 'CM', 'LM', 'RM');
   const cams = byPos(filled, 'CAM');
-  const lws = byPos(filled, 'LW', 'LM');
-  const rws = byPos(filled, 'RW', 'RM');
-  const sts = byPos(filled, 'ST', 'CF');
+  const lws  = byPos(filled, 'LW', 'LM');
+  const rws  = byPos(filled, 'RW', 'RM');
+  const sts  = byPos(filled, 'ST', 'CF');
 
-  const gk = gks[0];
+  const gk      = gks[0];
   const allMids = [...cdms, ...cms, ...cams];
-  const allDef = [...cbs, ...lbs, ...rbs];
+  const allDef  = [...cbs, ...lbs, ...rbs];
 
-  // ── ANGRIFF ────────────────────────────────────────────────────────────────
+  // Best ST by finishing (primary scoring threat)
+  const bestSt = sts.slice().sort((a, b) => stat(b, 'finishing') - stat(a, 'finishing'))[0];
 
-  if (sts.length && avg(sts.map((p) => stat(p, 'pac'))) > 82 && avg(sts.map((p) => stat(p, 'pac'))) > 82) {
-    const hasThroughPasser = allMids.some((p) => stat(p, 'pas') > 78);
-    if (hasThroughPasser) {
-      tips.push({
-        id: 'konter_pace',
-        category: 'angriff',
-        icon: '⚡',
-        headline: 'Konter-Taktik empfohlen',
-        detail: `Dein${sts.length > 1 ? 'e Stürmer haben' : ' ST hat'} die Pace für Tiefenläufe — und ein Spielmacher im Mittelfeld kann die Steilpässe spielen. Setze auf schnelles Umschalten nach Ballgewinn.`,
-        priority: 9,
-      });
-    }
-  }
+  // ── ANGRIFF ──────────────────────────────────────────────────────────────────
 
-  const bestSt = sts.slice().sort((a, b) => stat(b, 'sho') - stat(a, 'sho'))[0];
+  // Rule: Flanken-Taktik
+  // IF ST.heading > 80 AND ST.jumping > 75
+  //    AND (LW.crossing > 80 OR RW.crossing > 80)
   if (bestSt && stat(bestSt, 'heading') > 80 && stat(bestSt, 'jumping') > 75) {
-    const flankers = [...lws, ...rws, ...lbs, ...rbs];
-    const hasCrossers = flankers.some((p) => stat(p, 'crossing') > 78);
-    if (hasCrossers) {
+    const hasCrosser =
+      lws.some((p) => stat(p, 'crossing') > 80) ||
+      rws.some((p) => stat(p, 'crossing') > 80) ||
+      lbs.some((p) => stat(p, 'crossing') > 80) ||
+      rbs.some((p) => stat(p, 'crossing') > 80);
+    if (hasCrosser) {
       tips.push({
         id: 'kopfball_flanken',
         category: 'angriff',
         icon: '🎯',
         headline: 'Flanken-Taktik empfohlen',
-        detail: `${bestSt.name} gewinnt Kopfballduelle (Heading ${stat(bestSt, 'heading')}, Jumping ${stat(bestSt, 'jumping')}). Deine Flügel-/Außenbahn-Spieler können präzise flanken — nutze das konsequent.`,
-        priority: 8,
+        detail:
+          `${bestSt.name} gewinnt Kopfballduelle (Heading ${stat(bestSt, 'heading')}, ` +
+          `Jumping ${stat(bestSt, 'jumping')}). Deine Flügelspieler können präzise flanken — ` +
+          `nutze Hereingaben konsequent und lass Außenverteidiger nachrücken.`,
+        priority: 9,
       });
     }
   }
 
-  if (bestSt && stat(bestSt, 'finishing') > 84 && stat(bestSt, 'close_dribbling') > 78 && stat(bestSt, 'skills') > 78) {
+  // Rule: Konter-Taktik
+  // IF ST.sprint_speed > 85 AND ST.acceleration > 85 AND CM.through_pass > 80
+  if (
+    bestSt &&
+    stat(bestSt, 'sprint_speed') > 85 &&
+    stat(bestSt, 'acceleration') > 85
+  ) {
+    const hasThreader = allMids.some((p) => stat(p, 'through_pass') > 80);
+    if (hasThreader) {
+      tips.push({
+        id: 'konter_pace',
+        category: 'angriff',
+        icon: '⚡',
+        headline: 'Konter-Taktik empfohlen',
+        detail:
+          `${bestSt.name} hat die Pace (Sprint ${stat(bestSt, 'sprint_speed')}, ` +
+          `Acceleration ${stat(bestSt, 'acceleration')}), um Abwehrketten zu überlaufen. ` +
+          `Ein Mittelfeldspieler mit starkem Through-Pass kann ihn mit Steilpässen in die Tiefe schicken. ` +
+          `Setze auf schnelles Umschalten nach Ballgewinn.`,
+        priority: 9,
+      });
+    }
+  }
+
+  // Rule: Individuelle Durchbrüche
+  // IF ST.finishing > 85 AND ST.close_dribbling > 80 AND ST.skills > 80
+  if (
+    bestSt &&
+    stat(bestSt, 'finishing') > 85 &&
+    stat(bestSt, 'close_dribbling') > 80 &&
+    stat(bestSt, 'skills') > 80
+  ) {
     tips.push({
       id: 'individuelle_durchbrueche',
       category: 'angriff',
       icon: '🪄',
       headline: 'Individuelle Durchbrüche',
-      detail: `${bestSt.name} kann Gegner im 1v1 überspielen (Finishing ${stat(bestSt, 'finishing')}, Dribbling ${stat(bestSt, 'close_dribbling')}). Isoliere ihn gegen einzelne Verteidiger — wenig Besetzung im Sturmzentrum.`,
+      detail:
+        `${bestSt.name} kann Gegner im 1v1 überspielen ` +
+        `(Finishing ${stat(bestSt, 'finishing')}, Close Dribbling ${stat(bestSt, 'close_dribbling')}, ` +
+        `Skills ${stat(bestSt, 'skills')}). Isoliere ihn gegen einzelne Verteidiger.`,
       priority: 7,
     });
   }
 
-  // Inverted-Winger-Bonus
+  // Rule: Inverted Winger — keep existing logic (foot-based, no category stat needed)
   if (lws.length && rws.length) {
     const lw = lws[0];
     const rw = rws[0];
     const lwIsRightFooted = !lw.preferred_foot || lw.preferred_foot === 'right';
-    const rwIsLeftFooted = rw.preferred_foot === 'left';
+    const rwIsLeftFooted  = rw.preferred_foot === 'left';
     if (lwIsRightFooted || rwIsLeftFooted) {
       const detail = lwIsRightFooted
         ? `${lw.name} (LW, Rechtsfuß) kann nach innen schneiden für starke Finesse-Schüsse.`
@@ -122,121 +154,169 @@ export function analyzeTactics(
     }
   }
 
-  // ── VERTEIDIGUNG ───────────────────────────────────────────────────────────
+  // ── VERTEIDIGUNG ─────────────────────────────────────────────────────────────
 
-  const avgCbPace = cbs.length ? avg(cbs.map((p) => stat(p, 'pac'))) : 0;
-  const avgCbDiq = cbs.length ? avg(cbs.map((p) => stat(p, 'defensive_iq') ?? stat(p, 'def'))) : 0;
+  // Averages used for multiple rules below
+  const avgCbSprintSpeed = cbs.length ? avg(cbs.map((p) => stat(p, 'sprint_speed'))) : 0;
+  const avgCbDefIq       = cbs.length ? avg(cbs.map((p) => stat(p, 'defensive_iq')))  : 0;
 
-  if (avgCbPace < 68 && cbs.length) {
+  // Rule: Tiefes Pressing
+  // IF AVG(CB.sprint_speed) < 70
+  if (avgCbSprintSpeed < 70 && cbs.length) {
     tips.push({
       id: 'tiefes_pressing_cbpace',
       category: 'verteidigung',
       icon: '⚠️',
       headline: 'Tiefes Pressing empfohlen',
-      detail: `Deine Innenverteidiger haben durchschnittlich nur ${avgCbPace.toFixed(0)} Pace. Eine hohe Abwehrlinie wäre gefährlich — Through-Balls hinter die Kette würden regelmäßig durchkommen.`,
+      detail:
+        `Deine Innenverteidiger haben durchschnittlich nur ${avgCbSprintSpeed.toFixed(0)} Sprint-Speed. ` +
+        `Eine hohe Abwehrlinie wäre gefährlich — Through-Balls hinter die Kette würden regelmäßig durchkommen. ` +
+        `Spiele tief und kompakt.`,
       priority: 10,
     });
-  } else if (avgCbPace > 80 && avgCbDiq > 78 && cbs.length) {
+  }
+
+  // Rule: Hohes Pressing möglich
+  // IF AVG(CB.sprint_speed) > 82 AND AVG(CB.defensive_iq) > 80
+  if (avgCbSprintSpeed > 82 && avgCbDefIq > 80 && cbs.length) {
     tips.push({
       id: 'hohe_linie',
       category: 'verteidigung',
       icon: '🔝',
       headline: 'Hohes Pressing möglich',
-      detail: `Deine CBs haben die Pace (Ø ${avgCbPace.toFixed(0)}) und das defensive Verständnis (Ø ${avgCbDiq.toFixed(0)}) für eine aggressive hohe Abwehrlinie. Reduziert Raum für den Gegner.`,
+      detail:
+        `Deine CBs haben die Sprint-Speed (Ø ${avgCbSprintSpeed.toFixed(0)}) und das ` +
+        `Defensive IQ (Ø ${avgCbDefIq.toFixed(0)}) für eine aggressive hohe Abwehrlinie. ` +
+        `Reduziert Raum für den Gegner und verkürzt Wege beim Pressing.`,
       priority: 7,
     });
   }
 
-  // Mittelfeldpressing
-  const avgMidDef = allMids.length ? avg(allMids.map((p) => stat(p, 'def'))) : 0;
-  const avgMidInt = allMids.length ? avg(allMids.map((p) => stat(p, 'interceptions') ?? stat(p, 'def'))) : 0;
-  if (avgMidDef > 75 && avgMidInt > 72 && allMids.length >= 2) {
+  // Rule: Mittelfeldpressing
+  // IF AVG(CM.defensive_iq) > 78 AND AVG(CM.interceptions) > 75
+  const avgMidDefIq = allMids.length ? avg(allMids.map((p) => stat(p, 'defensive_iq'))) : 0;
+  const avgMidInt   = allMids.length ? avg(allMids.map((p) => stat(p, 'interceptions'))) : 0;
+  if (avgMidDefIq > 78 && avgMidInt > 75 && allMids.length >= 2) {
     tips.push({
       id: 'mittelfeldpressing',
       category: 'mittelfeld',
       icon: '🛡️',
       headline: 'Mittelfeldpressing empfohlen',
-      detail: `Deine zentralen Mittelfeldspieler (Ø Def ${avgMidDef.toFixed(0)}) können den Raum vor der Abwehr aktiv kontrollieren und Bälle früh abfangen.`,
+      detail:
+        `Deine Mittelfeldspieler (Ø Def-IQ ${avgMidDefIq.toFixed(0)}, Ø Interceptions ${avgMidInt.toFixed(0)}) ` +
+        `können den Raum vor der Abwehr aktiv kontrollieren und Bälle früh abfangen. ` +
+        `Enge Staffelung im Mittelfeld nutzen.`,
       priority: 7,
     });
   }
 
-  // Schwache Stamina
-  const tiredMids = allMids.filter((p) => stat(p, 'stamina') < 65);
-  tiredMids.forEach((p) => {
-    tips.push({
-      id: `stamina_${p.id}`,
-      category: 'warnung',
-      icon: '🔋',
-      headline: `${p.name} wird nachlassen`,
-      detail: `Stamina ${stat(p, 'stamina')} — dieser Spieler verliert in der 2. Halbzeit deutlich Intensität. Plane einen Wechsel oder setze ihn in einer defensiveren Rolle ein.`,
-      priority: 8,
-    });
-  });
+  // ── MITTELFELD ───────────────────────────────────────────────────────────────
 
-  // Vorgeschobener CM / falsche 9
-  cams.forEach((p) => {
-    if (stat(p, 'attacking_iq') > 82 && stat(p, 'sho') > 68) {
+  // Rule: Vorgeschobener CM / falsche 9
+  // IF CM.attacking_iq > 85 AND CM.finishing > 70
+  // Applied to CAMs and CMs (the most creative central players)
+  [...cms, ...cams].forEach((p) => {
+    if (stat(p, 'attacking_iq') > 85 && stat(p, 'finishing') > 70) {
       tips.push({
         id: `false9_${p.id}`,
         category: 'mittelfeld',
         icon: '🎭',
-        headline: `${p.name} als Spielmacher/falsche 9`,
-        detail: `Hoher Attacking IQ (${stat(p, 'attacking_iq')}) und solides Shooting (${stat(p, 'sho')}) — kann sowohl als vorgeschobener Spielmacher als auch als Einrücker eingesetzt werden.`,
+        headline: `${p.name} als Spielmacher / falsche 9`,
+        detail:
+          `Hoher Attacking IQ (${stat(p, 'attacking_iq')}) und solides Finishing ` +
+          `(${stat(p, 'finishing')}) — kann sowohl als vorgeschobener Spielmacher ` +
+          `als auch als Einrücker hinter dem ST eingesetzt werden.`,
         priority: 6,
       });
     }
   });
 
-  // ── TORWART ────────────────────────────────────────────────────────────────
+  // Rule: Schwache Stamina
+  // IF CM.stamina < 65 → Warnung
+  allMids.filter((p) => stat(p, 'stamina') < 65).forEach((p) => {
+    tips.push({
+      id: `stamina_${p.id}`,
+      category: 'warnung',
+      icon: '🔋',
+      headline: `${p.name} wird nachlassen`,
+      detail:
+        `Stamina ${stat(p, 'stamina')} — dieser Spieler verliert in der 2. Halbzeit ` +
+        `deutlich an Intensität. Plane einen Wechsel oder setze ihn in einer defensiveren Rolle ein.`,
+      priority: 8,
+    });
+  });
+
+  // ── TORWART ──────────────────────────────────────────────────────────────────
 
   if (gk) {
-    if (gk.height_cm && gk.height_cm > 192 && stat(gk, 'div') > 78) {
+    // Rule: Enormer Reach
+    // IF GK.height_cm > 192 AND GK.div > 80
+    if (gk.height_cm && gk.height_cm > 192 && stat(gk, 'div') > 80) {
       tips.push({
         id: 'gk_reach',
         category: 'torwart',
         icon: '🧤',
         headline: 'Keeper mit enormem Reach',
-        detail: `${gk.name} (${gk.height_cm} cm, Diving ${stat(gk, 'div')}) macht es für den Gegner schwerer, Schüsse präzise in die Ecken zu platzieren. Nutz das durch defensiveres Positionsspiel im Tor.`,
+        detail:
+          `${gk.name} (${gk.height_cm} cm, Diving ${stat(gk, 'div')}) macht es für den Gegner ` +
+          `schwerer, Schüsse präzise in die Ecken zu platzieren. ` +
+          `Nutz das durch defensiveres Positionsspiel — Gegner müssen perfekt schießen.`,
         priority: 5,
       });
     }
-    if (stat(gk, 'sprint_speed') > 60 && stat(gk, 'kic') > 72) {
+
+    // Rule: Sweeper-Keeper
+    // IF GK.rushing > 80 AND GK.sprint_speed > 65
+    if (stat(gk, 'rushing') > 80 && stat(gk, 'sprint_speed') > 65) {
       tips.push({
         id: 'gk_sweeper',
         category: 'torwart',
         icon: '🏃',
         headline: 'Keeper kann als Sweeper agieren',
-        detail: `${gk.name} hat genug Pace (${stat(gk, 'sprint_speed')}) und gutes Kicking (${stat(gk, 'kic')}) für eine Sweeper-Keeper-Rolle. Eine hohe Linie der Abwehr wird damit sicherer.`,
+        detail:
+          `${gk.name} hat starkes Rushing (${stat(gk, 'rushing')}) und genug Sprint-Speed ` +
+          `(${stat(gk, 'sprint_speed')}) um Bälle hinter der Abwehrlinie abzufangen. ` +
+          `Kombiniere das mit einer hohen Abwehrlinie für noch aggressiveres Pressing.`,
         priority: 5,
       });
     }
   }
 
-  // ── GLOBALE EINSCHÄTZUNG ───────────────────────────────────────────────────
+  // ── GLOBALE EINSCHÄTZUNG ─────────────────────────────────────────────────────
 
-  const avgDefPace = avg([...allDef].map((p) => stat(p, 'pac')));
-  const avgAttPace = avg([...sts, ...lws, ...rws].map((p) => stat(p, 'pac')));
+  // Use individual stats for all global assessments (no category stats)
+  const avgDefSprintSpeed = avg([...allDef].map((p) => stat(p, 'sprint_speed')));
+  const avgAttSprintSpeed = avg([...sts, ...lws, ...rws].map((p) => stat(p, 'sprint_speed')));
 
   const pressingSuggestion: TacticsAnalysis['pressingSuggestion'] =
-    avgCbPace < 68 ? 'tief' : avgCbPace > 80 && avgCbDiq > 78 ? 'hoch' : 'mittel';
+    avgCbSprintSpeed < 70 ? 'tief'
+    : avgCbSprintSpeed > 82 && avgCbDefIq > 80 ? 'hoch'
+    : 'mittel';
 
   const widthSuggestion: TacticsAnalysis['widthSuggestion'] =
-    (lws.length > 0 || rws.length > 0) ? 'breit' : lbs.length && rbs.length ? 'normal' : 'eng';
+    (lws.length > 0 || rws.length > 0) ? 'breit'
+    : lbs.length && rbs.length ? 'normal'
+    : 'eng';
+
+  // Style: konter = fast attack + good through_pass; offensiv = good finishing + wings;
+  // defensiv = slow CBs; else ausgewogen
+  const hasThreader = allMids.some((p) => stat(p, 'through_pass') > 77);
+  const hasFinisher = sts.some((p) => stat(p, 'finishing') > 80);
+  const hasWings    = lws.length > 0 || rws.length > 0;
 
   const styleSuggestion: TacticsAnalysis['styleSuggestion'] =
-    avgAttPace > 80 && allMids.some((p) => stat(p, 'pas') > 77)
-      ? 'konter'
-      : avgCbPace < 68
-      ? 'defensiv'
-      : sts.some((p) => stat(p, 'sho') > 80) && (lws.length > 0 || rws.length > 0)
-      ? 'offensiv'
-      : 'ausgewogen';
+    avgAttSprintSpeed > 82 && hasThreader ? 'konter'
+    : avgCbSprintSpeed < 68              ? 'defensiv'
+    : hasFinisher && hasWings            ? 'offensiv'
+    : 'ausgewogen';
 
   const overallWarnings: string[] = [];
-  if (avgDefPace < 66) overallWarnings.push('Abwehr-Pace insgesamt sehr niedrig — keine hohe Linie spielen.');
-  if (allMids.length === 0) overallWarnings.push('Kein klarer Mittelfeldblock — Gegner kann Räume vor der Abwehr ausnutzen.');
-  if (sts.length === 0) overallWarnings.push('Kein echter Stürmer in der Formation — offensive Druckentlastung fehlt.');
+  if (avgDefSprintSpeed < 66)
+    overallWarnings.push('Abwehr-Pace insgesamt sehr niedrig — keine hohe Linie spielen.');
+  if (allMids.length === 0)
+    overallWarnings.push('Kein klarer Mittelfeldblock — Gegner kann Räume vor der Abwehr ausnutzen.');
+  if (sts.length === 0)
+    overallWarnings.push('Kein echter Stürmer in der Formation — offensive Druckentlastung fehlt.');
 
   return {
     tips: tips.sort((a, b) => b.priority - a.priority),
@@ -247,7 +327,7 @@ export function analyzeTactics(
   };
 }
 
-// ── Taktik-Settings ────────────────────────────────────────────────────────
+// ── Taktik-Settings ──────────────────────────────────────────────────────────
 
 export type TacticsSettingType = 'select' | 'range';
 
@@ -264,15 +344,15 @@ export interface TacticsSetting {
 
 export const TACTICS_SETTINGS: TacticsSetting[] = [
   // Spielstil
-  { id: 'style', label: 'Spielstil', type: 'select', options: ['Offensiv', 'Ausgewogen', 'Defensiv', 'Konter'], default: 'Ausgewogen', group: 'Spielstil' },
-  { id: 'tempo', label: 'Tempo', type: 'select', options: ['Schnell', 'Normal', 'Langsam'], default: 'Normal', group: 'Spielstil' },
-  { id: 'width', label: 'Spielbreite', type: 'select', options: ['Breit', 'Normal', 'Eng'], default: 'Normal', group: 'Spielstil' },
+  { id: 'style',              label: 'Spielstil',            type: 'select', options: ['Offensiv','Ausgewogen','Defensiv','Konter'],          default: 'Ausgewogen', group: 'Spielstil' },
+  { id: 'tempo',              label: 'Tempo',                type: 'select', options: ['Schnell','Normal','Langsam'],                         default: 'Normal',     group: 'Spielstil' },
+  { id: 'width',              label: 'Spielbreite',          type: 'select', options: ['Breit','Normal','Eng'],                               default: 'Normal',     group: 'Spielstil' },
   // Pressing
-  { id: 'pressing_intensity', label: 'Pressing-Intensität', type: 'select', options: ['Hoch', 'Mittel', 'Niedrig'], default: 'Mittel', group: 'Pressing' },
-  { id: 'pressing_trigger', label: 'Pressing auslösen bei', type: 'select', options: ['Ballverlust', 'Einwurf', 'Torabstoß', 'Immer'], default: 'Ballverlust', group: 'Pressing' },
-  { id: 'defensive_line', label: 'Abwehrlinie', type: 'select', options: ['Hoch', 'Mittel', 'Tief'], default: 'Mittel', group: 'Pressing' },
+  { id: 'pressing_intensity', label: 'Pressing-Intensität',  type: 'select', options: ['Hoch','Mittel','Niedrig'],                           default: 'Mittel',     group: 'Pressing'  },
+  { id: 'pressing_trigger',   label: 'Pressing auslösen bei',type: 'select', options: ['Ballverlust','Einwurf','Torabstoß','Immer'],          default: 'Ballverlust',group: 'Pressing'  },
+  { id: 'defensive_line',     label: 'Abwehrlinie',          type: 'select', options: ['Hoch','Mittel','Tief'],                               default: 'Mittel',     group: 'Pressing'  },
   // Angriff
-  { id: 'attack_runs', label: 'Tiefenläufe', type: 'select', options: ['Häufig', 'Manchmal', 'Selten'], default: 'Manchmal', group: 'Angriff' },
-  { id: 'crossing', label: 'Flankenspiel', type: 'select', options: ['Viel', 'Normal', 'Wenig'], default: 'Normal', group: 'Angriff' },
-  { id: 'forward_runs', label: 'Läufe von Außenvert.', type: 'select', options: ['Häufig', 'Manchmal', 'Selten'], default: 'Manchmal', group: 'Angriff' },
+  { id: 'attack_runs',        label: 'Tiefenläufe',          type: 'select', options: ['Häufig','Manchmal','Selten'],                        default: 'Manchmal',   group: 'Angriff'   },
+  { id: 'crossing',           label: 'Flankenspiel',         type: 'select', options: ['Viel','Normal','Wenig'],                             default: 'Normal',     group: 'Angriff'   },
+  { id: 'forward_runs',       label: 'Läufe von Außenvert.', type: 'select', options: ['Häufig','Manchmal','Selten'],                        default: 'Manchmal',   group: 'Angriff'   },
 ];
