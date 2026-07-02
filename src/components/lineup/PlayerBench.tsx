@@ -1,7 +1,7 @@
 'use client';
 
 import { useDraggable } from '@dnd-kit/core';
-import { PlayerWithScores, Position } from '@/lib/scraper/types';
+import { PlayerWithScores, Position, displayPosition } from '@/lib/scraper/types';
 
 const RARITY_BADGE: Record<string, string> = {
   Basic: 'bg-slate-600',
@@ -34,7 +34,7 @@ function BenchPlayer({ player, targetPosition }: { player: PlayerWithScores; tar
         {player.overall}
       </span>
       <span className="text-sm text-white flex-1 truncate">{player.name}</span>
-      <span className="text-xs text-slate-500">{player.position}</span>
+      <span className="text-xs text-slate-500">{displayPosition(player.position)}</span>
       {fitScore !== null && (
         <span className={`text-xs font-mono font-bold ${
           fitScore >= 85 ? 'text-emerald-400' : fitScore >= 70 ? 'text-amber-400' : 'text-red-400'

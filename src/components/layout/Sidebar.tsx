@@ -10,7 +10,6 @@ const NAV_ITEMS = [
   { href: '/lineup/alternatives', label: 'Alternativen', icon: '🔄' },
   { href: '/development', label: 'Entwicklung', icon: '📈' },
   { href: '/meta', label: 'Meta Center', icon: '🎯' },
-  { href: '/ocr', label: 'OCR Import', icon: '🎥' },
 ];
 
 // Items shown in the mobile bottom bar (max 5 to fit)

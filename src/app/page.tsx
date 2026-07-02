@@ -4,7 +4,7 @@ import { ChangeEvent, useRef, useState } from 'react';
 import { useSquadStore, ImportDelta } from '@/lib/store/squad-store';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { PlayerWithScores } from '@/lib/scraper/types';
+import { PlayerWithScores, displayPosition } from '@/lib/scraper/types';
 import { enrichPlayerWithScores } from '@/lib/scoring/position-fit';
 import { apiPath, appPath } from '@/lib/app-url';
 
@@ -45,7 +45,7 @@ function DeltaReport({ delta, onDismiss }: { delta: ImportDelta; onDismiss: () =
           <div className="space-y-1">
             {delta.newPlayers.map((p) => (
               <p key={p.id} className="text-xs text-slate-300 pl-2">
-                + {p.name} ({p.position}, OVR {p.overall}, {p.rarity})
+                + {p.name} ({displayPosition(p.position)}, OVR {p.overall}, {p.rarity})
               </p>
             ))}
           </div>
@@ -75,7 +75,7 @@ function DeltaReport({ delta, onDismiss }: { delta: ImportDelta; onDismiss: () =
           <div className="space-y-1">
             {delta.removedPlayers.map((p) => (
               <p key={p.id} className="text-xs text-slate-400 pl-2 line-through">
-                {p.name} ({p.position})
+                {p.name} ({displayPosition(p.position)})
               </p>
             ))}
           </div>
@@ -97,12 +97,11 @@ export default function OnboardingPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(false);
-  const [demoMode, setDemoMode] = useState(false);
   const [status, setStatus] = useState('');
   const [delta, setDelta] = useState<ImportDelta | null>(null);
 
   const hasSquad = players.length > 0;
-  const isReimport = hasSquad && Boolean(clubName) && clubName !== 'Demo Club';
+  const isReimport = hasSquad && Boolean(clubName);
 
   async function fetchAndEnrich(name: string): Promise<PlayerWithScores[]> {
     const res = await fetch(apiPath('/api/import'), {
@@ -155,27 +154,6 @@ export default function OnboardingPage() {
     }
   }
 
-  async function handleDemo() {
-    setLoading(true);
-    setDemoMode(true);
-    setStatus('Demo-Modus…');
-    setDelta(null);
-    try {
-      const incoming = await fetchAndEnrich('demo');
-      if (incoming.length) {
-        setClubName('Demo Club');
-        importPlayers(incoming);
-        setStatus(`${incoming.length} Demo-Spieler geladen.`);
-        router.push('/squad');
-      }
-    } catch {
-      setStatus('Fehler bei Demo.');
-    } finally {
-      setLoading(false);
-      setDemoMode(false);
-    }
-  }
-
   function handleExport() {
     if (!players.length) {
       setStatus('Kein Kader zum Exportieren.');
@@ -224,7 +202,7 @@ export default function OnboardingPage() {
   }
 
   const importButtonLabel = loading
-    ? (demoMode ? 'Lade Demo…' : 'Importiere…')
+    ? 'Importiere…'
     : isReimport
     ? `🔄 Re-Import "${clubName}"`
     : 'Kader importieren';
@@ -239,7 +217,7 @@ export default function OnboardingPage() {
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white">GOALS Squad Optimizer</h1>
             <p className="text-slate-400 mt-1 text-sm">
-              Importiere deinen Kader von goalsverse.com, nutze Demo-Daten oder lade ein lokales Backup.
+              Importiere deinen Kader von goalsverse.com oder lade ein lokales Backup.
             </p>
           </div>
 
@@ -289,22 +267,13 @@ export default function OnboardingPage() {
             <div className="flex-1 h-px bg-slate-800" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={handleDemo}
-              disabled={loading}
-              className="py-2.5 rounded-lg border border-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-800 disabled:opacity-50 transition-colors"
-            >
-              {loading && demoMode ? 'Lade…' : 'Demo-Modus'}
-            </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={loading}
-              className="py-2.5 rounded-lg border border-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-800 disabled:opacity-50 transition-colors"
-            >
-              Backup importieren
-            </button>
-          </div>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading}
+            className="w-full py-2.5 rounded-lg border border-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-800 disabled:opacity-50 transition-colors"
+          >
+            Backup importieren
+          </button>
 
           <button
             onClick={handleExport}

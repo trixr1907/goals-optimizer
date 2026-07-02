@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useSquadStore } from '@/lib/store/squad-store';
-import { PlayerWithScores } from '@/lib/scraper/types';
+import { PlayerWithScores, Position, displayPosition } from '@/lib/scraper/types';
 import {
   DevelopmentPriority,
   PRIORITY_CLASSES,
@@ -253,9 +253,9 @@ function PlayerDevCard({ player }: { player: PlayerWithScores }) {
                 >
                   {player.overall}
                 </span>
-                <span className="text-xs text-slate-500">{player.position}</span>
+                <span className="text-xs text-slate-500">{displayPosition(player.position)}</span>
                 <span className={`text-xs font-mono font-bold ${fitColor}`}>
-                  Fit {mainFit.toFixed(0)}
+                  Meta {mainFit.toFixed(0)}
                 </span>
                 <span className="text-xs font-mono text-cyan-300">Dev {developmentScore}</span>
               </div>
@@ -263,7 +263,7 @@ function PlayerDevCard({ player }: { player: PlayerWithScores }) {
             <div className="text-right text-xs text-slate-500">
               <p>Beste Pos.</p>
               <p className="font-bold text-emerald-400">
-                {bestPos?.[0]} ({bestPos?.[1].toFixed(0)})
+                {bestPos?.[0] ? displayPosition(bestPos[0] as Position) : "-"} ({bestPos?.[1].toFixed(0)})
               </p>
             </div>
           </div>
@@ -444,7 +444,7 @@ function SwapSuggestionPanel({ players }: { players: PlayerWithScores[] }) {
                 <span className="text-emerald-400 font-medium">{s.in.name}</span>
               </p>
               <p className="text-[11px] text-slate-500">
-                Position: {s.pos} · Fit-Gewinn:{' '}
+                Position: {displayPosition(s.pos as Position)} · Meta-Gewinn:{' '}
                 <span className="text-emerald-400 font-mono">+{s.gain.toFixed(0)}</span>
               </p>
             </div>
@@ -585,7 +585,7 @@ export default function DevelopmentPage() {
                 <SelectContent className="bg-slate-800 border-slate-700">
                   {positions.map((p) => (
                     <SelectItem key={p} value={p} className="text-white focus:bg-slate-700">
-                      {p === 'all' ? 'Alle Pos.' : p}
+                      {p === 'all' ? 'Alle Pos.' : displayPosition(p as Position)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -602,7 +602,7 @@ export default function DevelopmentPage() {
                     Nach OVR
                   </SelectItem>
                   <SelectItem value="fit" className="text-white focus:bg-slate-700">
-                    Nach Fit-Score
+                    Nach Meta-Score
                   </SelectItem>
                   <SelectItem value="potential" className="text-white focus:bg-slate-700">
                     Nach Dev-Score

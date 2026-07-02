@@ -1,7 +1,7 @@
 'use client';
 
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import { PlayerWithScores, Position } from '@/lib/scraper/types';
+import { PlayerWithScores, Position, displayPosition } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
 
 const RARITY_COLORS: Record<string, string> = {
@@ -90,7 +90,7 @@ function EmptySlot({ slotKey, position }: EmptySlotProps) {
         strokeDasharray="4 2"
       />
       <text x={0} y={4} textAnchor="middle" fontSize={8} fill="#64748b" fontWeight="bold">
-        {position}
+        {displayPosition(position)}
       </text>
     </g>
   );

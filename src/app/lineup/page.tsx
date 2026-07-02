@@ -134,7 +134,7 @@ function PitchSlot({
         {player ? (
           <div className="text-center leading-tight pointer-events-none">
             <div className="text-[10px] sm:text-[11px] max-w-12 truncate">{player.name.split(' ')[0]}</div>
-            <div className={`text-[9px] font-mono ${fitText(fit)}`}>Fit {fit.toFixed(0)}</div>
+            <div className={`text-[9px] font-mono ${fitText(fit)}`}>Meta {fit.toFixed(0)}</div>
             <div className="text-[8px] opacity-75">OVR {player.overall}</div>
           </div>
         ) : (
@@ -313,7 +313,7 @@ export default function LineupPage() {
                           {rec.squadMatch.toFixed(0)}%
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">{rec.formation.playstyle} · Ø Fit {rec.averageFit.toFixed(1)}</p>
+                      <p className="mt-1 text-xs text-slate-500">{rec.formation.playstyle} · Ø Meta {rec.averageFit.toFixed(1)}</p>
                       <p className="mt-2 line-clamp-2 text-xs text-slate-400">{rec.reasons[0]}</p>
                       {rec.warnings[0] && <p className="mt-2 line-clamp-1 text-xs text-amber-300">⚠️ {rec.warnings[0]}</p>}
                     </button>
@@ -361,7 +361,7 @@ export default function LineupPage() {
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <p className="text-sm font-bold text-white">{pos} Slot</p>
                     <div className="flex items-center gap-2">
-                      {currentPlayer && <span className="text-xs text-slate-400">{currentPlayer.name} — Fit {currentPlayer.fit_scores[pos as Position]?.toFixed(0) ?? '-'}</span>}
+                      {currentPlayer && <span className="text-xs text-slate-400">{currentPlayer.name} — Meta {currentPlayer.fit_scores[pos as Position]?.toFixed(0) ?? '-'}</span>}
                       <button onClick={() => toggleLock(selectedSlotKey)} className={`text-xs px-2 py-1 rounded ${isLocked ? 'bg-amber-600 text-white' : 'bg-slate-700 text-slate-400'}`}>
                         {isLocked ? '🔒 Fixiert' : 'Fixieren'}
                       </button>

@@ -119,7 +119,7 @@ function FormationCard({
         </div>
         <div className="text-right">
           <span className={`font-mono text-sm font-bold ${fc(avgFit)}`}>{avgFit.toFixed(0)}</span>
-          <span className="text-xs text-slate-600 ml-1">Ø Fit</span>
+          <span className="text-xs text-slate-600 ml-1">Ø Meta</span>
         </div>
       </div>
 

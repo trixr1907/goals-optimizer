@@ -8,8 +8,32 @@ export type Position = (typeof ALL_POSITIONS)[number];
 
 export type Rarity = 'Basic' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary' | 'Mythic' | 'Iconic';
 
+// ── German display names for positions ───────────────────────────────────────
+const DISPLAY_POSITION_MAP: Record<Position, string> = {
+  GK:  'TW',
+  CB:  'IV',
+  LB:  'LV',
+  RB:  'RV',
+  LWB: 'LM',
+  RWB: 'RM',
+  CDM: 'ZDM',
+  CM:  'ZM',
+  CAM: 'ZOM',
+  LM:  'LM',
+  RM:  'RM',
+  LW:  'LS',
+  RW:  'RS',
+  CF:  'HS',
+  ST:  'ST',
+};
+
+/** Returns the German short label for display in UI. Internal scoring always uses Position. */
+export function displayPosition(pos: Position): string {
+  return DISPLAY_POSITION_MAP[pos] ?? pos;
+}
+
 export interface PlayerStats {
-  // Category averages (used for quick overview)
+  // Category averages (kept for legacy compatibility — scoring uses individual stats)
   pac: number;
   sho: number;
   pas: number;
@@ -89,6 +113,12 @@ export interface Player {
   xp_current?: number;
   xp_next_upgrade?: number;
   upgrade_count?: number;
+  /** Avatar URL — https://cdn.playgoals.com/character/prod/{raw_id}.png */
+  image_url?: string;
+  /** Match statistics (from club activity page) */
+  matches_played?: number;
+  goals?: number;
+  assists?: number;
 }
 
 export interface PlayerWithScores extends Player {

@@ -37,7 +37,7 @@ export function LineupScore({ slots, lineup, players, slotKeyFor }: LineupScoreP
         <p className="text-2xl font-bold text-white">{avgOvr.toFixed(1)}</p>
       </div>
       <div className="text-center">
-        <p className="text-xs text-slate-500 uppercase tracking-wide">Ø Fit</p>
+        <p className="text-xs text-slate-500 uppercase tracking-wide">Ø Meta</p>
         <p className={`text-2xl font-bold ${color}`}>{avgFit.toFixed(1)}</p>
       </div>
       <div className="text-center">

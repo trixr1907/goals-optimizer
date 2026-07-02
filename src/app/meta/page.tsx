@@ -60,7 +60,7 @@ export default function MetaPage() {
             usage_rate: liveUsage,
           },
           reasons: [
-            `${squadMatch.toFixed(0)}% Kader-Fit mit Live-Meta von goalsverse (${live.matches} Matches).`,
+            `${squadMatch.toFixed(0)}% Kader-Meta mit Live-Meta von goalsverse (${live.matches} Matches).`,
             ...rec.reasons.slice(1),
           ],
         };
@@ -94,7 +94,7 @@ export default function MetaPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-bold text-white">Meta Center</h2>
-                <p className="mt-1 text-sm text-slate-500">Formation-Ranking aus Kader-Fit, Live-Meta-Winrate und Risiko-Warnungen.</p>
+                <p className="mt-1 text-sm text-slate-500">Formation-Ranking aus Kader-Meta, Live-Meta-Winrate und Risiko-Warnungen.</p>
                 <p className="mt-2 text-xs text-slate-600">
                   Meta-Daten: {metaStatus === 'ok' ? `Live von goalsverse · Patch ${liveMeta?.patch ?? '?'} · ${liveMeta?.matches ?? '?'} Matches` : metaStatus === 'fallback' ? 'Fallback aus lokaler Config' : metaStatus === 'loading' ? 'Lade goalsverse…' : 'Live-Meta nicht erreichbar'}
                 </p>
@@ -120,12 +120,12 @@ export default function MetaPage() {
                       </div>
                       <div className={`rounded-xl border px-3 py-2 text-center ${scoreColor(rec.squadMatch)}`}>
                         <p className="text-lg font-bold">{rec.squadMatch.toFixed(0)}%</p>
-                        <p className="text-[10px] opacity-80">Kader-Fit</p>
+                        <p className="text-[10px] opacity-80">Kader-Meta</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div className="rounded-lg bg-slate-950/60 p-2"><p className="text-slate-500">Ø Fit</p><p className="font-mono text-white">{rec.averageFit.toFixed(1)}</p></div>
+                      <div className="rounded-lg bg-slate-950/60 p-2"><p className="text-slate-500">Ø Meta</p><p className="font-mono text-white">{rec.averageFit.toFixed(1)}</p></div>
                       <div className="rounded-lg bg-slate-950/60 p-2"><p className="text-slate-500">Winrate</p><p className="font-mono text-white">{rec.formation.winrate_current_patch?.toFixed(1) ?? '-'}%</p></div>
                       <div className="rounded-lg bg-slate-950/60 p-2"><p className="text-slate-500">Usage</p><p className="font-mono text-white">{rec.formation.usage_rate?.toFixed(1) ?? '-'}%</p></div>
                     </div>
@@ -174,7 +174,7 @@ export default function MetaPage() {
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full min-w-[760px] text-sm">
                   <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
-                    <tr><th className="py-2">Formation</th><th>Kader-Fit</th><th>Ø Fit</th><th>Live Meta</th><th>Matches</th><th>Größtes Risiko</th></tr>
+                    <tr><th className="py-2">Formation</th><th>Kader-Meta</th><th>Ø Meta</th><th>Live Meta</th><th>Matches</th><th>Größtes Risiko</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
                     {recommendations.map((rec) => {

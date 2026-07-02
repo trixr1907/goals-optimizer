@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useSquadStore } from '@/lib/store/squad-store';
-import { PlayerWithScores, Position, ALL_POSITIONS } from '@/lib/scraper/types';
+import { PlayerWithScores, Position, ALL_POSITIONS, displayPosition } from '@/lib/scraper/types';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { appPath } from '@/lib/app-url';
 import { Input } from '@/components/ui/input';
@@ -30,48 +30,84 @@ const RARITY_ORDER: Record<string, number> = {
 
 // ── Stat-Gruppen ─────────────────────────────────────────────────────────────
 
-const STAT_GROUPS: { label: string; color: string; keys: string[] }[] = [
-  { label: 'Pace',       color: 'text-sky-400',    keys: ['acceleration', 'sprint_speed'] },
-  { label: 'Shooting',   color: 'text-rose-400',   keys: ['finishing', 'shot_power', 'long_shots', 'penalties', 'weak_foot', 'attacking_iq'] },
-  { label: 'Passing',    color: 'text-amber-400',  keys: ['ground_pass', 'lofted_pass', 'through_pass', 'crossing', 'curve', 'free_kick_accuracy'] },
-  { label: 'Dribbling',  color: 'text-purple-400', keys: ['sprint_dribbling', 'close_dribbling', 'skills', 'agility', 'balance', 'first_touch'] },
-  { label: 'Defending',  color: 'text-emerald-400',keys: ['defensive_iq', 'stand_tackle', 'slide_tackle', 'jockeying', 'interceptions', 'blocking'] },
-  { label: 'Physical',   color: 'text-orange-400', keys: ['strength', 'aggression', 'stamina', 'heading', 'jumping'] },
+// Field player groups — never shown for GK
+const FIELD_STAT_GROUPS: { label: string; color: string; keys: string[] }[] = [
+  { label: 'Pace',      color: 'text-sky-400',     keys: ['acceleration', 'sprint_speed'] },
+  { label: 'Shooting',  color: 'text-rose-400',    keys: ['finishing', 'shot_power', 'long_shots', 'penalties', 'weak_foot', 'attacking_iq'] },
+  { label: 'Passing',   color: 'text-amber-400',   keys: ['ground_pass', 'lofted_pass', 'through_pass', 'crossing', 'curve', 'free_kick_accuracy'] },
+  { label: 'Dribbling', color: 'text-purple-400',  keys: ['sprint_dribbling', 'close_dribbling', 'skills', 'agility', 'balance', 'first_touch'] },
+  { label: 'Defending', color: 'text-emerald-400', keys: ['defensive_iq', 'stand_tackle', 'slide_tackle', 'jockeying', 'interceptions', 'blocking'] },
+  { label: 'Physical',  color: 'text-orange-400',  keys: ['strength', 'aggression', 'stamina', 'heading', 'jumping'] },
 ];
 
-const GK_STATS: { label: string; color: string; keys: string[] } = {
-  label: 'Goalkeeping', color: 'text-cyan-400',
-  keys: ['div', 'reflexes', 'positioning', 'catching', 'parrying'],
+// Full GK group — all 10 goalkeeping stats
+const GK_STAT_GROUP: { label: string; color: string; keys: string[] } = {
+  label: 'Goalkeeping',
+  color: 'text-cyan-400',
+  keys: ['div', 'reflexes', 'positioning', 'catching', 'parrying', 'rushing', 'command_of_area', 'penalty_saving', 'throwing', 'kicking_power'],
 };
 
 const STAT_LABEL: Record<string, string> = {
-  acceleration: 'Acceleration', sprint_speed: 'Sprint Speed',
-  finishing: 'Finishing', shot_power: 'Shot Power', long_shots: 'Long Shots',
-  penalties: 'Penalties', weak_foot: 'Weak Foot', attacking_iq: 'Attacking IQ',
-  ground_pass: 'Ground Pass', lofted_pass: 'Lofted Pass', through_pass: 'Through Pass',
-  crossing: 'Crossing', curve: 'Curve', free_kick_accuracy: 'FK Accuracy',
+  acceleration: 'Acceleration',   sprint_speed: 'Sprint Speed',
+  finishing: 'Finishing',         shot_power: 'Shot Power',      long_shots: 'Long Shots',
+  penalties: 'Penalties',         weak_foot: 'Weak Foot',        attacking_iq: 'Attacking IQ',
+  ground_pass: 'Ground Pass',     lofted_pass: 'Lofted Pass',    through_pass: 'Through Pass',
+  crossing: 'Crossing',           curve: 'Curve',                free_kick_accuracy: 'FK Accuracy',
   sprint_dribbling: 'Sprint Drib.', close_dribbling: 'Close Drib.', skills: 'Skills',
-  agility: 'Agility', balance: 'Balance', first_touch: 'First Touch',
-  defensive_iq: 'Def. IQ', stand_tackle: 'Stand Tackle', slide_tackle: 'Slide Tackle',
-  jockeying: 'Jockeying', interceptions: 'Interceptions', blocking: 'Blocking',
-  strength: 'Strength', aggression: 'Aggression', stamina: 'Stamina',
-  heading: 'Heading', jumping: 'Jumping',
-  div: 'Diving', reflexes: 'Reflexes', positioning: 'Positioning',
-  catching: 'Catching', parrying: 'Parrying',
+  agility: 'Agility',             balance: 'Balance',            first_touch: 'First Touch',
+  defensive_iq: 'Def. IQ',        stand_tackle: 'Stand Tackle',  slide_tackle: 'Slide Tackle',
+  jockeying: 'Jockeying',         interceptions: 'Interceptions', blocking: 'Blocking',
+  strength: 'Strength',           aggression: 'Aggression',      stamina: 'Stamina',
+  heading: 'Heading',             jumping: 'Jumping',
+  div: 'Diving',                  reflexes: 'Reflexes',          positioning: 'Positioning',
+  catching: 'Catching',           parrying: 'Parrying',
+  rushing: 'Rushing',             command_of_area: 'Command Area', penalty_saving: 'Penalty Save',
+  throwing: 'Throwing',           kicking_power: 'Kicking Power',
 };
 
-// ── Hilfs-Hooks / -Funktionen ────────────────────────────────────────────────
+// ── Hilfs-Funktionen ─────────────────────────────────────────────────────────
 
 type SortKey = 'name' | 'position' | 'overall' | 'rarity' | 'fit' | 'bestPos';
 type SortDir = 'asc' | 'desc';
 
-function fitColor(v: number) { return v >= 85 ? 'text-emerald-400' : v >= 70 ? 'text-amber-400' : 'text-red-400'; }
-function fitBg(v: number)    { return v >= 85 ? 'bg-emerald-500'  : v >= 70 ? 'bg-amber-400'   : 'bg-red-500'; }
-function statColor(v: number){ return v >= 85 ? 'bg-emerald-500'  : v >= 70 ? 'bg-sky-500'     : v >= 55 ? 'bg-amber-400' : 'bg-red-600'; }
+function metaColor(v: number) { return v >= 85 ? 'text-emerald-400' : v >= 70 ? 'text-amber-400' : 'text-red-400'; }
+function metaBg(v: number)    { return v >= 85 ? 'bg-emerald-500'   : v >= 70 ? 'bg-amber-400'   : 'bg-red-500'; }
+function statColor(v: number) { return v >= 85 ? 'bg-emerald-500'   : v >= 70 ? 'bg-sky-500'     : v >= 55 ? 'bg-amber-400' : 'bg-red-600'; }
 
 function getBestPos(player: PlayerWithScores): [Position, number] {
   const entries = Object.entries(player.fit_scores) as [Position, number][];
   return entries.sort(([, a], [, b]) => b - a)[0] ?? [player.position, 0];
+}
+
+// ── Avatar ───────────────────────────────────────────────────────────────────
+
+function PlayerAvatar({
+  player, size = 32,
+}: { player: PlayerWithScores; size?: number }) {
+  const [error, setError] = useState(false);
+  if (error || !player.image_url) {
+    // Fallback: coloured circle with OVR number
+    return (
+      <span
+        className={`rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0 ${RARITY_COLOR[player.rarity] ?? 'bg-slate-600'}`}
+        style={{ width: size, height: size, fontSize: size < 40 ? 11 : 16 }}
+      >
+        {player.overall}
+      </span>
+    );
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={player.image_url}
+      alt={player.name}
+      width={size}
+      height={size}
+      onError={() => setError(true)}
+      className="rounded-full object-cover shrink-0"
+      style={{ width: size, height: size }}
+    />
+  );
 }
 
 // ── Stat-Bar ─────────────────────────────────────────────────────────────────
@@ -79,11 +115,11 @@ function getBestPos(player: PlayerWithScores): [Position, number] {
 function StatBar({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex items-center gap-1.5 min-w-0">
-      <span className="text-[10px] text-slate-400 w-24 shrink-0 truncate">{label}</span>
+      <span className="text-[10px] text-slate-400 w-28 shrink-0 truncate">{label}</span>
       <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden min-w-[40px]">
-        <div className={`h-full rounded-full ${statColor(value)}`} style={{ width: `${value}%` }} />
+        <div className={`h-full rounded-full ${statColor(value)}`} style={{ width: `${Math.min(value, 100)}%` }} />
       </div>
-      <span className="text-[10px] font-mono text-white w-6 text-right shrink-0">{value}</span>
+      <span className="text-[10px] font-mono text-white w-6 text-right shrink-0">{value || '—'}</span>
     </div>
   );
 }
@@ -91,43 +127,68 @@ function StatBar({ label, value }: { label: string; value: number }) {
 // ── Inline Details-Panel ─────────────────────────────────────────────────────
 
 function DetailsPanel({ player }: { player: PlayerWithScores }) {
-  const stats = player.stats as unknown as Record<string, number>;
-  const isGK  = player.position === 'GK';
+  const stats  = player.stats as unknown as Record<string, number>;
+  const isGK   = player.position === 'GK';
 
-  // top-5 contributing stats for this player's primary position
+  // top-5 contributing stats for this player's position
   const top5 = topWeightedStats(player, player.position, 5);
 
-  // fit scores sorted desc, mark best alternative
-  const fitEntries = (Object.entries(player.fit_scores) as [Position, number][])
+  // Meta-scores sorted desc, find best alternative
+  const metaEntries = (Object.entries(player.fit_scores) as [Position, number][])
     .sort(([, a], [, b]) => b - a);
-  const [bestAltPos, bestAltFit] = fitEntries.find(([p]) => p !== player.position) ?? [null, 0];
-  const mainFit = player.fit_scores[player.position] ?? 0;
-  const altIsBetter = bestAltPos && (bestAltFit as number) - mainFit >= 10;
+  const [bestAltPos, bestAltFit] = metaEntries.find(([p]) => p !== player.position) ?? [null, 0];
+  const mainMeta  = player.fit_scores[player.position] ?? 0;
+  const altBetter = bestAltPos && (bestAltFit as number) - mainMeta >= 10;
 
-  const groups = isGK ? [GK_STATS, ...STAT_GROUPS] : STAT_GROUPS;
+  // GK sees only GK stats; field players see only field stat groups
+  const groups = isGK ? [GK_STAT_GROUP] : FIELD_STAT_GROUPS;
 
   return (
     <div className="bg-slate-950 border-t border-slate-800 px-4 pt-3 pb-4 space-y-4">
 
-      {/* ── Top-5 Beitrags-Stats ── */}
-      <div>
-        <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">
-          Top-5 Stats für {player.position}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {top5.map(({ stat, value, contribution }) => (
-            <div key={stat} className="flex items-center gap-1 bg-slate-800/70 rounded px-2 py-1">
-              <span className="text-[10px] text-slate-300">{STAT_LABEL[stat] ?? stat}</span>
-              <span className="text-[10px] font-mono text-emerald-400">{value}</span>
-              <span className="text-[9px] text-slate-600">(+{contribution.toFixed(0)})</span>
-            </div>
-          ))}
+      {/* ── Header: Avatar + Name ── */}
+      <div className="flex items-center gap-3">
+        <PlayerAvatar player={player} size={80} />
+        <div>
+          <p className="text-sm font-bold text-white">{player.name}</p>
+          <p className="text-xs text-slate-400">
+            {displayPosition(player.position)} · OVR {player.overall} · {player.rarity}
+            {player.height_cm && <> · {player.height_cm} cm</>}
+            {player.preferred_foot && <> · {player.preferred_foot === 'left' ? 'Links' : 'Rechts'}</>}
+          </p>
+          {(player.matches_played !== undefined || player.goals !== undefined) && (
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {player.matches_played !== undefined && <>{player.matches_played} Spiele</>}
+              {player.goals !== undefined && <> · {player.goals} Tore</>}
+              {player.assists !== undefined && <> · {player.assists} Vorlagen</>}
+            </p>
+          )}
         </div>
       </div>
 
+      {/* ── Top-5 Beitrags-Stats ── */}
+      {top5.length > 0 && (
+        <div>
+          <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">
+            Top-5 Stats für {displayPosition(player.position)}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {top5.map(({ stat, value, contribution }) => (
+              <div key={stat} className="flex items-center gap-1 bg-slate-800/70 rounded px-2 py-1">
+                <span className="text-[10px] text-slate-300">{STAT_LABEL[stat] ?? stat}</span>
+                <span className="text-[10px] font-mono text-emerald-400">{value}</span>
+                <span className="text-[9px] text-slate-600">(+{contribution.toFixed(0)})</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Alle Einzelstats – gruppiert ── */}
       <div className="overflow-x-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3 min-w-[280px]">
+        <div className={`grid gap-x-6 gap-y-3 min-w-[280px] ${
+          isGK ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+        }`}>
           {groups.map((group) => (
             <div key={group.label}>
               <p className={`text-[10px] uppercase tracking-widest font-semibold mb-1.5 ${group.color}`}>
@@ -136,7 +197,6 @@ function DetailsPanel({ player }: { player: PlayerWithScores }) {
               <div className="space-y-1">
                 {group.keys.map((key) => {
                   const val = stats[key] ?? 0;
-                  if (!isGK && val === 0 && GK_STATS.keys.includes(key)) return null;
                   return <StatBar key={key} label={STAT_LABEL[key] ?? key} value={val} />;
                 })}
               </div>
@@ -145,21 +205,21 @@ function DetailsPanel({ player }: { player: PlayerWithScores }) {
         </div>
       </div>
 
-      {/* ── Fit-Scores alle 15 Positionen ── */}
+      {/* ── Meta-Scores alle 15 Positionen ── */}
       <div>
         <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">
-          Fit-Score alle Positionen
-          {altIsBetter && (
+          Meta-Score alle Positionen
+          {altBetter && (
             <span className="ml-2 text-amber-400 normal-case">
-              → {bestAltPos} wäre +{((bestAltFit as number) - mainFit).toFixed(0)} besser
+              → {displayPosition(bestAltPos as Position)} wäre +{((bestAltFit as number) - mainMeta).toFixed(0)} besser
             </span>
           )}
         </p>
         <div className="flex flex-wrap gap-1.5">
           {ALL_POSITIONS.map((pos) => {
-            const sc = player.fit_scores[pos] ?? 0;
+            const sc        = player.fit_scores[pos] ?? 0;
             const isCurrent = pos === player.position;
-            const isBestAlt = pos === bestAltPos && altIsBetter;
+            const isBestAlt = pos === bestAltPos && altBetter;
             return (
               <span
                 key={pos}
@@ -175,7 +235,7 @@ function DetailsPanel({ player }: { player: PlayerWithScores }) {
                     : 'border-slate-800 bg-slate-900/20 text-slate-600'
                 }`}
               >
-                {pos} {sc}
+                {displayPosition(pos)} {sc}
               </span>
             );
           })}
@@ -198,25 +258,38 @@ function RadarOverlay({
 }) {
   const [search, setSearch] = useState('');
   const filtered = useMemo(
-    () => allPlayers.filter((p) => p.id !== playerA.id && p.name.toLowerCase().includes(search.toLowerCase())).slice(0, 8),
+    () => allPlayers
+      .filter((p) => p.id !== playerA.id && p.name.toLowerCase().includes(search.toLowerCase()))
+      .slice(0, 8),
     [allPlayers, playerA.id, search]
   );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+
+        {/* Header mit Avatar */}
         <div className="flex items-center justify-between p-4 border-b border-slate-800">
-          <div>
-            <p className="font-bold text-white">{playerA.name}</p>
-            <p className="text-xs text-slate-500">{playerA.position} · OVR {playerA.overall} · {playerA.rarity}</p>
+          <div className="flex items-center gap-3">
+            <PlayerAvatar player={playerA} size={40} />
+            <div>
+              <p className="font-bold text-white">{playerA.name}</p>
+              <p className="text-xs text-slate-500">
+                {displayPosition(playerA.position)} · OVR {playerA.overall} · {playerA.rarity}
+              </p>
+            </div>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-white text-lg px-2">✕</button>
         </div>
+
+        {/* Chart */}
         <div className="p-4">
           <StatRadarChart playerA={playerA} playerB={playerB} size={240} />
         </div>
+
+        {/* Meta-Scores */}
         <div className="px-4 pb-3">
-          <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Fit-Scores alle Positionen</p>
+          <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Meta-Score alle Positionen</p>
           <div className="flex flex-wrap gap-2">
             {(Object.entries(playerA.fit_scores) as [Position, number][])
               .sort(([, a], [, b]) => b - a)
@@ -226,11 +299,13 @@ function RadarOverlay({
                   : score >= 70 ? 'border-amber-800 bg-amber-950/30 text-amber-300'
                   : 'border-slate-700 bg-slate-800/50 text-slate-400'
                 }`}>
-                  {pos} {score.toFixed(0)}
+                  {displayPosition(pos)} {score.toFixed(0)}
                 </span>
               ))}
           </div>
         </div>
+
+        {/* Vergleich */}
         <div className="border-t border-slate-800 px-4 py-3">
           <p className="text-xs text-slate-500 mb-2">Vergleich mit:</p>
           <Input
@@ -268,14 +343,14 @@ function RadarOverlay({
 export default function SquadPage() {
   const { players, clubName, _hasHydrated } = useSquadStore();
 
-  const [search,        setSearch]        = useState('');
-  const [filterPos,     setFilterPos]     = useState('all');
-  const [filterRarity,  setFilterRarity]  = useState('all');
-  const [sortKey,       setSortKey]       = useState<SortKey>('overall');
-  const [sortDir,       setSortDir]       = useState<SortDir>('desc');
-  const [expandedId,    setExpandedId]    = useState<string | null>(null);
-  const [selectedPlayer, setSelectedPlayer] = useState<PlayerWithScores | null>(null);
-  const [comparePlayer,  setComparePlayer]  = useState<PlayerWithScores | null>(null);
+  const [search,          setSearch]          = useState('');
+  const [filterPos,       setFilterPos]       = useState('all');
+  const [filterRarity,    setFilterRarity]    = useState('all');
+  const [sortKey,         setSortKey]         = useState<SortKey>('overall');
+  const [sortDir,         setSortDir]         = useState<SortDir>('desc');
+  const [expandedId,      setExpandedId]      = useState<string | null>(null);
+  const [selectedPlayer,  setSelectedPlayer]  = useState<PlayerWithScores | null>(null);
+  const [comparePlayer,   setComparePlayer]   = useState<PlayerWithScores | null>(null);
 
   const positions = useMemo(() => {
     const ps = new Set(players.map((p) => p.position));
@@ -302,26 +377,34 @@ export default function SquadPage() {
       })
       .sort((a, b) => {
         let diff = 0;
-        if (sortKey === 'name')     diff = a.name.localeCompare(b.name);
+        if (sortKey === 'name')          diff = a.name.localeCompare(b.name);
         else if (sortKey === 'position') diff = a.position.localeCompare(b.position);
         else if (sortKey === 'overall')  diff = a.overall - b.overall;
         else if (sortKey === 'rarity')   diff = (RARITY_ORDER[a.rarity] ?? 0) - (RARITY_ORDER[b.rarity] ?? 0);
         else if (sortKey === 'fit')      diff = (a.fit_scores[a.position] ?? 0) - (b.fit_scores[b.position] ?? 0);
-        else if (sortKey === 'bestPos')  { const [,sa] = getBestPos(a); const [,sb] = getBestPos(b); diff = sa - sb; }
+        else if (sortKey === 'bestPos')  {
+          const [, sa] = getBestPos(a);
+          const [, sb] = getBestPos(b);
+          diff = sa - sb;
+        }
         return sortDir === 'asc' ? diff : -diff;
       });
   }, [players, search, filterPos, filterRarity, sortKey, sortDir]);
 
   const summary = useMemo(() => ({
-    avgOvr: players.length ? Math.round(players.reduce((s, p) => s + p.overall, 0) / players.length) : 0,
-    avgFit: players.length ? Math.round(players.reduce((s, p) => s + (p.fit_scores[p.position] ?? 0), 0) / players.length) : 0,
+    avgOvr:  players.length ? Math.round(players.reduce((s, p) => s + p.overall, 0)                          / players.length) : 0,
+    avgMeta: players.length ? Math.round(players.reduce((s, p) => s + (p.fit_scores[p.position] ?? 0), 0) / players.length) : 0,
   }), [players]);
 
   function SortTh({ label, sk }: { label: string; sk: SortKey }) {
     const active = sortKey === sk;
     return (
-      <th onClick={() => toggleSort(sk)}
-        className={`px-3 py-2 text-left text-xs font-medium cursor-pointer select-none whitespace-nowrap ${active ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300'}`}>
+      <th
+        onClick={() => toggleSort(sk)}
+        className={`px-3 py-2 text-left text-xs font-medium cursor-pointer select-none whitespace-nowrap ${
+          active ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300'
+        }`}
+      >
         {label} {active ? (sortDir === 'desc' ? '▼' : '▲') : ''}
       </th>
     );
@@ -346,7 +429,7 @@ export default function SquadPage() {
       <Sidebar />
       <main className="flex-1 overflow-auto">
 
-        {/* Radar-Overlay (Chart-Button) */}
+        {/* Radar-Overlay */}
         {selectedPlayer && (
           <RadarOverlay
             playerA={selectedPlayer}
@@ -363,7 +446,9 @@ export default function SquadPage() {
           <div className="flex items-start justify-between flex-wrap gap-3">
             <div>
               <h2 className="text-xl font-bold text-white">{clubName || 'Kader'}</h2>
-              <p className="text-sm text-slate-500">{players.length} Spieler · Ø OVR {summary.avgOvr} · Ø Fit {summary.avgFit}</p>
+              <p className="text-sm text-slate-500">
+                {players.length} Spieler · Ø OVR {summary.avgOvr} · Ø Meta {summary.avgMeta}
+              </p>
             </div>
             <p className="text-xs text-slate-600">Details → alle Einzelstats · 📊 → Radar-Chart</p>
           </div>
@@ -378,11 +463,17 @@ export default function SquadPage() {
             />
             <select value={filterPos} onChange={(e) => setFilterPos(e.target.value)}
               className="h-8 rounded border border-slate-700 bg-slate-800 text-xs text-white px-2">
-              {positions.map((p) => <option key={p} value={p}>{p === 'all' ? 'Alle Pos.' : p}</option>)}
+              {positions.map((p) => (
+                <option key={p} value={p}>
+                  {p === 'all' ? 'Alle Pos.' : displayPosition(p as Position)}
+                </option>
+              ))}
             </select>
             <select value={filterRarity} onChange={(e) => setFilterRarity(e.target.value)}
               className="h-8 rounded border border-slate-700 bg-slate-800 text-xs text-white px-2">
-              {rarities.map((r) => <option key={r} value={r}>{r === 'all' ? 'Alle Raritäten' : r}</option>)}
+              {rarities.map((r) => (
+                <option key={r} value={r}>{r === 'all' ? 'Alle Raritäten' : r}</option>
+              ))}
             </select>
             <span className="ml-auto self-center text-xs text-slate-600">{sorted.length} Treffer</span>
           </div>
@@ -392,21 +483,21 @@ export default function SquadPage() {
             <table className="w-full text-sm border-collapse">
               <thead className="bg-slate-900 border-b border-slate-800">
                 <tr>
-                  <SortTh label="Name"      sk="name" />
-                  <SortTh label="Pos"       sk="position" />
-                  <SortTh label="OVR"       sk="overall" />
-                  <SortTh label="Rarity"    sk="rarity" />
-                  <SortTh label="Fit (Pos)" sk="fit" />
-                  <SortTh label="Beste Pos" sk="bestPos" />
+                  <SortTh label="Name"            sk="name" />
+                  <SortTh label="Pos"             sk="position" />
+                  <SortTh label="OVR"             sk="overall" />
+                  <SortTh label="Rarity"          sk="rarity" />
+                  <SortTh label="Meta (Pos)"      sk="fit" />
+                  <SortTh label="Beste Position"  sk="bestPos" />
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">Details</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">Chart</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {sorted.map((player) => {
-                  const mainFit = player.fit_scores[player.position] ?? 0;
+                  const mainMeta  = player.fit_scores[player.position] ?? 0;
                   const [bestPos, bestFit] = getBestPos(player);
-                  const isWasted = bestPos !== player.position && bestFit - mainFit >= 10;
+                  const isWasted   = bestPos !== player.position && bestFit - mainMeta >= 10;
                   const isExpanded = expandedId === player.id;
 
                   return (
@@ -415,26 +506,30 @@ export default function SquadPage() {
                         key={player.id}
                         className={`transition-colors ${isExpanded ? 'bg-slate-800/20' : 'hover:bg-slate-800/30'}`}
                       >
-                        {/* Name */}
+                        {/* Name + Avatar */}
                         <td className="px-3 py-2.5">
                           <div className="flex items-center gap-2">
-                            <span className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0 ${RARITY_COLOR[player.rarity] ?? 'bg-slate-600'}`}>
-                              {player.overall}
-                            </span>
+                            <PlayerAvatar player={player} size={32} />
                             <div>
                               <p className="text-white font-medium text-xs">{player.name}</p>
                               {isWasted && (
-                                <p className="text-[10px] text-amber-400">↑ {bestPos} +{(bestFit - mainFit).toFixed(0)}</p>
+                                <p className="text-[10px] text-amber-400">
+                                  ↑ {displayPosition(bestPos)} +{(bestFit - mainMeta).toFixed(0)}
+                                </p>
                               )}
                             </div>
                           </div>
                         </td>
 
-                        {/* Position */}
-                        <td className="px-3 py-2.5 text-xs text-slate-400">{player.position}</td>
+                        {/* Position (deutsch) */}
+                        <td className="px-3 py-2.5 text-xs text-slate-400">
+                          {displayPosition(player.position)}
+                        </td>
 
                         {/* OVR */}
-                        <td className="px-3 py-2.5 text-xs font-mono font-bold text-white">{player.overall}</td>
+                        <td className="px-3 py-2.5 text-xs font-mono font-bold text-white">
+                          {player.overall}
+                        </td>
 
                         {/* Rarity */}
                         <td className="px-3 py-2.5">
@@ -443,19 +538,26 @@ export default function SquadPage() {
                           </span>
                         </td>
 
-                        {/* Fit */}
+                        {/* Meta-Score */}
                         <td className="px-3 py-2.5">
                           <div className="flex items-center gap-1.5">
                             <div className="w-12 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full ${fitBg(mainFit)}`} style={{ width: `${mainFit}%` }} />
+                              <div
+                                className={`h-full rounded-full ${metaBg(mainMeta)}`}
+                                style={{ width: `${mainMeta}%` }}
+                              />
                             </div>
-                            <span className={`text-[11px] font-mono ${fitColor(mainFit)}`}>{mainFit.toFixed(0)}</span>
+                            <span className={`text-[11px] font-mono ${metaColor(mainMeta)}`}>
+                              {mainMeta.toFixed(0)}
+                            </span>
                           </div>
                         </td>
 
-                        {/* Beste Pos */}
+                        {/* Beste Position */}
                         <td className="px-3 py-2.5">
-                          <span className="text-[11px] text-emerald-400 font-mono">{bestPos} {bestFit.toFixed(0)}</span>
+                          <span className="text-[11px] text-emerald-400 font-mono">
+                            {displayPosition(bestPos)} {bestFit.toFixed(0)}
+                          </span>
                         </td>
 
                         {/* Details-Button */}
