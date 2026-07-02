@@ -1,0 +1,404 @@
+{
+  "acceleration": {
+    "display_de": "Acceleration",
+    "display_en": "Acceleration",
+    "category": "Pace",
+    "applies_to": ["Outfield", "Goalkeeper"],
+    "description": "Wie schnell ein Spieler Geschwindigkeit aufbaut – von Stillstand oder Joggen zum Vollsprint.",
+    "mechanic": "Beeinflusst die Anlaufphase. Hoher Wert = schnelles Erreichen der Maximalgeschwindigkeit in wenigen Schritten. Entscheidend für kurze Sprints und Richtungswechsel.",
+    "interactions": ["sprint_speed"],
+    "is_active": true
+  },
+  "sprint_speed": {
+    "display_de": "Sprint Speed",
+    "display_en": "Sprint Speed",
+    "category": "Pace",
+    "applies_to": ["Outfield", "Goalkeeper"],
+    "description": "Die maximale Sprintgeschwindigkeit, die ein Spieler erreichen kann.",
+    "mechanic": "Bestimmt die Endgeschwindigkeit nach der Anlaufphase. Wichtiger als Acceleration auf langen Strecken (>15m). Für CBs extrem wichtig gegen Through-Ball-Meta.",
+    "interactions": ["acceleration"],
+    "is_active": true
+  },
+  "attacking_iq": {
+    "display_de": "Attacking IQ",
+    "display_en": "Attacking IQ",
+    "category": "Shooting",
+    "applies_to": ["Outfield"],
+    "description": "KI-gesteuertes Offensivverhalten wenn der Spieler nicht direkt gesteuert wird.",
+    "mechanic": "Bestimmt Laufwege in die Tiefe, Freilaufbewegungen und Positionsfindung im Angriff. Entscheidend für Mitspieler-Bewegungen bei Konterpressing.",
+    "interactions": ["finishing", "sprint_speed"],
+    "is_active": true
+  },
+  "finishing": {
+    "display_de": "Finishing",
+    "display_en": "Finishing",
+    "category": "Shooting",
+    "applies_to": ["Outfield"],
+    "description": "Schussgenauigkeit aus kurzer Distanz (Strafraum).",
+    "mechanic": "Beeinflusst die Präzision von Abschlüssen innerhalb des Strafraums. Auf mittlerer Distanz: Mix aus Finishing + Long Shots. Auf langer Distanz: Hauptsächlich Long Shots.",
+    "interactions": ["long_shots", "shot_power", "weak_foot"],
+    "is_active": true
+  },
+  "shot_power": {
+    "display_de": "Shot Power",
+    "display_en": "Shot Power",
+    "category": "Shooting",
+    "applies_to": ["Outfield"],
+    "description": "Maximale Schusskraft pro Schusstyp.",
+    "mechanic": "Bestimmt wie hart ein Schuss ist – beeinflusst die Reaktionszeit des Torwarts. Niedriger Wert = einfachere Haltechance für GK.",
+    "interactions": ["finishing", "long_shots"],
+    "is_active": true
+  },
+  "long_shots": {
+    "display_de": "Long Shots",
+    "display_en": "Long Shots",
+    "category": "Shooting",
+    "applies_to": ["Outfield"],
+    "description": "Schussgenauigkeit aus großer Distanz (außerhalb des Strafraums).",
+    "mechanic": "Auf großer Distanz der primäre Faktor. Auf mittlerer Distanz kombiniert mit Finishing. Für CAMs und CMs im Pressing-Spiel relevant.",
+    "interactions": ["finishing", "shot_power"],
+    "is_active": true
+  },
+  "penalties": {
+    "display_de": "Penalties",
+    "display_en": "Penalties",
+    "category": "Shooting",
+    "applies_to": ["Outfield"],
+    "description": "Beeinflusst die Pulsrate des Timing-Kreises und die maximale Streuung beim Elfmeter.",
+    "mechanic": "Hoher Wert = ruhigerer Puls-Kreis, kleinere maximale Streuzone. Niedriger Wert = schnell wachsender Kreis, erhöhtes Risiko.",
+    "interactions": [],
+    "is_active": true
+  },
+  "weak_foot": {
+    "display_de": "Weak Foot",
+    "display_en": "Weak Foot",
+    "category": "Shooting",
+    "applies_to": ["Outfield"],
+    "description": "Multiplikator auf Schuss- und Pass-Stats beim Einsatz des schwachen Fußes.",
+    "mechanic": "Beispiel: 87 Finishing × 0.77 Weak Foot = 67 effektives Finishing. Betrifft auch Lofted Pass, Crossing und Driven Pass. Bei Wert > 85 kaum noch Unterschied zum starken Fuß.",
+    "interactions": ["finishing", "lofted_pass", "crossing"],
+    "is_active": true
+  },
+  "ground_pass": {
+    "display_de": "Ground Pass",
+    "display_en": "Ground Pass",
+    "category": "Passing",
+    "applies_to": ["Outfield", "Goalkeeper"],
+    "description": "Maximale Passgeschwindigkeit bei Bodenpässen unter Druck.",
+    "mechanic": "NUR relevant wenn der Spieler unter Gegnerdruck steht. Ohne Druck haben alle Spieler die gleiche Passgeschwindigkeit. Wichtig für CMs und CDMs im Pressing.",
+    "interactions": ["through_pass"],
+    "is_active": true
+  },
+  "lofted_pass": {
+    "display_de": "Lofted Pass",
+    "display_en": "Lofted Pass",
+    "category": "Passing",
+    "applies_to": ["Outfield", "Goalkeeper"],
+    "description": "Genauigkeit und Flugbahn von Lofted Passes (gehobene Pässe).",
+    "mechanic": "Hoher Wert = flachere, schnellere Flugbahn → schwerer abzufangen. Niedriger Wert = steilere, langsamere Bahn mit mehr Fehlertoleranz für den Gegner.",
+    "interactions": ["weak_foot"],
+    "is_active": true
+  },
+  "through_pass": {
+    "display_de": "Through Pass",
+    "display_en": "Through Pass",
+    "category": "Passing",
+    "applies_to": ["Outfield"],
+    "description": "Fehlertoleranz beim Über- oder Unterschlagen von Steilpässen.",
+    "mechanic": "Hoher Wert = größere Fehlertoleranz beim Zielen → Steilpässe landen trotz kleiner Ungenauigkeiten präzise. Kern-Stat im aktuellen Through-Ball-Meta.",
+    "interactions": ["attacking_iq"],
+    "is_active": true
+  },
+  "crossing": {
+    "display_de": "Crossing",
+    "display_en": "Crossing",
+    "category": "Passing",
+    "applies_to": ["Outfield"],
+    "description": "Genauigkeit und Geschwindigkeit bei Flanken.",
+    "mechanic": "Beeinflusst wo die Flanke landet und wie scharf sie kommt. Kombiniert mit weak_foot für Flanken vom schwachen Fuß. Optimal für traditionelle Flügelspieler.",
+    "interactions": ["weak_foot", "lofted_pass"],
+    "is_active": true
+  },
+  "curve": {
+    "display_de": "Curve",
+    "display_en": "Curve",
+    "category": "Passing",
+    "applies_to": ["Outfield"],
+    "description": "Beeinflusst Finesse Shots, Low Finesse Shots und Flanken.",
+    "mechanic": "Bestimmt die Kurvenstärke. Bei Finesse Shots entscheidend für den Bogen ins Eck. Bei Flanken: mehr Effet = schärfere Hereingabe. Für Inverted Winger sehr wichtig.",
+    "interactions": ["finishing", "crossing"],
+    "is_active": true
+  },
+  "free_kick_accuracy": {
+    "display_de": "Free Kick Accuracy",
+    "display_en": "Free Kick Accuracy",
+    "category": "Passing",
+    "applies_to": ["Outfield"],
+    "description": "Genauigkeit bei Freistößen.",
+    "mechanic": "Bestimmt die Präzision der Schussbahn beim Freistoß. Kombiniert mit curve und shot_power.",
+    "interactions": ["curve", "shot_power"],
+    "is_active": true
+  },
+  "first_touch": {
+    "display_de": "First Touch",
+    "display_en": "First Touch",
+    "category": "Passing",
+    "applies_to": ["Outfield"],
+    "description": "Qualität der Ballannahme und -kontrolle beim ersten Kontakt.",
+    "mechanic": "Niedriger Wert = Ball springt weg beim Annehmen, besonders unter Druck. Hoher Wert = saubere Kontrolle in jeder Situation.",
+    "interactions": ["close_dribbling", "agility"],
+    "is_active": true
+  },
+  "sprint_dribbling": {
+    "display_de": "Sprint Dribbling",
+    "display_en": "Sprint Dribbling",
+    "category": "Dribbling",
+    "applies_to": ["Outfield"],
+    "description": "Geschwindigkeits-Penalty beim Sprint mit Ball und Berührungskontrolle bei Gegnernähe.",
+    "mechanic": "Niedriger Wert = starker Speedverlust beim Dribbling im Sprint. Hoher Wert = kaum Unterschied zwischen Laufen mit/ohne Ball. Wichtig für Flügelspieler und Konterspieler.",
+    "interactions": ["sprint_speed", "acceleration"],
+    "is_active": true
+  },
+  "close_dribbling": {
+    "display_de": "Close Dribbling",
+    "display_en": "Close Dribbling",
+    "category": "Dribbling",
+    "applies_to": ["Outfield"],
+    "description": "Geschwindigkeits-Penalty beim Joggen mit Ball und Cooldown zwischen Ball-Touches.",
+    "mechanic": "Bestimmt wie schnell aufeinanderfolgende Touches möglich sind. Niedriger Wert = längere Pausen zwischen Touches. Wichtig für 1v1-Situationen im engen Raum.",
+    "interactions": ["agility", "balance"],
+    "is_active": true
+  },
+  "skills": {
+    "display_de": "Skills",
+    "display_en": "Skills",
+    "category": "Dribbling",
+    "applies_to": ["Outfield"],
+    "description": "Skill-Move-Ausführungsqualität, Cooldowns, Exit Touches und Boosts nach Skill Moves.",
+    "mechanic": "Hoher Wert = schnellere Ausführung von Skill Moves, kürzere Cooldowns und stärkerer Speedboost nach erfolgreicher Ausführung. Essentiell für Spieler mit Star-Skill-Moves.",
+    "interactions": ["agility", "close_dribbling"],
+    "is_active": true
+  },
+  "agility": {
+    "display_de": "Agility",
+    "display_en": "Agility",
+    "category": "Dribbling",
+    "applies_to": ["Outfield"],
+    "description": "Drehgeschwindigkeit und Fähigkeit zum Abbremsen und Richtungswechsel.",
+    "mechanic": "Niedriger Wert = träge Drehbewegungen und langsames Einbremsen. Für kleine, wendige Spieler entscheidend. Kombiniert mit balance gegen physischen Druck.",
+    "interactions": ["balance", "close_dribbling"],
+    "is_active": true
+  },
+  "balance": {
+    "display_de": "Balance",
+    "display_en": "Balance",
+    "category": "Dribbling",
+    "applies_to": ["Outfield"],
+    "description": "Widerstand gegen physischen Druck und Körperkontakt beim Dribbling.",
+    "mechanic": "Hoher Wert = Spieler bleibt beim Schulter-Check auf den Beinen. Niedriger Wert = geht leicht zu Boden. Synergiert mit strength für dominante Ballkontrolle.",
+    "interactions": ["strength", "agility"],
+    "is_active": true
+  },
+  "defensive_iq": {
+    "display_de": "Defensive IQ",
+    "display_en": "Defensive IQ",
+    "category": "Defending",
+    "applies_to": ["Outfield"],
+    "description": "KI-Positionierung, Markierung und Laufweg-Tracking wenn der Spieler nicht gesteuert wird.",
+    "mechanic": "Bestimmt wie gut der Spieler sich automatisch in Defensivpositionen bewegt. Bei ausgelasteten Spielern (2v2+) entscheidend. Der wichtigste Defensiv-Stat für CDMs und CBs.",
+    "interactions": ["interceptions", "stand_tackle"],
+    "is_active": true
+  },
+  "stand_tackle": {
+    "display_de": "Stand Tackle",
+    "display_en": "Stand Tackle",
+    "category": "Defending",
+    "applies_to": ["Outfield"],
+    "description": "Tackling-Reichweite und Assist-Winkel beim stehenden Tackle.",
+    "mechanic": "Hoher Wert = größerer Radius für erfolgreiche Tackles und breiterer Winkel. Bestimmt ob ein Zweikampf gewonnen wird. Primärer Defensiv-Skill-Stat.",
+    "interactions": ["defensive_iq", "agility"],
+    "is_active": true
+  },
+  "slide_tackle": {
+    "display_de": "Slide Tackle",
+    "display_en": "Slide Tackle",
+    "category": "Defending",
+    "applies_to": ["Outfield"],
+    "description": "Grätsch-Reichweite und Grätsch-Assist-Winkel.",
+    "mechanic": "Wie stand_tackle aber für Grätschen. Größere Reichweite aber höheres Risiko einer Fehlentscheidung. Für CBs und CDMs relevant bei Kontersituationen.",
+    "interactions": ["defensive_iq", "sprint_speed"],
+    "is_active": true
+  },
+  "jockeying": {
+    "display_de": "Jockeying",
+    "display_en": "Jockeying",
+    "category": "Defending",
+    "applies_to": ["Outfield"],
+    "description": "Jockey-Bewegungsgeschwindigkeit beim seitlichen Verteidigen.",
+    "mechanic": "Bestimmt wie schnell der Spieler im Jockey-Modus seitlich läuft. Niedriger Wert = Angreifer kann den Verteidiger einfach aussteppen. Wichtig für LBs/RBs.",
+    "interactions": ["agility", "defensive_iq"],
+    "is_active": true
+  },
+  "interceptions": {
+    "display_de": "Interceptions",
+    "display_en": "Interceptions",
+    "category": "Defending",
+    "applies_to": ["Outfield"],
+    "description": "Reaktionszeit und Stretch-Abfang-Reichweite bei Pässen.",
+    "mechanic": "Hoher Wert = Spieler reagiert schneller auf passierbare Bälle und kann weiter nach vorne strecken um Pässe abzufangen. Für CDMs und CMs essenziell.",
+    "interactions": ["defensive_iq", "sprint_speed"],
+    "is_active": true
+  },
+  "blocking": {
+    "display_de": "Blocking",
+    "display_en": "Blocking",
+    "category": "Defending",
+    "applies_to": ["Outfield"],
+    "description": "Blocking-Radius und Reaktionsfenster für Schussblocks.",
+    "mechanic": "Bestimmt wie groß der effektive Block-Radius ist und wie lange das Reaktionsfenster. Hoher Wert = mehr Schüsse werden geblockt. Für CBs und CDMs im Pressing relevant.",
+    "interactions": ["defensive_iq"],
+    "is_active": true
+  },
+  "strength": {
+    "display_de": "Strength",
+    "display_en": "Strength",
+    "category": "Physical",
+    "applies_to": ["Outfield", "Goalkeeper"],
+    "description": "Effektivität in körperlichen Duellen und Zweikämpfen.",
+    "mechanic": "Höherer Wert gewinnt Schulter-Checks. Kombiniert mit jumping für Luftballduelle. Entscheidend für große, physische Stürmer und defensive Mittelfeldspieler.",
+    "interactions": ["balance", "heading", "jumping"],
+    "is_active": true
+  },
+  "aggression": {
+    "display_de": "Aggression",
+    "display_en": "Aggression",
+    "category": "Physical",
+    "applies_to": ["Outfield"],
+    "description": "Second-Man-Press Reaktionsgeschwindigkeit und Pressure-Distanz.",
+    "mechanic": "Varianz: 0.5 bis 2.0 Sekunden Reaktionszeit. Hoher Wert = Spieler setzt nach Ballverlust sofort nach. Bestimmt auch die maximale Pressing-Distanz vom Ball.",
+    "interactions": ["defensive_iq", "stamina"],
+    "is_active": true
+  },
+  "stamina": {
+    "display_de": "Stamina",
+    "display_en": "Stamina",
+    "category": "Physical",
+    "applies_to": ["Outfield"],
+    "description": "Energieverbrauch-Rate über die Spieldauer.",
+    "mechanic": "Niedriger Wert = Spieler verliert ab ca. 60. Minute deutlich an Intensität und Geschwindigkeit. Für Pressing-intensive Formationen und CMs kritisch.",
+    "interactions": ["aggression"],
+    "is_active": true
+  },
+  "heading": {
+    "display_de": "Heading",
+    "display_en": "Heading",
+    "category": "Physical",
+    "applies_to": ["Outfield"],
+    "description": "Kopfball-Power und -Genauigkeit.",
+    "mechanic": "Bestimmt Stärke und Präzision von Kopfbällen. Kombiniert mit jumping und height_cm für Aerial Reach. Für Kopfball-Stürmer und defensive Kopfball-CBs sehr wichtig.",
+    "interactions": ["jumping", "strength"],
+    "is_active": true
+  },
+  "jumping": {
+    "display_de": "Jumping",
+    "display_en": "Jumping",
+    "category": "Physical",
+    "applies_to": ["Outfield", "Goalkeeper"],
+    "description": "Maximale Sprunghöhe.",
+    "mechanic": "WICHTIG: Aerial Reach = Spieler-Größe (cm) + Jumping-Stat. Ein 190cm-Spieler mit 75 Jumping gewinnt gegen einen 175cm-Spieler mit 85 Jumping. Größe schlägt Jumping-Stat.",
+    "interactions": ["heading", "strength"],
+    "is_active": true
+  },
+  "diving": {
+    "display_de": "Diving",
+    "display_en": "Diving",
+    "category": "Goalkeeping",
+    "applies_to": ["Goalkeeper"],
+    "description": "Maximale Reichweite beim Hechten.",
+    "mechanic": "Wird durch Keeper-Größe beeinflusst – größerer Keeper hat mit gleichem Diving-Wert mehr effektive Reichweite. Total Reach = height_cm + diving + jumping.",
+    "interactions": ["jumping"],
+    "is_active": true
+  },
+  "catching": {
+    "display_de": "Catching",
+    "display_en": "Catching",
+    "category": "Goalkeeping",
+    "applies_to": ["Goalkeeper"],
+    "description": "Geschwindigkeit beim Fangen eingehender Bälle.",
+    "mechanic": "Variiert nach Reaktionszeit und ob ein Dive nötig ist. Hoher Wert = sichereres Halten statt Abpraller. Kombiniert mit parrying für Schuss-Handling.",
+    "interactions": ["parrying", "reflexes"],
+    "is_active": true
+  },
+  "parrying": {
+    "display_de": "Parrying",
+    "display_en": "Parrying",
+    "category": "Goalkeeping",
+    "applies_to": ["Goalkeeper"],
+    "description": "Wahrscheinlichkeit einer kontrollierten Abwehr statt unkontrolliertem Block.",
+    "mechanic": "Hoher Wert = Ball wird kontrolliert abgelenkt (weniger gefährliche Abpraller). Niedriger Wert = unkontrollierte Abpraller die vor dem Tor landen können.",
+    "interactions": ["catching", "reflexes"],
+    "is_active": true
+  },
+  "reflexes": {
+    "display_de": "Reflexes",
+    "display_en": "Reflexes",
+    "category": "Goalkeeping",
+    "applies_to": ["Goalkeeper"],
+    "description": "Reaktionsgeschwindigkeit auf eingehende Schüsse.",
+    "mechanic": "Der wichtigste GK-Stat. Bestimmt die Zeitspanne zwischen Schussabgabe und GK-Reaktion. Niedrige Reflexes = auch schwache Schüsse können durchgehen.",
+    "interactions": ["diving", "positioning"],
+    "is_active": true
+  },
+  "positioning": {
+    "display_de": "Positioning",
+    "display_en": "Positioning",
+    "category": "Goalkeeping",
+    "applies_to": ["Goalkeeper"],
+    "description": "Repositionierungs-Frequenz, Winkelabdeckung und Vorhersage der Ballbahn.",
+    "mechanic": "Hoher Wert = GK deckt automatisch den optimalen Winkel ab und antizipiert Schüsse besser. Beeinflusst auch wie weit er aus dem Tor kommt um Winkel zu verkürzen.",
+    "interactions": ["reflexes", "rushing"],
+    "is_active": true
+  },
+  "command_of_area": {
+    "display_de": "Command of Area",
+    "display_en": "Command of Area",
+    "category": "Goalkeeping",
+    "applies_to": ["Goalkeeper"],
+    "description": "Maximale Lock-On-Reichweite für Luftbälle in der Strafraum-Zone.",
+    "mechanic": "Bestimmt aus welcher Entfernung der GK automatisch auf Flanken und Ecken reagiert. Hoher Wert = aggressiveres Herauslaufen bei Luftbällen.",
+    "interactions": ["jumping", "catching"],
+    "is_active": false,
+    "note": "Laut offizieller Seite playgoals.com möglicherweise noch nicht aktiviert."
+  },
+  "rushing": {
+    "display_de": "Rushing",
+    "display_en": "Rushing",
+    "category": "Goalkeeping",
+    "applies_to": ["Goalkeeper"],
+    "description": "Timing-Schwelle für automatisches Herauslaufen bei Durchbrüchen.",
+    "mechanic": "Hoher Wert = GK kommt früher heraus. Riskant bei schlechtem sprint_speed. Kombiniert mit sprint_speed für Sweeper-Keeper-Rolle.",
+    "interactions": ["sprint_speed", "positioning"],
+    "is_active": false,
+    "note": "Laut offizieller Seite playgoals.com möglicherweise noch nicht aktiviert."
+  },
+  "penalty_saving": {
+    "display_de": "Penalty Saving",
+    "display_en": "Penalty Saving",
+    "category": "Goalkeeping",
+    "applies_to": ["Goalkeeper"],
+    "description": "Größe der Torwart-Zone bei Elfmetern und Fangwahrscheinlichkeit nach Richtungswahl.",
+    "mechanic": "Hoher Wert = GK-Zone bei der Richtungswahl-Animation ist größer. Mehr Spielraum für richtige Richtungsentscheidung.",
+    "interactions": [],
+    "is_active": true
+  },
+  "kicking_power": {
+    "display_de": "Kicking Power",
+    "display_en": "Kicking Power",
+    "category": "Goalkeeping",
+    "applies_to": ["Goalkeeper"],
+    "description": "Geschwindigkeit und Genauigkeit von Drop Kicks und Abstoßen.",
+    "mechanic": "Hoher Wert = längere, präzisere Drop Kicks für schnelle Konter. Wichtig für Keeper die als aktiver Spielaufbau-Beginn dienen.",
+    "interactions": ["ground_pass", "lofted_pass"],
+    "is_active": true
+  }
+}

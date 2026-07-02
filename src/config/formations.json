@@ -1,0 +1,112 @@
+{
+  "4-3-3": {
+    "name": "4-3-3",
+    "winrate_current_patch": 52.4,
+    "usage_rate": 18.7,
+    "skill_cohort": "Mittel/Top",
+    "playstyle": "Offensiv",
+    "strengths": ["Breite Flügelangriffe", "Gute Pressing-Struktur", "Klare Rollen im Angriff"],
+    "weaknesses": ["CMs müssen viel Raum abdecken", "Anfällig bei schwachen Außenverteidigern"],
+    "slots": [
+      { "position": "GK", "x": 50, "y": 90 },
+      { "position": "LB", "x": 15, "y": 72 },
+      { "position": "CB", "x": 38, "y": 78 },
+      { "position": "CB", "x": 62, "y": 78 },
+      { "position": "RB", "x": 85, "y": 72 },
+      { "position": "CM", "x": 30, "y": 48 },
+      { "position": "CM", "x": 50, "y": 52 },
+      { "position": "CM", "x": 70, "y": 48 },
+      { "position": "LW", "x": 18, "y": 22 },
+      { "position": "ST", "x": 50, "y": 22 },
+      { "position": "RW", "x": 82, "y": 22 }
+    ]
+  },
+  "4-4-2": {
+    "name": "4-4-2",
+    "winrate_current_patch": 50.8,
+    "usage_rate": 12.5,
+    "skill_cohort": "Anfänger/Mittel",
+    "playstyle": "Ausgewogen",
+    "strengths": ["Stabile Grundordnung", "Zwei klare Stürmer", "Einfach zu rotieren"],
+    "weaknesses": ["Weniger zentrale Überzahl", "Flügel brauchen Ausdauer"],
+    "slots": [
+      { "position": "GK", "x": 50, "y": 90 },
+      { "position": "LB", "x": 15, "y": 72 },
+      { "position": "CB", "x": 38, "y": 78 },
+      { "position": "CB", "x": 62, "y": 78 },
+      { "position": "RB", "x": 85, "y": 72 },
+      { "position": "LM", "x": 18, "y": 52 },
+      { "position": "CM", "x": 38, "y": 48 },
+      { "position": "CM", "x": 62, "y": 48 },
+      { "position": "RM", "x": 82, "y": 52 },
+      { "position": "ST", "x": 38, "y": 20 },
+      { "position": "ST", "x": 62, "y": 20 }
+    ]
+  },
+  "4-2-3-1": {
+    "name": "4-2-3-1",
+    "winrate_current_patch": 51.6,
+    "usage_rate": 14.2,
+    "skill_cohort": "Mittel",
+    "playstyle": "Ausgewogen",
+    "strengths": ["Doppelsechs schützt langsame CBs", "CAM als Kreativzentrum", "Gute Balance gegen Konter"],
+    "weaknesses": ["Alleiniger ST braucht hohe Qualität", "LAM/RAM müssen defensiv mitarbeiten"],
+    "slots": [
+      { "position": "GK", "x": 50, "y": 90 },
+      { "position": "LB", "x": 15, "y": 72 },
+      { "position": "CB", "x": 38, "y": 78 },
+      { "position": "CB", "x": 62, "y": 78 },
+      { "position": "RB", "x": 85, "y": 72 },
+      { "position": "CDM", "x": 38, "y": 56 },
+      { "position": "CDM", "x": 62, "y": 56 },
+      { "position": "LM", "x": 20, "y": 36 },
+      { "position": "CAM", "x": 50, "y": 34 },
+      { "position": "RM", "x": 80, "y": 36 },
+      { "position": "ST", "x": 50, "y": 18 }
+    ]
+  },
+  "3-5-2": {
+    "name": "3-5-2",
+    "winrate_current_patch": 49.9,
+    "usage_rate": 8.1,
+    "skill_cohort": "Top",
+    "playstyle": "Defensiv",
+    "strengths": ["Zentrale Überzahl", "Zwei Stürmer für Pressing", "Wingbacks können breit schieben"],
+    "weaknesses": ["Wingbacks sind kritisch", "Außen offen bei Ballverlust", "Schwierig für Anfänger"],
+    "slots": [
+      { "position": "GK", "x": 50, "y": 90 },
+      { "position": "CB", "x": 28, "y": 76 },
+      { "position": "CB", "x": 50, "y": 80 },
+      { "position": "CB", "x": 72, "y": 76 },
+      { "position": "LWB", "x": 12, "y": 50 },
+      { "position": "CDM", "x": 38, "y": 55 },
+      { "position": "CM", "x": 50, "y": 45 },
+      { "position": "CDM", "x": 62, "y": 55 },
+      { "position": "RWB", "x": 88, "y": 50 },
+      { "position": "ST", "x": 38, "y": 20 },
+      { "position": "ST", "x": 62, "y": 20 }
+    ]
+  },
+  "4-1-2-1-2": {
+    "name": "4-1-2-1-2",
+    "winrate_current_patch": 51.1,
+    "usage_rate": 9.4,
+    "skill_cohort": "Mittel/Top",
+    "playstyle": "Konter",
+    "strengths": ["Stark durchs Zentrum", "CAM + zwei ST für schnelle Kombinationen", "CDM sichert ab"],
+    "weaknesses": ["Kaum natürliche Breite", "Außenverteidiger müssen Qualität haben"],
+    "slots": [
+      { "position": "GK", "x": 50, "y": 90 },
+      { "position": "LB", "x": 15, "y": 72 },
+      { "position": "CB", "x": 38, "y": 78 },
+      { "position": "CB", "x": 62, "y": 78 },
+      { "position": "RB", "x": 85, "y": 72 },
+      { "position": "CDM", "x": 50, "y": 58 },
+      { "position": "CM", "x": 34, "y": 44 },
+      { "position": "CM", "x": 66, "y": 44 },
+      { "position": "CAM", "x": 50, "y": 32 },
+      { "position": "ST", "x": 38, "y": 18 },
+      { "position": "ST", "x": 62, "y": 18 }
+    ]
+  }
+}
