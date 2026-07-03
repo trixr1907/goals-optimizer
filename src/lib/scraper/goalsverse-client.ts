@@ -4,6 +4,14 @@ const GOALSVERSE_BASE = 'https://goalsverse.com';
 const CDN_BASE = 'https://cdn.playgoals.com/character/prod';
 const USER_AGENT = 'Mozilla/5.0 (compatible; GOALS Squad Optimizer/1.0)';
 
+function characterImageUrl(characterId?: string): string | undefined {
+  if (!characterId) return undefined;
+  const rawId = characterId.startsWith('goalsverse-')
+    ? characterId.slice('goalsverse-'.length)
+    : characterId;
+  return `${CDN_BASE}/${rawId}.png`;
+}
+
 // GOALS role IDs → Positionen
 const ROLE_MAP: Record<number, Position> = {
   0: 'GK',
@@ -237,7 +245,7 @@ function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
     overall,
     rarity: TIER_TO_RARITY[tier] ?? 'Basic',
     stats: emptyStats,
-    image_url: `${CDN_BASE}/${rawId}.png`,
+    image_url: characterImageUrl(rawId),
     matches_played: ap.matchesPlayed,
     goals: ap.goals,
     assists: ap.assists,
@@ -371,7 +379,7 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
       ? (raw.potential as Record<string, unknown>).training_value as number | undefined
       : undefined,
     xp_current: typeof raw.current_xp === 'number' ? raw.current_xp : undefined,
-    image_url: rawId ? `${CDN_BASE}/${rawId}.png` : undefined,
+    image_url: characterImageUrl(rawId),
   };
 }
 

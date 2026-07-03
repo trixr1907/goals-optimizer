@@ -8,28 +8,10 @@ export type Position = (typeof ALL_POSITIONS)[number];
 
 export type Rarity = 'Basic' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary' | 'Mythic' | 'Iconic';
 
-// ── German display names for positions ───────────────────────────────────────
-const DISPLAY_POSITION_MAP: Record<Position, string> = {
-  GK:  'TW',
-  CB:  'IV',
-  LB:  'LV',
-  RB:  'RV',
-  LWB: 'LM',
-  RWB: 'RM',
-  CDM: 'ZDM',
-  CM:  'ZM',
-  CAM: 'ZOM',
-  LM:  'LM',
-  RM:  'RM',
-  LW:  'LS',
-  RW:  'RS',
-  CF:  'HS',
-  ST:  'ST',
-};
-
-/** Returns the German short label for display in UI. Internal scoring always uses Position. */
+// UI displays the original GOALS position abbreviations.
+// Internal scoring uses the same Position values, so this is intentionally identity.
 export function displayPosition(pos: Position): string {
-  return DISPLAY_POSITION_MAP[pos] ?? pos;
+  return pos;
 }
 
 export interface PlayerStats {

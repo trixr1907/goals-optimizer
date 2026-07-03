@@ -81,11 +81,24 @@ function getBestPos(player: PlayerWithScores): [Position, number] {
 
 // ── Avatar ───────────────────────────────────────────────────────────────────
 
+function imageUrlForPlayer(player: PlayerWithScores): string | undefined {
+  if (player.image_url) return player.image_url;
+
+  // Backfill for persisted squads imported before image_url existed.
+  const rawId = player.id.startsWith('goalsverse-')
+    ? player.id.slice('goalsverse-'.length)
+    : player.id;
+
+  return rawId ? `https://cdn.playgoals.com/character/prod/${rawId}.png` : undefined;
+}
+
 function PlayerAvatar({
   player, size = 32,
 }: { player: PlayerWithScores; size?: number }) {
   const [error, setError] = useState(false);
-  if (error || !player.image_url) {
+  const imageUrl = imageUrlForPlayer(player);
+
+  if (error || !imageUrl) {
     // Fallback: coloured circle with OVR number
     return (
       <span
@@ -99,12 +112,12 @@ function PlayerAvatar({
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={player.image_url}
+      src={imageUrl}
       alt={player.name}
       width={size}
       height={size}
       onError={() => setError(true)}
-      className="rounded-full object-cover shrink-0"
+      className="w-8 h-8 rounded-full object-cover shrink-0"
       style={{ width: size, height: size }}
     />
   );
@@ -521,7 +534,7 @@ export default function SquadPage() {
                           </div>
                         </td>
 
-                        {/* Position (deutsch) */}
+                        {/* Position */}
                         <td className="px-3 py-2.5 text-xs text-slate-400">
                           {displayPosition(player.position)}
                         </td>
