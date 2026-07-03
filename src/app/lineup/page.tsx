@@ -150,7 +150,7 @@ function PitchSlot({
 
 export default function LineupPage() {
   const { players, clubName, _hasHydrated } = useSquadStore();
-  const { formation, slots, lineup, locked, setFormation, assignPlayer, toggleLock, autoFill, clearLineup } = useLineupStore();
+  const { formation, slots, lineup, locked, setFormation, setFormationWithLineup, assignPlayer, toggleLock, autoFill, clearLineup } = useLineupStore();
 
   const [selectedSlotKey, setSelectedSlotKey] = useState<string | null>(null);
   const [activePlayerId, setActivePlayerId] = useState<string | null>(null);
@@ -183,22 +183,20 @@ export default function LineupPage() {
   const handleFormationChange = useCallback((name: string) => {
     const f = FORMATIONS[name];
     if (!f) return;
-    const newLineup: Record<string, string | null> = {};
-    const used = new Set<string>();
     const fSlots = f.slots as LineupSlot[];
+    const assignments: Record<string, string | null> = {};
+    const used = new Set<string>();
     fSlots.forEach((s, i) => {
       const key = slotKeyFor(s.position, i);
       const best = players
         .filter((p) => !used.has(p.id))
         .sort((a, b) => (b.fit_scores[s.position] ?? 0) - (a.fit_scores[s.position] ?? 0))[0];
-      if (best) {
-        newLineup[key] = best.id;
-        used.add(best.id);
-      } else newLineup[key] = null;
+      assignments[key] = best ? best.id : null;
+      if (best) used.add(best.id);
     });
-    setFormation(name, fSlots);
-    setTimeout(() => autoFill(newLineup), 0);
-  }, [players, setFormation, autoFill]);
+    // Atomic: formation + slots + initial lineup in one store update — no setTimeout needed
+    setFormationWithLineup(name, fSlots, assignments);
+  }, [players, setFormationWithLineup]);
 
   const handleAutoFill = useCallback(() => {
     const assignments: Record<string, string> = {};
@@ -227,9 +225,9 @@ export default function LineupPage() {
   const handleApplyRecommendation = useCallback((index: number) => {
     const rec = formationRecommendations[index];
     if (!rec) return;
-    setFormation(rec.formation.name, rec.formation.slots as LineupSlot[]);
-    setTimeout(() => autoFill(recommendationToLineup(rec)), 0);
-  }, [formationRecommendations, setFormation, autoFill]);
+    // Atomic: formation + slots + assignments in one store update — no setTimeout needed
+    setFormationWithLineup(rec.formation.name, rec.formation.slots as LineupSlot[], recommendationToLineup(rec));
+  }, [formationRecommendations, setFormationWithLineup]);
 
   const handlePlayerAssign = useCallback((playerId: string) => {
     if (selectedSlotKey) {
