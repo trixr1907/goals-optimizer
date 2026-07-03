@@ -19,6 +19,7 @@ import { useLineupStore, LineupSlot } from '@/lib/store/lineup-store';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { appPath } from '@/lib/app-url';
 import { TacticsPanel } from '@/components/lineup/TacticsPanel';
+import { ShareCard } from '@/components/lineup/ShareCard';
 import { Position, PlayerWithScores } from '@/lib/scraper/types';
 import formationsData from '@/config/formations.json';
 import { recommendationToLineup, recommendFormations, FormationAssignment } from '@/lib/optimizer/formation-optimizer';
@@ -243,6 +244,7 @@ export default function LineupPage() {
   const [selectedSlotKey, setSelectedSlotKey] = useState<string | null>(null);
   const [activePlayerId, setActivePlayerId] = useState<string | null>(null);
   const [activeVariant, setActiveVariant] = useState<OptimizationMode>('balanced');
+  const [showShareCard, setShowShareCard] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -397,6 +399,14 @@ export default function LineupPage() {
                 </button>
                 <button onClick={clearLineup} className="px-4 py-2 rounded-lg border border-slate-700 text-slate-400 text-sm font-medium hover:bg-slate-800 transition-colors">
                   Leeren
+                </button>
+                <button
+                  onClick={() => setShowShareCard(true)}
+                  disabled={Object.values(lineup).filter(Boolean).length === 0}
+                  className="px-4 py-2 rounded-lg border border-slate-600 text-slate-300 text-sm font-medium hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title="Aufstellung als Bild exportieren"
+                >
+                  📤 Teilen
                 </button>
               </div>
             </div>
@@ -555,6 +565,17 @@ export default function LineupPage() {
           </div>
         ) : null}
       </DragOverlay>
+
+      {showShareCard && (
+        <ShareCard
+          clubName={clubName || 'GOALS Squad'}
+          formationName={FORMATIONS[formation]?.name ?? formation}
+          slots={slots}
+          lineup={lineup}
+          players={players}
+          onClose={() => setShowShareCard(false)}
+        />
+      )}
     </DndContext>
   );
 }
