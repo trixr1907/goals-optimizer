@@ -231,6 +231,26 @@ function PlayerDevCard({ player }: { player: PlayerWithScores }) {
   );
   const [showHistory, setShowHistory] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showAllStats, setShowAllStats] = useState(false);
+  const compactStatKeys = player.position === 'GK'
+    ? GK_STAT_KEYS.slice(0, 5)
+    : (['pac', 'sho', 'pas', 'dri', 'def', 'phy'] as const);
+  const visibleStats = showAllStats
+    ? (player.position === 'GK'
+        ? GK_STAT_KEYS
+            .map((key) => [key, (player.stats as unknown as Record<string, number>)[key]] as [string, number])
+            .filter(([, val]) => typeof val === 'number' && val > 0)
+        : statEntries.filter(([key]) => !(GK_STAT_KEYS as readonly string[]).includes(key)))
+    : compactStatKeys
+        .map((key) => [key, (player.stats as unknown as Record<string, number>)[key]] as [string, number])
+        .filter(([, val]) => typeof val === 'number' && val > 0);
+  const hiddenStatsCount = Math.max(
+    0,
+    (player.position === 'GK'
+      ? GK_STAT_KEYS.filter((key) => typeof (player.stats as unknown as Record<string, number>)[key] === 'number' && (player.stats as unknown as Record<string, number>)[key] > 0).length
+      : statEntries.filter(([key]) => !(GK_STAT_KEYS as readonly string[]).includes(key)).length
+    ) - compactStatKeys.length
+  );
 
   return (
     <>
@@ -350,20 +370,26 @@ function PlayerDevCard({ player }: { player: PlayerWithScores }) {
             )}
           </div>
 
-          {/* Stat-Bars — Feldspieler zeigen 6 Gruppen, GK zeigen nur GK-Stats */}
-          <div className="space-y-1.5">
-            {player.position === 'GK'
-              ? GK_STAT_KEYS.map((key) => {
-                  const val = (player.stats as unknown as Record<string, number>)[key];
-                  if (typeof val !== 'number' || val === 0) return null;
-                  return <StatBar key={key} label={STAT_LABELS[key] ?? key} value={val} />;
-                })
-              : statEntries
-                  .filter(([key]) => !(GK_STAT_KEYS as readonly string[]).includes(key))
-                  .map(([key, val]) => (
-                    <StatBar key={key} label={STAT_LABELS[key] ?? key} value={val} />
-                  ))
-            }
+          {/* Stat-Bars — compact by default, full list on demand */}
+          <div className="rounded-lg bg-slate-800/30 border border-slate-800 p-2 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-400 font-medium">
+                {player.position === 'GK' ? 'Torwart-Werte' : 'Basis-Werte'}
+              </span>
+              {hiddenStatsCount > 0 && (
+                <button
+                  onClick={() => setShowAllStats((open) => !open)}
+                  className="text-[11px] text-slate-500 hover:text-slate-300"
+                >
+                  {showAllStats ? 'kompakt' : `alle Werte (+${hiddenStatsCount})`}
+                </button>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              {visibleStats.map(([key, val]) => (
+                <StatBar key={key} label={STAT_LABELS[key] ?? key} value={val} />
+              ))}
+            </div>
           </div>
 
           {/* Upgrade-Tracker ─────────────────────────────────────────────── */}

@@ -13,26 +13,74 @@ interface Props {
   myLineup?: Record<string, string | null>;
 }
 
-function bestPlayerForPosition(players: PlayerWithScores[], pos: Position): PlayerWithScores | undefined {
-  const candidates = players.filter((p) => p.fit_scores[pos] > 0);
-  if (!candidates.length) return undefined;
-  return candidates.reduce((best, p) => (p.fit_scores[pos] > best.fit_scores[pos] ? p : best));
-}
+// ── Formation estimation ─────────────────────────────────────────────────────
+// Given a pool of players, count their positions and map to a formation name.
+// We use the top-11 players by overall rating (best available XI).
 
-// Default formation rows if no lineup is provided
-const DEFAULT_FORMATION_ROWS: Position[][] = [
-  ['GK'],
-  ['FB', 'CB', 'CB', 'FB'],
-  ['DM', 'CM'],
-  ['WF', 'AM', 'WF'],
-  ['ST'],
+const FORMATION_TEMPLATES: { name: string; positions: Position[] }[] = [
+  { name: '4-3-3', positions: ['GK','FB','CB','CB','FB','CM','CM','CM','WF','ST','WF'] },
+  { name: '4-4-2', positions: ['GK','FB','CB','CB','FB','WM','CM','CM','WM','ST','ST'] },
+  { name: '4-2-3-1', positions: ['GK','FB','CB','CB','FB','DM','DM','WM','AM','WM','ST'] },
+  { name: '3-5-2', positions: ['GK','CB','CB','CB','WB','CM','CM','CM','WB','ST','ST'] },
+  { name: '4-1-2-1-2', positions: ['GK','FB','CB','CB','FB','DM','CM','CM','AM','ST','ST'] },
+  { name: '5-3-2', positions: ['GK','WB','CB','CB','CB','WB','CM','CM','CM','ST','ST'] },
+  { name: '4-5-1', positions: ['GK','FB','CB','CB','FB','WM','CM','CM','CM','WM','ST'] },
+  { name: '3-4-3', positions: ['GK','CB','CB','CB','WM','CM','CM','WM','WF','ST','WF'] },
 ];
 
+function estimateFormation(players: PlayerWithScores[]): {
+  name: string;
+  rows: { position: Position; player: PlayerWithScores | undefined; fit: number }[][];
+} {
+  // Pick top 11 by overall
+  const top11 = [...players].sort((a, b) => b.overall - a.overall).slice(0, 11);
+
+  // Score each template against these 11 players (greedy best-fit assignment)
+  let bestTemplate = FORMATION_TEMPLATES[0];
+  let bestScore = -Infinity;
+
+  for (const tmpl of FORMATION_TEMPLATES) {
+    const pool = [...top11];
+    let score = 0;
+    for (const pos of tmpl.positions) {
+      const idx = pool.reduce<number>((best, p, i) => {
+        const s = p.fit_scores[pos] ?? 0;
+        return s > (pool[best]?.fit_scores[pos] ?? 0) ? i : best;
+      }, 0);
+      score += pool[idx]?.fit_scores[pos] ?? 0;
+      pool.splice(idx, 1);
+    }
+    if (score > bestScore) { bestScore = score; bestTemplate = tmpl; }
+  }
+
+  // Assign players to positions greedily
+  const pool = [...top11];
+  const assignments: { position: Position; player: PlayerWithScores | undefined; fit: number }[] = [];
+  for (const pos of bestTemplate.positions) {
+    if (pool.length === 0) { assignments.push({ position: pos, player: undefined, fit: 0 }); continue; }
+    const idx = pool.reduce<number>((best, p, i) =>
+      (p.fit_scores[pos] ?? 0) > (pool[best]?.fit_scores[pos] ?? 0) ? i : best, 0);
+    const player = pool[idx];
+    assignments.push({ position: pos, player, fit: player?.fit_scores[pos] ?? 0 });
+    pool.splice(idx, 1);
+  }
+
+  // Group into rows by formation name (parse "4-3-3" → [1, 4, 3, 3])
+  const counts = [1, ...bestTemplate.name.split('-').map(Number)]; // GK + lines
+  const rows: typeof assignments[] = [];
+  let offset = 0;
+  for (const count of counts) {
+    rows.push(assignments.slice(offset, offset + count));
+    offset += count;
+  }
+  return { name: bestTemplate.name, rows };
+}
+
+// ── My formation from lineup store ──────────────────────────────────────────
+
 function groupSlotsByRow(slots: LineupSlot[]): Position[][] {
-  if (!slots.length) return DEFAULT_FORMATION_ROWS;
-  // Sort by y descending (GK at bottom = high y, strikers at top = low y)
+  if (!slots.length) return [];
   const sorted = [...slots].sort((a, b) => b.y - a.y);
-  // Bucket into rows by y proximity (within 12 units = same row)
   const rows: LineupSlot[][] = [];
   let currentRow: LineupSlot[] = [];
   let lastY = sorted[0]?.y ?? 0;
@@ -48,6 +96,58 @@ function groupSlotsByRow(slots: LineupSlot[]): Position[][] {
   return rows.map((row) => row.map((s) => s.position as Position));
 }
 
+// ── Dot colours ──────────────────────────────────────────────────────────────
+
+function scoreColor(fit: number) {
+  if (fit >= 85) return 'bg-emerald-500 border-emerald-400';
+  if (fit >= 70) return 'bg-amber-500 border-amber-400';
+  return 'bg-red-600 border-red-500';
+}
+
+// ── Sub-components ───────────────────────────────────────────────────────────
+
+function PlayerDot({
+  name, fit, pos, dim = false,
+}: { name: string; fit: number; pos: Position; dim?: boolean }) {
+  return (
+    <div className={`flex flex-col items-center gap-0.5 transition-opacity ${dim ? 'opacity-40' : ''}`}>
+      <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-[9px] font-bold text-white ${scoreColor(fit)}`}>
+        {pos}
+      </div>
+      <p className="text-[8px] text-slate-300 max-w-[52px] truncate text-center leading-tight">{name || '—'}</p>
+      <p className="text-[8px] font-mono text-slate-500">{fit > 0 ? fit : '?'}</p>
+    </div>
+  );
+}
+
+function FormationHalf({
+  rows,
+  flip = false,
+}: {
+  rows: { position: Position; player: PlayerWithScores | undefined; fit: number }[][];
+  flip?: boolean;
+}) {
+  const orderedRows = flip ? [...rows].reverse() : rows;
+  return (
+    <div className="flex flex-col gap-2 w-full">
+      {orderedRows.map((row, i) => (
+        <div key={i} className="flex justify-center gap-1.5 flex-wrap">
+          {row.map((a, j) => (
+            <PlayerDot
+              key={`${i}-${j}`}
+              name={a.player?.name ?? '—'}
+              fit={a.fit}
+              pos={a.position}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Main component ───────────────────────────────────────────────────────────
+
 export function MatchupCanvas({
   myPlayers,
   opponentPlayers,
@@ -57,128 +157,115 @@ export function MatchupCanvas({
   mySlots,
   myLineup,
 }: Props) {
-  // Build set of my lineup player IDs (if lineup is active)
-  const lineupIds = myLineup ? new Set(Object.values(myLineup).filter(Boolean) as string[]) : new Set<string>();
+  // My team: use active lineup if set, else full squad
+  const lineupIds = myLineup
+    ? new Set(Object.values(myLineup).filter(Boolean) as string[])
+    : new Set<string>();
   const hasActiveLineup = lineupIds.size >= 7;
+  const myPool = hasActiveLineup
+    ? myPlayers.filter((p) => lineupIds.has(p.id))
+    : myPlayers;
 
-  // Determine formation rows
-  const formationRows = (mySlots && mySlots.length > 0)
-    ? groupSlotsByRow(mySlots)
-    : DEFAULT_FORMATION_ROWS;
-
-  // All positions present in the formation (used for row rendering via uniqueRows below)
-  // const formationPositions = formationRows.flat(); // retained for future use
-
-  // For each position, pick the best from my active lineup (or full squad fallback)
-  function myBestForPos(pos: Position): PlayerWithScores | undefined {
-    if (hasActiveLineup) {
-      const lineupPlayers = myPlayers.filter((p) => lineupIds.has(p.id));
-      const candidate = lineupPlayers.find((p) => p.fit_scores[pos] > 0);
-      if (candidate) return lineupPlayers.reduce((best, p) =>
-        (p.fit_scores[pos] ?? 0) > (best.fit_scores[pos] ?? 0) ? p : best, candidate);
-    }
-    return bestPlayerForPosition(myPlayers, pos);
+  // Estimate my formation from slots (if lineup active) or infer from pool
+  let myRows: { position: Position; player: PlayerWithScores | undefined; fit: number }[][];
+  if (mySlots && mySlots.length > 0) {
+    const posRows = groupSlotsByRow(mySlots);
+    // Assign players to each slot position
+    const pool = [...myPool];
+    myRows = posRows.map((row) =>
+      row.map((pos) => {
+        const idx = pool.reduce<number>((best, p, i) =>
+          (p.fit_scores[pos] ?? 0) > (pool[best]?.fit_scores[pos] ?? 0) ? i : best, 0);
+        const player = pool.splice(idx, 1)[0];
+        return { position: pos, player, fit: player?.fit_scores[pos] ?? 0 };
+      })
+    );
+  } else {
+    myRows = estimateFormation(myPool).rows;
   }
 
-  // Deduplicate positions to avoid comparing same pos twice
-  const seen = new Set<string>();
-  const uniqueRows = formationRows.map((row) =>
-    row.filter((pos) => {
-      const key = pos;
-      if (seen.has(key)) return true; // keep duplicates (CB CB is intentional)
-      seen.add(key);
-      return true;
-    })
-  );
+  const oppEstimate = estimateFormation(opponentPlayers);
+
+  // Duell per position — highlight diffs
+  const myFlat = myRows.flat();
+  const oppFlat = oppEstimate.rows.flat();
+  const myAvgFit = myFlat.length
+    ? Math.round(myFlat.reduce((s, a) => s + a.fit, 0) / myFlat.length)
+    : 0;
+  const oppAvgFit = oppFlat.length
+    ? Math.round(oppFlat.reduce((s, a) => s + a.fit, 0) / oppFlat.length)
+    : 0;
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <h3 className="text-sm font-semibold text-white">
-          {myClubName || 'Mein Team'} <span className="text-slate-600 text-xs font-normal">{myFormation && `(${myFormation})`}</span>
-          <span className="text-slate-500 mx-2">vs</span>
-          {opponentClubName || 'Gegner'}
-        </h3>
-        {hasActiveLineup && (
-          <span className="text-[10px] text-emerald-600 bg-emerald-950/40 border border-emerald-900/50 px-2 py-0.5 rounded">
-            Deine Aufstellung aktiv
+    <div className="rounded-xl border border-slate-800 bg-slate-900/50 overflow-hidden">
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-800 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-white truncate max-w-[120px]">{myClubName || 'Mein Team'}</span>
+          {(myFormation || hasActiveLineup) && (
+            <span className="text-[10px] text-emerald-600 bg-emerald-950/40 border border-emerald-900/50 px-1.5 py-0.5 rounded">
+              {myFormation ?? 'Lineup aktiv'}
+            </span>
+          )}
+        </div>
+        <div className="text-center">
+          <p className="text-[10px] text-slate-500">Ø Meta</p>
+          <p className="text-sm font-mono font-bold">
+            <span className={myAvgFit >= oppAvgFit ? 'text-emerald-400' : 'text-slate-300'}>{myAvgFit}</span>
+            <span className="text-slate-700 mx-1">–</span>
+            <span className={oppAvgFit > myAvgFit ? 'text-amber-400' : 'text-slate-300'}>{oppAvgFit}</span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2 justify-end">
+          <span className="text-[10px] text-slate-500 bg-slate-800 border border-slate-700 px-1.5 py-0.5 rounded">
+            {oppEstimate.name}
           </span>
-        )}
+          <span className="text-sm font-semibold text-white truncate max-w-[120px] text-right">{opponentClubName || 'Gegner'}</span>
+        </div>
       </div>
 
-      <div className="space-y-1.5">
-        {uniqueRows.map((row, rowIdx) => (
-          <div key={rowIdx} className="flex justify-center gap-2 flex-wrap">
-            {row.map((pos, posIdx) => {
-              const myBest = myBestForPos(pos);
-              const oppBest = bestPlayerForPosition(opponentPlayers, pos);
-              const myScore = myBest?.fit_scores[pos] ?? 0;
-              const oppScore = oppBest?.fit_scores[pos] ?? 0;
-              const total = myScore + oppScore || 1;
-              const myWins = myScore > oppScore + 2;
-              const oppWins = oppScore > myScore + 2;
+      {/* Pitch */}
+      <div className="relative p-3">
+        {/* Field background */}
+        <div className="relative rounded-lg overflow-hidden bg-emerald-950/30 border border-emerald-900/20 p-3 space-y-1">
+          {/* Centre line */}
+          <div className="absolute left-3 right-3 top-1/2 border-t border-white/10" />
 
-              return (
-                <div
-                  key={`${pos}-${posIdx}`}
-                  className={`flex flex-col items-center gap-1 min-w-[110px] rounded-lg border p-2 ${
-                    myWins
-                      ? 'border-emerald-900/70 bg-emerald-950/20'
-                      : oppWins
-                      ? 'border-amber-900/70 bg-amber-950/20'
-                      : 'border-slate-800 bg-slate-950/50'
-                  }`}
-                >
-                  <p className={`text-[10px] font-semibold ${
-                    myWins ? 'text-emerald-400' : oppWins ? 'text-amber-400' : 'text-slate-500'
-                  }`}>{pos}</p>
-                  <div className="flex items-center gap-1.5 w-full">
-                    <span className={`text-xs font-mono w-7 text-right ${myWins ? 'text-emerald-400 font-bold' : 'text-slate-400'}`}>
-                      {myScore}
-                    </span>
-                    <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden flex">
-                      <div
-                        className={`h-full ${myWins ? 'bg-emerald-500' : 'bg-emerald-800'} rounded-l`}
-                        style={{ width: `${Math.max(0, Math.min(100, (myScore / total) * 100))}%` }}
-                      />
-                      <div
-                        className={`h-full ${oppWins ? 'bg-amber-500' : 'bg-amber-800'} rounded-r`}
-                        style={{ width: `${Math.max(0, Math.min(100, (oppScore / total) * 100))}%` }}
-                      />
-                    </div>
-                    <span className={`text-xs font-mono w-7 text-left ${oppWins ? 'text-amber-400 font-bold' : 'text-slate-400'}`}>
-                      {oppScore}
-                    </span>
-                  </div>
-                  <div className="flex justify-between w-full">
-                    <p className="text-[9px] text-slate-600 truncate max-w-[48px]">{myBest?.name ?? '—'}</p>
-                    <p className="text-[9px] text-slate-600 truncate max-w-[48px] text-right">{oppBest?.name ?? '—'}</p>
-                  </div>
-                </div>
-              );
-            })}
+          {/* My half (bottom) */}
+          <div className="space-y-2 pb-2">
+            <FormationHalf rows={myRows} flip />
           </div>
-        ))}
+
+          {/* Divider label */}
+          <div className="flex items-center gap-2 py-0.5">
+            <div className="flex-1 border-t border-white/10" />
+            <span className="text-[9px] text-slate-700 tracking-widest uppercase">Mittelfeld</span>
+            <div className="flex-1 border-t border-white/10" />
+          </div>
+
+          {/* Opponent half (top) */}
+          <div className="space-y-2 pt-2">
+            <FormationHalf rows={oppEstimate.rows} />
+          </div>
+        </div>
       </div>
 
-      {/* Gesamtübersicht */}
-      <div className="flex gap-4 text-xs pt-1 border-t border-slate-800/60">
-        <div>
-          <span className="text-slate-500">Ø OVR: </span>
-          <span className="text-white font-mono">
-            {myPlayers.length ? Math.round(myPlayers.reduce((s, p) => s + p.overall, 0) / myPlayers.length) : 0}
-          </span>
-          <span className="text-slate-600"> vs </span>
-          <span className="text-white font-mono">
-            {opponentPlayers.length ? Math.round(opponentPlayers.reduce((s, p) => s + p.overall, 0) / opponentPlayers.length) : 0}
-          </span>
+      {/* Legend */}
+      <div className="flex items-center gap-4 px-4 py-2 border-t border-slate-800/60 text-[9px]">
+        <div className="flex items-center gap-1">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+          <span className="text-slate-500">Meta ≥ 85</span>
         </div>
-        <div>
-          <span className="text-slate-500">Spieler: </span>
-          <span className="text-white font-mono">{myPlayers.length}</span>
-          <span className="text-slate-600"> vs </span>
-          <span className="text-white font-mono">{opponentPlayers.length}</span>
+        <div className="flex items-center gap-1">
+          <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+          <span className="text-slate-500">70–84</span>
         </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
+          <span className="text-slate-500">&lt; 70</span>
+        </div>
+        <span className="ml-auto text-slate-700">Formation geschätzt</span>
       </div>
     </div>
   );

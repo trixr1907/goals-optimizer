@@ -134,11 +134,21 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
   const [delta, setDelta] = useState<ImportDelta | null>(null);
+  const [importResult, setImportResult] = useState<{
+    requestedName: string;
+    resolvedName: string;
+    count: number;
+    clubUrl?: string;
+  } | null>(null);
 
   const hasSquad = players.length > 0;
   const isReimport = hasSquad && Boolean(clubName);
 
-  async function fetchAndEnrich(name: string): Promise<{ players: PlayerWithScores[]; clubUrl?: string }> {
+  async function fetchAndEnrich(name: string): Promise<{
+    players: PlayerWithScores[];
+    clubUrl?: string;
+    resolvedName?: string;
+  }> {
     const res = await fetch(apiPath('/api/import'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -148,11 +158,14 @@ export default function OnboardingPage() {
     if (!res.ok) {
       throw new Error(data.error ?? 'Live-Import fehlgeschlagen.');
     }
+    const resolvedName = data.clubName && data.source === 'goalsverse'
+      ? String(data.clubName)
+      : name;
     if (data.clubName && data.source === 'goalsverse') {
       setClubName(data.clubName);
     }
-    if (!data.players?.length) return { players: [] };
-    return { players: data.players as PlayerWithScores[], clubUrl: data.clubUrl };
+    if (!data.players?.length) return { players: [], resolvedName, clubUrl: data.clubUrl };
+    return { players: data.players as PlayerWithScores[], clubUrl: data.clubUrl, resolvedName };
   }
 
   async function handleImport() {
@@ -161,12 +174,20 @@ export default function OnboardingPage() {
     setLoading(true);
     setStatus('Importiere…');
     setDelta(null);
+    setImportResult(null);
     try {
-      const { players: incoming, clubUrl } = await fetchAndEnrich(inputValue.trim());
+      const requestedName = inputValue.trim();
+      const { players: incoming, clubUrl, resolvedName } = await fetchAndEnrich(requestedName);
       if (!incoming.length) {
         setStatus('Keine Spieler gefunden.');
         return;
       }
+      setImportResult({
+        requestedName,
+        resolvedName: resolvedName ?? requestedName,
+        count: incoming.length,
+        clubUrl,
+      });
       if (isReimport) {
         const result = reimportPlayers(incoming, clubUrl);
         setDelta(result);
@@ -311,6 +332,38 @@ export default function OnboardingPage() {
               {importButtonLabel}
             </button>
           </div>
+
+          {/* Import-Bestätigung */}
+          {importResult && (
+            <div className="rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-3 text-left space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-emerald-500 font-medium">
+                    Club gefunden
+                  </p>
+                  <p className="text-sm text-white font-semibold">
+                    {importResult.resolvedName}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {importResult.count} Spieler importiert
+                    {importResult.resolvedName.toLowerCase() !== importResult.requestedName.toLowerCase() && (
+                      <> · gesucht: “{importResult.requestedName}”</>
+                    )}
+                  </p>
+                </div>
+                {importResult.clubUrl && (
+                  <a
+                    href={importResult.clubUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-emerald-400 underline whitespace-nowrap"
+                  >
+                    Profil öffnen
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Delta-Bericht */}
           {delta && <DeltaReport delta={delta} onDismiss={() => setDelta(null)} />}
