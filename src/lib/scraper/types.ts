@@ -1,7 +1,7 @@
 export const ALL_POSITIONS = [
-  'GK', 'CB', 'LB', 'RB', 'LWB', 'RWB',
-  'CDM', 'CM', 'CAM', 'LM', 'RM',
-  'ST', 'LW', 'RW', 'CF',
+  'GK', 'CB', 'FB', 'WB',
+  'DM', 'CM', 'AM', 'WM',
+  'WF', 'CF', 'ST',
 ] as const;
 
 export type Position = (typeof ALL_POSITIONS)[number];

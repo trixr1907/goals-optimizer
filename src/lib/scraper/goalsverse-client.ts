@@ -16,13 +16,13 @@ function characterImageUrl(characterId?: string): string | undefined {
 const ROLE_MAP: Record<number, Position> = {
   0: 'GK',
   1: 'CB', 2: 'CB',
-  3: 'LB', 4: 'RB',
-  5: 'LWB', 6: 'RWB',
-  7: 'CDM',
+  3: 'FB', 4: 'FB',   // LB, RB → FB
+  5: 'WB', 6: 'WB',   // LWB, RWB → WB
+  7: 'DM',            // CDM → DM
   8: 'CM', 9: 'CM',
-  10: 'CAM',
-  11: 'LM', 12: 'RM',
-  13: 'LW', 14: 'RW',
+  10: 'AM',           // CAM → AM
+  11: 'WM', 12: 'WM', // LM, RM → WM
+  13: 'WF', 14: 'WF', // LW, RW → WF
   15: 'CF',
   16: 'ST',
 };
@@ -297,12 +297,22 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
     ? (raw.ovr_roles as Array<{ role: number; overall_rating: number }>)
     : [];
 
-  const roleRatings: PlayerRoleRating[] = ovrRoles
+  // Mappe auf GOALS-Positionen (ROLE_MAP bereits auf FB/WB/etc. umgestellt)
+  const roleRatingsRaw: PlayerRoleRating[] = ovrRoles
     .map((r) => ({
       position: (ROLE_MAP[r.role] ?? 'ST') as Position,
       overall: r.overall_rating ?? 0,
     }))
     .filter((r) => ALL_POSITIONS.includes(r.position));
+
+  // Aggregiere: pro GOALS-Position nur der höchste OVR (LB+RB → max = FB)
+  const roleRatingsMap = new Map<Position, number>();
+  for (const r of roleRatingsRaw) {
+    const current = roleRatingsMap.get(r.position) ?? 0;
+    if (r.overall > current) roleRatingsMap.set(r.position, r.overall);
+  }
+  const roleRatings: PlayerRoleRating[] = Array.from(roleRatingsMap.entries())
+    .map(([position, overall]) => ({ position, overall }));
 
   // Primary = highest OVR in roleRatings (fallback: current position/overall)
   const primaryRoleRating = roleRatings.length

@@ -12,13 +12,14 @@ export interface ImportDelta {
 
 interface SquadState {
   clubName: string;
+  clubUrl?: string;
   players: PlayerWithScores[];
   lastImportedAt: string | null;
   _hasHydrated: boolean;
   setClubName: (name: string) => void;
-  importPlayers: (players: PlayerWithScores[]) => void;
+  importPlayers: (players: PlayerWithScores[], clubUrl?: string) => void;
   /** Re-import: merge incoming players and return a delta report */
-  reimportPlayers: (incoming: PlayerWithScores[]) => ImportDelta;
+  reimportPlayers: (incoming: PlayerWithScores[], clubUrl?: string) => ImportDelta;
   clearSquad: () => void;
   setHasHydrated: (state: boolean) => void;
 }
@@ -71,10 +72,10 @@ export const useSquadStore = create<SquadState>()(
 
       setClubName: (name) => set({ clubName: name }),
 
-      importPlayers: (players) =>
-        set({ players, lastImportedAt: new Date().toISOString() }),
+      importPlayers: (players, clubUrl) =>
+        set({ players, clubUrl, lastImportedAt: new Date().toISOString() }),
 
-      reimportPlayers: (incoming) => {
+      reimportPlayers: (incoming, clubUrl) => {
         const existing = get().players;
         const existingById = new Map(existing.map((p) => [p.id, p]));
         const incomingById = new Map(incoming.map((p) => [p.id, p]));
@@ -111,7 +112,7 @@ export const useSquadStore = create<SquadState>()(
           ...newPlayers,
         ];
 
-        set({ players: merged, lastImportedAt: new Date().toISOString() });
+        set({ players: merged, clubUrl, lastImportedAt: new Date().toISOString() });
 
         return { newPlayers, updatedPlayers, removedPlayers, unchanged };
       },
@@ -125,11 +126,27 @@ export const useSquadStore = create<SquadState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         clubName: state.clubName,
+        clubUrl: state.clubUrl,
         players: state.players,
         lastImportedAt: state.lastImportedAt,
       }),
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+        if (state) {
+          // Migrate old granular positions → GOALS positions
+          const posMap: Record<string, string> = {
+            LB: 'FB', RB: 'FB',
+            LWB: 'WB', RWB: 'WB',
+            CDM: 'DM',
+            CAM: 'AM',
+            LM: 'WM', RM: 'WM',
+            LW: 'WF', RW: 'WF',
+          };
+          state.players = state.players.map((p) => ({
+            ...p,
+            position: (posMap[p.position] ?? p.position) as typeof p.position,
+          }));
+          state.setHasHydrated(true);
+        }
       },
     }
   )

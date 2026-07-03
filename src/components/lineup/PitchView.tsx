@@ -106,7 +106,7 @@ function EmptySlot({ slotKey, position }: EmptySlotProps) {
         strokeWidth={1.5}
         strokeDasharray="4 2"
       />
-      <text x={0} y={4} textAnchor="middle" fontSize={8} fill="#64748b" fontWeight="bold">
+      <text x={0} y={4} textAnchor="middle" fontSize={7} className="sm:text-[8px]" fill="#64748b" fontWeight="bold">
         {displayPosition(position)}
       </text>
     </g>
@@ -131,7 +131,7 @@ export function PitchView({
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
-      className="w-full max-w-md mx-auto"
+      className="w-full max-w-md mx-auto min-w-[280px]"
       style={{ background: '#166534', borderRadius: 8 }}
     >
       <rect x={3} y={3} width={94} height={144} rx={2} fill="none" stroke="#15803d" strokeWidth={0.8} />

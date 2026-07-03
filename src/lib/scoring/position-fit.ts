@@ -42,10 +42,10 @@ function applyContextModifiers(
 
   // ── Foot / wide position modifiers ───────────────────────
   if (foot) {
-    const isInvertedLeft  = position === 'LW' && foot === 'right';
-    const isInvertedRight = position === 'RW' && foot === 'left';
-    const isNaturalLeft   = position === 'LW' && foot === 'left';
-    const isNaturalRight  = position === 'RW' && foot === 'right';
+    const isInvertedLeft  = position === 'WF' && foot === 'right';
+    const isInvertedRight = position === 'WF' && foot === 'left';
+    const isNaturalLeft   = position === 'WF' && foot === 'left';
+    const isNaturalRight  = position === 'WF' && foot === 'right';
 
     if (isInvertedLeft || isInvertedRight) {
       // Inside-forward: cuts inside → finishing & curve are the money stats
@@ -66,8 +66,8 @@ function applyContextModifiers(
     if (wfStat < 70) {
       // Determine which side the player's weak foot is
       const isOnWrongSide =
-        (['LB','LWB','LM','LW'].includes(position) && foot === 'right') ||
-        (['RB','RWB','RM','RW'].includes(position) && foot === 'left');
+        (['FB','WB','WM','WF'].includes(position) && foot === 'right') ||
+        (['FB','WB','WM','WF'].includes(position) && foot === 'left');
 
       if (isOnWrongSide) {
         // Actions requiring the weak foot under pressure are less reliable
@@ -142,14 +142,14 @@ export function explainFootFit(player: Player, position: Position): string | nul
   const wfStat = player.stats.weak_foot ?? 70;
 
   const isInverted =
-    (position === 'LW' && foot === 'right') ||
-    (position === 'RW' && foot === 'left');
+    (position === 'WF' && foot === 'right') ||
+    (position === 'WF' && foot === 'left');
   const isNatural =
-    (position === 'LW' && foot === 'left') ||
-    (position === 'RW' && foot === 'right');
+    (position === 'WF' && foot === 'left') ||
+    (position === 'WF' && foot === 'right');
   const isWrongSideWide =
-    (['LB','LWB','LM'].includes(position) && foot === 'right') ||
-    (['RB','RWB','RM'].includes(position) && foot === 'left');
+    (['FB','WB','WM'].includes(position) && foot === 'right') ||
+    (['FB','WB','WM'].includes(position) && foot === 'left');
 
   if (isInverted) {
     return wfStat < 70

@@ -117,7 +117,7 @@ function PlayerAvatar({
       width={size}
       height={size}
       onError={() => setError(true)}
-      className="w-8 h-8 rounded-full object-cover shrink-0"
+      className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover shrink-0"
       style={{ width: size, height: size }}
     />
   );
@@ -359,7 +359,7 @@ function RadarOverlay({
 // ── Haupt-Komponente ──────────────────────────────────────────────────────────
 
 export default function SquadPage() {
-  const { players, clubName, _hasHydrated } = useSquadStore();
+  const { players, clubName, clubUrl, _hasHydrated } = useSquadStore();
 
   const [search,          setSearch]          = useState('');
   const [filterPos,       setFilterPos]       = useState('all');
@@ -509,6 +509,7 @@ export default function SquadPage() {
                   <SortTh label="Beste Position"  sk="bestPos" />
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">Details</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">Chart</th>
+                  {clubUrl && <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">⚡</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -613,12 +614,27 @@ export default function SquadPage() {
                             📊
                           </button>
                         </td>
+
+                        {/* goalsverse-Link */}
+                        {clubUrl && (
+                          <td className="px-3 py-2.5">
+                            <a
+                              href={clubUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-colors"
+                              title="Auf goalsverse überprüfen"
+                            >
+                              🔗
+                            </a>
+                          </td>
+                        )}
                       </tr>
 
                       {/* Inline Expand-Panel */}
                       {isExpanded && (
                         <tr key={`${player.id}-details`}>
-                          <td colSpan={8} className="p-0">
+                          <td colSpan={clubUrl ? 9 : 8} className="p-0">
                             <DetailsPanel player={player} />
                           </td>
                         </tr>

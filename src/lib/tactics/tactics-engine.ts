@@ -42,19 +42,19 @@ export function analyzeTactics(
   const tips: TacticsTip[] = [];
 
   const gks  = byPos(filled, 'GK');
-  const cbs  = byPos(filled, 'CB', 'LWB', 'RWB');
-  const lbs  = byPos(filled, 'LB');
-  const rbs  = byPos(filled, 'RB');
-  const cdms = byPos(filled, 'CDM');
-  const cms  = byPos(filled, 'CM', 'LM', 'RM');
-  const cams = byPos(filled, 'CAM');
-  const lws  = byPos(filled, 'LW', 'LM');
-  const rws  = byPos(filled, 'RW', 'RM');
+  const cbs  = byPos(filled, 'CB');
+  const fbs  = byPos(filled, 'FB');
+  const wbs  = byPos(filled, 'WB');
+  const dms  = byPos(filled, 'DM');
+  const cms  = byPos(filled, 'CM');
+  const ams  = byPos(filled, 'AM');
+  const wms  = byPos(filled, 'WM');
+  const wfs  = byPos(filled, 'WF');
   const sts  = byPos(filled, 'ST', 'CF');
 
   const gk      = gks[0];
-  const allMids = [...cdms, ...cms, ...cams];
-  const allDef  = [...cbs, ...lbs, ...rbs];
+  const allMids = [...dms, ...cms, ...ams, ...wms];
+  const allDef  = [...cbs, ...fbs, ...wbs];
 
   // Best ST by finishing (primary scoring threat)
   const bestSt = sts.slice().sort((a, b) => stat(b, 'finishing') - stat(a, 'finishing'))[0];
@@ -66,10 +66,9 @@ export function analyzeTactics(
   //    AND (LW.crossing > 80 OR RW.crossing > 80)
   if (bestSt && stat(bestSt, 'heading') > 80 && stat(bestSt, 'jumping') > 75) {
     const hasCrosser =
-      lws.some((p) => stat(p, 'crossing') > 80) ||
-      rws.some((p) => stat(p, 'crossing') > 80) ||
-      lbs.some((p) => stat(p, 'crossing') > 80) ||
-      rbs.some((p) => stat(p, 'crossing') > 80);
+      wfs.some((p) => stat(p, 'crossing') > 80) ||
+      fbs.some((p) => stat(p, 'crossing') > 80) ||
+      wbs.some((p) => stat(p, 'crossing') > 80);
     if (hasCrosser) {
       tips.push({
         id: 'kopfball_flanken',
@@ -131,9 +130,9 @@ export function analyzeTactics(
   }
 
   // Rule: Inverted Winger — keep existing logic (foot-based, no category stat needed)
-  if (lws.length && rws.length) {
-    const lw = lws[0];
-    const rw = rws[0];
+  if (wfs.length >= 2) {
+    const lw = wfs[0];
+    const rw = wfs[wfs.length > 1 ? 1 : 0];
     const lwIsRightFooted = !lw.preferred_foot || lw.preferred_foot === 'right';
     const rwIsLeftFooted  = rw.preferred_foot === 'left';
     if (lwIsRightFooted || rwIsLeftFooted) {
@@ -212,7 +211,7 @@ export function analyzeTactics(
   // Rule: Vorgeschobener CM / falsche 9
   // IF CM.attacking_iq > 85 AND CM.finishing > 70
   // Applied to CAMs and CMs (the most creative central players)
-  [...cms, ...cams].forEach((p) => {
+  [...cms, ...ams].forEach((p) => {
     if (stat(p, 'attacking_iq') > 85 && stat(p, 'finishing') > 70) {
       tips.push({
         id: `false9_${p.id}`,

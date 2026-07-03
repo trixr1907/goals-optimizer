@@ -103,7 +103,7 @@ export default function OnboardingPage() {
   const hasSquad = players.length > 0;
   const isReimport = hasSquad && Boolean(clubName);
 
-  async function fetchAndEnrich(name: string): Promise<PlayerWithScores[]> {
+  async function fetchAndEnrich(name: string): Promise<{ players: PlayerWithScores[]; clubUrl?: string }> {
     const res = await fetch(apiPath('/api/import'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -116,9 +116,8 @@ export default function OnboardingPage() {
     if (data.clubName && data.source === 'goalsverse') {
       setClubName(data.clubName);
     }
-    if (!data.players?.length) return [];
-    // Enrich is already done server-side, but re-run to be safe
-    return data.players as PlayerWithScores[];
+    if (!data.players?.length) return { players: [] };
+    return { players: data.players as PlayerWithScores[], clubUrl: data.clubUrl };
   }
 
   async function handleImport() {
@@ -127,13 +126,13 @@ export default function OnboardingPage() {
     setStatus('Importiere…');
     setDelta(null);
     try {
-      const incoming = await fetchAndEnrich(clubName.trim());
+      const { players: incoming, clubUrl } = await fetchAndEnrich(clubName.trim());
       if (!incoming.length) {
         setStatus('Keine Spieler gefunden.');
         return;
       }
       if (isReimport) {
-        const result = reimportPlayers(incoming);
+        const result = reimportPlayers(incoming, clubUrl);
         setDelta(result);
         const total =
           result.newPlayers.length + result.updatedPlayers.length + result.removedPlayers.length;
@@ -143,7 +142,7 @@ export default function OnboardingPage() {
             : 'Kein Unterschied zum letzten Import.'
         );
       } else {
-        importPlayers(incoming);
+        importPlayers(incoming, clubUrl);
         setStatus(`${incoming.length} Spieler importiert.`);
         router.push('/squad');
       }

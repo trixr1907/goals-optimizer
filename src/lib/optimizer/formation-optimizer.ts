@@ -34,8 +34,8 @@ export interface FormationRecommendation {
 }
 
 const FORMATIONS = formationsData as Record<string, FormationMeta>;
-const DEF_POSITIONS = new Set<Position>(['GK', 'CB', 'LB', 'RB', 'LWB', 'RWB', 'CDM']);
-const ATT_POSITIONS = new Set<Position>(['CAM', 'LM', 'RM', 'LW', 'RW', 'CF', 'ST']);
+const DEF_POSITIONS = new Set<Position>(['GK', 'CB', 'FB', 'WB', 'DM']);
+const ATT_POSITIONS = new Set<Position>(['AM', 'WM', 'WF', 'CF', 'ST']);
 
 function slotKeyFor(position: Position, index: number) {
   return `${position}-${index}`;
@@ -46,12 +46,12 @@ function getRoleBias(player: PlayerWithScores, position: Position, mode: 'balanc
   const stats = player.stats;
   if (mode === 'offensiv') {
     if (ATT_POSITIONS.has(position)) return stats.pac * 0.08 + stats.sho * 0.1 + stats.dri * 0.06 + stats.pas * 0.04;
-    if (position === 'CM' || position === 'CAM') return stats.pas * 0.08 + stats.dri * 0.05 + stats.sho * 0.04;
+    if (position === 'CM' || position === 'AM') return stats.pas * 0.08 + stats.dri * 0.05 + stats.sho * 0.04;
     return 0;
   }
   if (mode === 'defensiv') {
     if (DEF_POSITIONS.has(position)) return stats.def * 0.1 + stats.phy * 0.06 + stats.pac * 0.04;
-    if (position === 'CM' || position === 'CDM') return stats.def * 0.08 + stats.pas * 0.04 + stats.phy * 0.05;
+    if (position === 'CM' || position === 'DM') return stats.def * 0.08 + stats.pas * 0.04 + stats.phy * 0.05;
     return 0;
   }
   // Gegen-Meta: prefer pace + defensive recovery because through-balls and wide counters are common pain points.
