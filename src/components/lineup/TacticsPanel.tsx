@@ -30,24 +30,6 @@ const CAT_BADGE: Record<TipCategory, string> = {
   warnung: 'bg-red-900/60 text-red-300',
 };
 
-const STYLE_ICONS = {
-  offensiv: '⚔️ Offensiv',
-  ausgewogen: '⚖️ Ausgewogen',
-  defensiv: '🛡️ Defensiv',
-  konter: '⚡ Konter',
-};
-
-const PRESSING_ICONS = {
-  hoch: '🔝 Hoch',
-  mittel: '🔄 Mittel',
-  tief: '⬇️ Tief',
-};
-
-const WIDTH_ICONS = {
-  breit: '↔️ Breit',
-  normal: '◾ Normal',
-  eng: '↕️ Eng',
-};
 
 interface TacticsPanelProps {
   slots: LineupSlot[];
@@ -115,23 +97,9 @@ export function TacticsPanel({ slots, lineup, players, slotKeyFor }: TacticsPane
 
   return (
     <div className="space-y-4 text-sm">
-      {/* Schnellübersicht */}
+      {/* Taktik-Analyse */}
       <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4 space-y-3">
         <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Taktik-Analyse</p>
-        <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-lg bg-slate-800/60 p-2 text-center">
-            <p className="text-[10px] text-slate-500">Spielstil</p>
-            <p className="text-xs font-bold text-white mt-0.5">{STYLE_ICONS[analysis.styleSuggestion]}</p>
-          </div>
-          <div className="rounded-lg bg-slate-800/60 p-2 text-center">
-            <p className="text-[10px] text-slate-500">Pressing</p>
-            <p className="text-xs font-bold text-white mt-0.5">{PRESSING_ICONS[analysis.pressingSuggestion]}</p>
-          </div>
-          <div className="rounded-lg bg-slate-800/60 p-2 text-center">
-            <p className="text-[10px] text-slate-500">Breite</p>
-            <p className="text-xs font-bold text-white mt-0.5">{WIDTH_ICONS[analysis.widthSuggestion]}</p>
-          </div>
-        </div>
 
         {analysis.overallWarnings.length > 0 && (
           <div className="space-y-1">

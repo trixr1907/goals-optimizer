@@ -14,9 +14,6 @@ export interface TacticsTip {
 
 export interface TacticsAnalysis {
   tips: TacticsTip[];
-  pressingSuggestion: 'hoch' | 'mittel' | 'tief';
-  widthSuggestion: 'breit' | 'normal' | 'eng';
-  styleSuggestion: 'offensiv' | 'ausgewogen' | 'defensiv' | 'konter';
   overallWarnings: string[];
 }
 
@@ -286,29 +283,6 @@ export function analyzeTactics(
 
   // Use individual stats for all global assessments (no category stats)
   const avgDefSprintSpeed = avg([...allDef].map((p) => stat(p, 'sprint_speed')));
-  const avgAttSprintSpeed = avg([...sts, ...lws, ...rws].map((p) => stat(p, 'sprint_speed')));
-
-  const pressingSuggestion: TacticsAnalysis['pressingSuggestion'] =
-    avgCbSprintSpeed < 70 ? 'tief'
-    : avgCbSprintSpeed > 82 && avgCbDefIq > 80 ? 'hoch'
-    : 'mittel';
-
-  const widthSuggestion: TacticsAnalysis['widthSuggestion'] =
-    (lws.length > 0 || rws.length > 0) ? 'breit'
-    : lbs.length && rbs.length ? 'normal'
-    : 'eng';
-
-  // Style: konter = fast attack + good through_pass; offensiv = good finishing + wings;
-  // defensiv = slow CBs; else ausgewogen
-  const hasThreader = allMids.some((p) => stat(p, 'through_pass') > 77);
-  const hasFinisher = sts.some((p) => stat(p, 'finishing') > 80);
-  const hasWings    = lws.length > 0 || rws.length > 0;
-
-  const styleSuggestion: TacticsAnalysis['styleSuggestion'] =
-    avgAttSprintSpeed > 82 && hasThreader ? 'konter'
-    : avgCbSprintSpeed < 68              ? 'defensiv'
-    : hasFinisher && hasWings            ? 'offensiv'
-    : 'ausgewogen';
 
   const overallWarnings: string[] = [];
   if (avgDefSprintSpeed < 66)
@@ -320,9 +294,6 @@ export function analyzeTactics(
 
   return {
     tips: tips.sort((a, b) => b.priority - a.priority),
-    pressingSuggestion,
-    widthSuggestion,
-    styleSuggestion,
     overallWarnings,
   };
 }
