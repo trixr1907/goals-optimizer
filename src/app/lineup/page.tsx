@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -154,7 +154,6 @@ export default function LineupPage() {
 
   const [selectedSlotKey, setSelectedSlotKey] = useState<string | null>(null);
   const [activePlayerId, setActivePlayerId] = useState<string | null>(null);
-  const [initialized, setInitialized] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -165,13 +164,16 @@ export default function LineupPage() {
   const formationNames = useMemo(() => Object.keys(FORMATIONS), []);
   const playerById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
 
-  if (!initialized) {
+  // Fix: initialize default formation inside useEffect, not during render.
+  // Calling setFormation in the render body caused a race condition where
+  // the store update was skipped or triggered an extra re-render loop.
+  useEffect(() => {
     if (slots.length === 0) {
       const def = FORMATIONS['4-3-3'] ?? FORMATIONS[formationNames[0]];
       if (def) setFormation(def.name, def.slots as LineupSlot[]);
     }
-    setInitialized(true);
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount — formationNames and setFormation are stable refs
 
   const benchPlayers = useMemo(() => {
     const inLineup = new Set(Object.values(lineup).filter(Boolean) as string[]);
