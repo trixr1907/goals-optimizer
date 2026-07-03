@@ -520,3 +520,11 @@ export async function getClubRoster(clubName: string): Promise<GoalsverseFetchRe
     };
   }
 }
+
+// ScraperClient registration — future sources implement the same interface
+import type { ScraperClient } from './base-client';
+export const goalsverseClient: ScraperClient = {
+  name: 'goalsverse',
+  baseUrl: 'https://goalsverse.com',
+  getClubRoster,
+};

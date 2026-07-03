@@ -12,14 +12,16 @@ export interface ImportDelta {
 
 interface SquadState {
   clubName: string;
+  clubId?: string;
   clubUrl?: string;
   players: PlayerWithScores[];
   lastImportedAt: string | null;
   _hasHydrated: boolean;
   setClubName: (name: string) => void;
-  importPlayers: (players: PlayerWithScores[], clubUrl?: string) => void;
+  setClubId: (id: string) => void;
+  importPlayers: (players: PlayerWithScores[], clubUrl?: string, clubId?: string) => void;
   /** Re-import: merge incoming players and return a delta report */
-  reimportPlayers: (incoming: PlayerWithScores[], clubUrl?: string) => ImportDelta;
+  reimportPlayers: (incoming: PlayerWithScores[], clubUrl?: string, clubId?: string) => ImportDelta;
   clearSquad: () => void;
   setHasHydrated: (state: boolean) => void;
 }
@@ -66,16 +68,18 @@ export const useSquadStore = create<SquadState>()(
   persist(
     (set, get) => ({
       clubName: '',
+      clubId: undefined,
       players: [],
       lastImportedAt: null,
       _hasHydrated: false,
 
       setClubName: (name) => set({ clubName: name }),
+      setClubId: (id) => set({ clubId: id }),
 
-      importPlayers: (players, clubUrl) =>
-        set({ players, clubUrl, lastImportedAt: new Date().toISOString() }),
+      importPlayers: (players, clubUrl, clubId) =>
+        set({ players, clubUrl, clubId, lastImportedAt: new Date().toISOString() }),
 
-      reimportPlayers: (incoming, clubUrl) => {
+      reimportPlayers: (incoming, clubUrl, clubId) => {
         const existing = get().players;
         const existingById = new Map(existing.map((p) => [p.id, p]));
         const incomingById = new Map(incoming.map((p) => [p.id, p]));
@@ -112,12 +116,12 @@ export const useSquadStore = create<SquadState>()(
           ...newPlayers,
         ];
 
-        set({ players: merged, clubUrl, lastImportedAt: new Date().toISOString() });
+        set({ players: merged, clubUrl, clubId, lastImportedAt: new Date().toISOString() });
 
         return { newPlayers, updatedPlayers, removedPlayers, unchanged };
       },
 
-      clearSquad: () => set({ players: [], clubName: '', lastImportedAt: null }),
+      clearSquad: () => set({ players: [], clubName: '', clubId: undefined, lastImportedAt: null }),
 
       setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
@@ -126,6 +130,7 @@ export const useSquadStore = create<SquadState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         clubName: state.clubName,
+        clubId: state.clubId,
         clubUrl: state.clubUrl,
         players: state.players,
         lastImportedAt: state.lastImportedAt,

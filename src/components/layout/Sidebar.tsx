@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useSquadStore } from '@/lib/store/squad-store';
+import { appPath } from '@/lib/app-url';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Heim', icon: '🏠', exact: true },
@@ -10,6 +12,7 @@ const NAV_ITEMS = [
   { href: '/lineup/alternatives', label: 'Alternativen', icon: '🔄' },
   { href: '/development', label: 'Entwicklung', icon: '📈' },
   { href: '/meta', label: 'Meta Center', icon: '🎯' },
+  { href: '/matchup', label: 'Gegner-Analyse', icon: '⚔️' },
 ];
 
 // Items shown in the mobile bottom bar (max 5 to fit)
@@ -18,7 +21,7 @@ const MOBILE_NAV = [
   { href: '/squad', label: 'Kader', icon: '👥' },
   { href: '/lineup', label: 'Lineup', icon: '⚽', exact: true },
   { href: '/development', label: 'Dev', icon: '📈' },
-  { href: '/meta', label: 'Meta', icon: '🎯' },
+  { href: '/matchup', label: 'Matchup', icon: '⚔️' },
 ];
 
 function isActive(href: string, pathname: string, exact?: boolean) {
@@ -28,6 +31,8 @@ function isActive(href: string, pathname: string, exact?: boolean) {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { clubName, clubId, clearSquad } = useSquadStore();
+  const router = useRouter();
 
   return (
     <>
@@ -37,6 +42,19 @@ export function Sidebar() {
           <h1 className="text-lg font-bold text-white tracking-tight">GOALS</h1>
           <p className="text-xs text-slate-500">Squad Optimizer</p>
         </div>
+        {/* Club-Info + Wechseln */}
+        {clubId && (
+          <div className="px-3 py-2 border-b border-slate-800">
+            <p className="text-[10px] text-slate-500 uppercase">Club</p>
+            <p className="text-xs text-white truncate">{clubName || 'Kein Club'}</p>
+            <button
+              onClick={() => { clearSquad(); router.push(appPath('/')); }}
+              className="text-[10px] text-emerald-400 hover:underline mt-1"
+            >
+              Wechseln
+            </button>
+          </div>
+        )}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.href, pathname, item.exact);

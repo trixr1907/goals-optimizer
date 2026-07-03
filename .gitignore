@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# OpenHands runtime artifacts
+openhands-result-*/
+bash_events/
+conversations/
+OPENHANDS_TASK_BRIEF.md
+openhands_task_*.md

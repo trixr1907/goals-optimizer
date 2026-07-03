@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
 
 export const metadata: Metadata = {
   title: 'GOALS Squad Optimizer',
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  viewportFit: 'cover', // safe-area support for notch devices
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         /* Mobile: top/bottom padding to clear fixed nav bars */
         pt-11 pb-14
         lg:pt-0 lg:pb-0">
+        <OnboardingModal />
         {children}
       </body>
     </html>

@@ -1,6 +1,6 @@
 'use client';
 
-import { ChangeEvent, useRef, useState } from 'react';
+import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useSquadStore, ImportDelta } from '@/lib/store/squad-store';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -92,9 +92,17 @@ function DeltaReport({ delta, onDismiss }: { delta: ImportDelta; onDismiss: () =
 // ── Haupt-Seite ──────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
-  const { clubName, players, lastImportedAt, setClubName, importPlayers, reimportPlayers } =
+  const { clubName, clubId, players, lastImportedAt, setClubName, importPlayers, reimportPlayers } =
     useSquadStore();
   const router = useRouter();
+
+  // Auto-Redirect: Club-ID + Spieler vorhanden → direkt zu Squad
+  const { _hasHydrated } = useSquadStore();
+  useEffect(() => {
+    if (_hasHydrated && clubId && players.length > 0) {
+      router.push(appPath('/squad'));
+    }
+  }, [_hasHydrated, clubId, players.length, router]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
