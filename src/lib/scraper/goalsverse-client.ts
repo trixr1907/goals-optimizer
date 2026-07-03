@@ -79,21 +79,47 @@ type GoalsverseSearchUser = {
 
 /* ── Low-level fetch helpers ─────────────────────────────────────────────── */
 
+const FETCH_TIMEOUT_MS = 12_000; // 12 s — enough for slow goalsverse responses
+
+function withTimeout(ms: number): { signal: AbortSignal; clear: () => void } {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  return { signal: controller.signal, clear: () => clearTimeout(id) };
+}
+
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, {
-    headers: { 'user-agent': USER_AGENT, accept: 'application/json' },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json() as Promise<T>;
+  const { signal, clear } = withTimeout(FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      signal,
+      headers: { 'user-agent': USER_AGENT, accept: 'application/json' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json() as Promise<T>;
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') throw new Error('goalsverse: Anfrage-Timeout (12 s)');
+    throw err;
+  } finally {
+    clear();
+  }
 }
 
 async function fetchRsc(path: string): Promise<string> {
   const url = path.startsWith('http') ? path : `${GOALSVERSE_BASE}${path}`;
-  const res = await fetch(url, {
-    headers: { 'user-agent': USER_AGENT, accept: 'text/x-component', RSC: '1' },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.text();
+  const { signal, clear } = withTimeout(FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      signal,
+      headers: { 'user-agent': USER_AGENT, accept: 'text/x-component', RSC: '1' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.text();
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') throw new Error('goalsverse: Anfrage-Timeout (12 s)');
+    throw err;
+  } finally {
+    clear();
+  }
 }
 
 /* ── Search / resolve club ───────────────────────────────────────────────── */
