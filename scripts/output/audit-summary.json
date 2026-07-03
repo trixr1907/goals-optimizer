@@ -1,0 +1,306 @@
+{
+  "auditDate": "2026-07-03T22:39:00.999Z",
+  "players": [
+    {
+      "player": "Wendelin Pietsch",
+      "characterId": "d6553983-f4d5-5923-8fe9-077939607a12",
+      "positions": {
+        "our_app": "CB",
+        "playgoals": "FB",
+        "tracker_expected": "FB",
+        "tracker_actual": "FB",
+        "goalsverse_ovr_role": "CB",
+        "goalsverse_top_level_role": null,
+        "goalsverse_best_rated": "CB",
+        "goalsverse_best_rated_ovr": 76,
+        "all_role_ratings": "CB:76, FB:76, WB:73, DM:70, AM:69, CM:69, WM:68",
+        "tracker_all_positions": "FB:76, WB:76, CB:74, WM:74, DM:71, CM:71, AM:71, WF:71, CF:71, ST:71"
+      },
+      "stats": {
+        "pac": 92,
+        "sho": 38,
+        "pas": 68,
+        "dri": 62,
+        "def": 68,
+        "phy": 83
+      },
+      "physical": {
+        "height": 176,
+        "age": 16,
+        "foot": "left"
+      },
+      "performance": {
+        "tier": 3,
+        "overall": 76,
+        "matches_played": null,
+        "goals": null,
+        "assists": null
+      },
+      "dataQuality": "full",
+      "discrepancies": {
+        "app_vs_playgoals": true,
+        "app_vs_tracker": true,
+        "ovr_role_vs_playgoals": true,
+        "tracker_vs_playgoals": false
+      }
+    },
+    {
+      "player": "Alfred Mengue",
+      "characterId": "8d45f3f7-5d7b-5ea1-b72d-890ec1dfa6f6",
+      "positions": {
+        "our_app": "CB",
+        "playgoals": "FB",
+        "tracker_expected": "FB",
+        "tracker_actual": "FB",
+        "goalsverse_ovr_role": "CB",
+        "goalsverse_top_level_role": null,
+        "goalsverse_best_rated": "CB",
+        "goalsverse_best_rated_ovr": 75,
+        "all_role_ratings": "CB:75, FB:75, WB:73, DM:70, AM:69, CM:68, WM:68",
+        "tracker_all_positions": "FB:75, WB:75, CB:73, WM:73, DM:70, CM:70, AM:70, WF:70, CF:70, ST:70"
+      },
+      "stats": {
+        "pac": 94,
+        "sho": 51,
+        "pas": 76,
+        "dri": 50,
+        "def": 79,
+        "phy": 69
+      },
+      "physical": {
+        "height": 179,
+        "age": 17,
+        "foot": "left"
+      },
+      "performance": {
+        "tier": 3,
+        "overall": 75,
+        "matches_played": null,
+        "goals": null,
+        "assists": null
+      },
+      "dataQuality": "full",
+      "discrepancies": {
+        "app_vs_playgoals": true,
+        "app_vs_tracker": true,
+        "ovr_role_vs_playgoals": true,
+        "tracker_vs_playgoals": false
+      }
+    },
+    {
+      "player": "Elen de Mattos",
+      "characterId": "30ea7689-33ca-5b3e-bb95-6b0f094a7a1f",
+      "positions": {
+        "our_app": "DM",
+        "playgoals": "AM",
+        "tracker_expected": "AM",
+        "tracker_actual": "AM",
+        "goalsverse_ovr_role": "DM",
+        "goalsverse_top_level_role": null,
+        "goalsverse_best_rated": "DM",
+        "goalsverse_best_rated_ovr": 70,
+        "all_role_ratings": "DM:70, WB:70, AM:69, CM:69, WM:69, FB:66, CB:64",
+        "tracker_all_positions": "AM:70, WM:68, CM:68, CF:68, FB:65, CB:65, WB:65, DM:65, WF:65, ST:65"
+      },
+      "stats": {
+        "pac": 60,
+        "sho": 57,
+        "pas": 84,
+        "dri": 82,
+        "def": 56,
+        "phy": 42
+      },
+      "physical": {
+        "height": 177,
+        "age": 18,
+        "foot": "left"
+      },
+      "performance": {
+        "tier": 3,
+        "overall": 70,
+        "matches_played": null,
+        "goals": null,
+        "assists": null
+      },
+      "dataQuality": "full",
+      "discrepancies": {
+        "app_vs_playgoals": true,
+        "app_vs_tracker": true,
+        "ovr_role_vs_playgoals": true,
+        "tracker_vs_playgoals": false
+      }
+    },
+    {
+      "player": "Antoinette Sidibe",
+      "characterId": "1b1bafcd-1317-54ca-992c-55b9e0fe4a77",
+      "positions": {
+        "our_app": "WB",
+        "playgoals": "CM",
+        "tracker_expected": "CM",
+        "tracker_actual": "CM",
+        "goalsverse_ovr_role": "WB",
+        "goalsverse_top_level_role": null,
+        "goalsverse_best_rated": "WB",
+        "goalsverse_best_rated_ovr": 73,
+        "all_role_ratings": "WB:73, FB:73, DM:73, AM:72, CM:72, WM:72, CB:72",
+        "tracker_all_positions": "CM:73, DM:71, WM:71, AM:71, FB:68, CB:68, WB:68, WF:68, CF:68, ST:68"
+      },
+      "stats": {
+        "pac": 78,
+        "sho": 73,
+        "pas": 69,
+        "dri": 65,
+        "def": 76,
+        "phy": 58
+      },
+      "physical": {
+        "height": 180,
+        "age": 22,
+        "foot": "left"
+      },
+      "performance": {
+        "tier": 3,
+        "overall": 73,
+        "matches_played": null,
+        "goals": null,
+        "assists": null
+      },
+      "dataQuality": "full",
+      "discrepancies": {
+        "app_vs_playgoals": true,
+        "app_vs_tracker": true,
+        "ovr_role_vs_playgoals": true,
+        "tracker_vs_playgoals": false
+      }
+    },
+    {
+      "player": "Jonathan Jones",
+      "characterId": "6dbe494a-0568-58e9-bd59-30c331515659",
+      "positions": {
+        "our_app": "DM",
+        "playgoals": "AM",
+        "tracker_expected": "AM",
+        "tracker_actual": "AM",
+        "goalsverse_ovr_role": "DM",
+        "goalsverse_top_level_role": null,
+        "goalsverse_best_rated": "DM",
+        "goalsverse_best_rated_ovr": 81,
+        "all_role_ratings": "DM:81, WB:81, CM:81, AM:81, WM:80, FB:76, CB:75",
+        "tracker_all_positions": "AM:81, WM:79, CM:79, CF:79, FB:76, CB:76, WB:76, DM:76, WF:76, ST:76"
+      },
+      "stats": {
+        "pac": 87,
+        "sho": 74,
+        "pas": 84,
+        "dri": 90,
+        "def": 76,
+        "phy": 38
+      },
+      "physical": {
+        "height": 174,
+        "age": 20,
+        "foot": "left"
+      },
+      "performance": {
+        "tier": 4,
+        "overall": 81,
+        "matches_played": null,
+        "goals": null,
+        "assists": null
+      },
+      "dataQuality": "full",
+      "discrepancies": {
+        "app_vs_playgoals": true,
+        "app_vs_tracker": true,
+        "ovr_role_vs_playgoals": true,
+        "tracker_vs_playgoals": false
+      }
+    },
+    {
+      "player": "Romário Vieira",
+      "characterId": "b5b9e160-ee33-5ab6-82ab-4e660a067b6b",
+      "positions": {
+        "our_app": "CM",
+        "playgoals": "WF",
+        "tracker_expected": "WF",
+        "tracker_actual": "WF",
+        "goalsverse_ovr_role": "CM",
+        "goalsverse_top_level_role": null,
+        "goalsverse_best_rated": "CM",
+        "goalsverse_best_rated_ovr": 76,
+        "all_role_ratings": "CM:76, WM:76, AM:75, WB:74, DM:74, FB:64, CB:62",
+        "tracker_all_positions": "WF:76, WM:74, CF:74, ST:74, FB:71, CB:71, WB:71, DM:71, CM:71, AM:71"
+      },
+      "stats": {
+        "pac": 92,
+        "sho": 83,
+        "pas": 40,
+        "dri": 86,
+        "def": 41,
+        "phy": 50
+      },
+      "physical": {
+        "height": 179,
+        "age": 21,
+        "foot": "left"
+      },
+      "performance": {
+        "tier": 3,
+        "overall": 76,
+        "matches_played": null,
+        "goals": null,
+        "assists": null
+      },
+      "dataQuality": "full",
+      "discrepancies": {
+        "app_vs_playgoals": true,
+        "app_vs_tracker": true,
+        "ovr_role_vs_playgoals": true,
+        "tracker_vs_playgoals": false
+      }
+    },
+    {
+      "player": "Vitor do Monte",
+      "characterId": "7cfe929a-32c9-5ef2-8690-322339963af8",
+      "positions": {
+        "our_app": "WM",
+        "playgoals": "ST",
+        "tracker_expected": "ST",
+        "tracker_actual": "ST",
+        "goalsverse_ovr_role": "WM",
+        "goalsverse_top_level_role": null,
+        "goalsverse_best_rated": "WM",
+        "goalsverse_best_rated_ovr": 81,
+        "all_role_ratings": "WM:81, CM:81, AM:81, WB:80, DM:80, FB:73, CB:71",
+        "tracker_all_positions": "ST:81, WF:79, CF:79, FB:76, CB:76, WB:76, DM:76, WM:76, CM:76, AM:76"
+      },
+      "stats": {
+        "pac": 86,
+        "sho": 82,
+        "pas": 66,
+        "dri": 82,
+        "def": 43,
+        "phy": 72
+      },
+      "physical": {
+        "height": 186,
+        "age": 34,
+        "foot": "left"
+      },
+      "performance": {
+        "tier": 4,
+        "overall": 81,
+        "matches_played": null,
+        "goals": null,
+        "assists": null
+      },
+      "dataQuality": "full",
+      "discrepancies": {
+        "app_vs_playgoals": true,
+        "app_vs_tracker": true,
+        "ovr_role_vs_playgoals": true,
+        "tracker_vs_playgoals": false
+      }
+    }
+  ]
+}

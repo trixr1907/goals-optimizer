@@ -1,0 +1,1747 @@
+{
+  "auditDate": "2026-07-03T22:39:00.998Z",
+  "club": {
+    "id": "1b0f88df-6f4c-45cf-8c96-46e47853731c",
+    "slug": "txr"
+  },
+  "squadCount": 18,
+  "clubCount": 18,
+  "results": [
+    {
+      "target": "Wendelin Pietsch",
+      "appPosition": "CB",
+      "playgoalsPosition": "FB",
+      "trackerExpected": "FB",
+      "characterId": "d6553983-f4d5-5923-8fe9-077939607a12",
+      "goalsverseSquad": {
+        "characterId": "d6553983-f4d5-5923-8fe9-077939607a12",
+        "name": "Wendelin Pietsch",
+        "overall": 76,
+        "ovr_role_raw": 2,
+        "ovr_role_resolved": "CB",
+        "top_level_role_resolved": null,
+        "roleRatings": [
+          {
+            "position": "CB",
+            "overall": 76,
+            "rawRole": 2
+          },
+          {
+            "position": "FB",
+            "overall": 76,
+            "rawRole": 3
+          },
+          {
+            "position": "WB",
+            "overall": 73,
+            "rawRole": 5
+          },
+          {
+            "position": "DM",
+            "overall": 70,
+            "rawRole": 7
+          },
+          {
+            "position": "AM",
+            "overall": 69,
+            "rawRole": 10
+          },
+          {
+            "position": "CM",
+            "overall": 69,
+            "rawRole": 9
+          },
+          {
+            "position": "WM",
+            "overall": 68,
+            "rawRole": 11
+          }
+        ],
+        "height": 176,
+        "age": 16,
+        "strong_foot": "left",
+        "stats": {
+          "pac": 92,
+          "sho": 38,
+          "pas": 68,
+          "dri": 62,
+          "def": 68,
+          "phy": 83
+        },
+        "raw_stats": {
+          "acceleration": 92,
+          "sprint_speed": 92,
+          "finishing": 25,
+          "shot_power": 41,
+          "long_shots": 57,
+          "attacking_iq": 42,
+          "ground_pass": 55,
+          "through_pass": 64,
+          "crossing": 74,
+          "sprint_dribbling": 66,
+          "close_dribbling": 49,
+          "agility": 66,
+          "defensive_iq": 75,
+          "stand_tackle": 72,
+          "interceptions": 67,
+          "strength": 89,
+          "stamina": 84,
+          "aggression": 85,
+          "heading": 74
+        },
+        "tier": 3,
+        "potential": 84,
+        "upgrades_remaining": 3
+      },
+      "goalsverseClub": {
+        "characterId": "d6553983-f4d5-5923-8fe9-077939607a12",
+        "name": "Wendelin Pietsch",
+        "overall": 76,
+        "role_raw": 2,
+        "role_resolved": "CB",
+        "tier": 3,
+        "matches_played": 3,
+        "goals": null,
+        "assists": null,
+        "dataQuality": "basic"
+      },
+      "goalsverseData": {
+        "characterId": "d6553983-f4d5-5923-8fe9-077939607a12",
+        "name": "Wendelin Pietsch",
+        "overall": 76,
+        "ovr_role_raw": 2,
+        "ovr_role_resolved": "CB",
+        "top_level_role_resolved": null,
+        "roleRatings": [
+          {
+            "position": "CB",
+            "overall": 76,
+            "rawRole": 2
+          },
+          {
+            "position": "FB",
+            "overall": 76,
+            "rawRole": 3
+          },
+          {
+            "position": "WB",
+            "overall": 73,
+            "rawRole": 5
+          },
+          {
+            "position": "DM",
+            "overall": 70,
+            "rawRole": 7
+          },
+          {
+            "position": "AM",
+            "overall": 69,
+            "rawRole": 10
+          },
+          {
+            "position": "CM",
+            "overall": 69,
+            "rawRole": 9
+          },
+          {
+            "position": "WM",
+            "overall": 68,
+            "rawRole": 11
+          }
+        ],
+        "height": 176,
+        "age": 16,
+        "strong_foot": "left",
+        "stats": {
+          "pac": 92,
+          "sho": 38,
+          "pas": 68,
+          "dri": 62,
+          "def": 68,
+          "phy": 83
+        },
+        "raw_stats": {
+          "acceleration": 92,
+          "sprint_speed": 92,
+          "finishing": 25,
+          "shot_power": 41,
+          "long_shots": 57,
+          "attacking_iq": 42,
+          "ground_pass": 55,
+          "through_pass": 64,
+          "crossing": 74,
+          "sprint_dribbling": 66,
+          "close_dribbling": 49,
+          "agility": 66,
+          "defensive_iq": 75,
+          "stand_tackle": 72,
+          "interceptions": 67,
+          "strength": 89,
+          "stamina": 84,
+          "aggression": 85,
+          "heading": 74
+        },
+        "tier": 3,
+        "potential": 84,
+        "upgrades_remaining": 3
+      },
+      "trackerData": {
+        "characterId": "d6553983-f4d5-5923-8fe9-077939607a12",
+        "url": "https://goals-tracker.com/player/d6553983-f4d5-5923-8fe9-077939607a12",
+        "name": null,
+        "primaryPosition": "FB",
+        "primaryOvr": 76,
+        "allPositions": [
+          {
+            "rawPosition": "FB",
+            "position": "FB",
+            "overall": 76
+          },
+          {
+            "rawPosition": "WB",
+            "position": "WB",
+            "overall": 76
+          },
+          {
+            "rawPosition": "CB",
+            "position": "CB",
+            "overall": 74
+          },
+          {
+            "rawPosition": "WM",
+            "position": "WM",
+            "overall": 74
+          },
+          {
+            "rawPosition": "DM",
+            "position": "DM",
+            "overall": 71
+          },
+          {
+            "rawPosition": "CM",
+            "position": "CM",
+            "overall": 71
+          },
+          {
+            "rawPosition": "AM",
+            "position": "AM",
+            "overall": 71
+          },
+          {
+            "rawPosition": "WF",
+            "position": "WF",
+            "overall": 71
+          },
+          {
+            "rawPosition": "CF",
+            "position": "CF",
+            "overall": 71
+          },
+          {
+            "rawPosition": "ST",
+            "position": "ST",
+            "overall": 71
+          }
+        ],
+        "stats": {
+          "pac": 62,
+          "sho": 68,
+          "pas": 83,
+          "dri": 38,
+          "def": 68,
+          "phy": 0
+        },
+        "nextData": null,
+        "rawTextLength": 43360
+      }
+    },
+    {
+      "target": "Alfred Mengue",
+      "appPosition": "CB",
+      "playgoalsPosition": "FB",
+      "trackerExpected": "FB",
+      "characterId": "8d45f3f7-5d7b-5ea1-b72d-890ec1dfa6f6",
+      "goalsverseSquad": {
+        "characterId": "8d45f3f7-5d7b-5ea1-b72d-890ec1dfa6f6",
+        "name": "Alfred Mengue",
+        "overall": 75,
+        "ovr_role_raw": 2,
+        "ovr_role_resolved": "CB",
+        "top_level_role_resolved": null,
+        "roleRatings": [
+          {
+            "position": "CB",
+            "overall": 75,
+            "rawRole": 2
+          },
+          {
+            "position": "FB",
+            "overall": 75,
+            "rawRole": 3
+          },
+          {
+            "position": "WB",
+            "overall": 73,
+            "rawRole": 5
+          },
+          {
+            "position": "DM",
+            "overall": 70,
+            "rawRole": 7
+          },
+          {
+            "position": "AM",
+            "overall": 69,
+            "rawRole": 10
+          },
+          {
+            "position": "CM",
+            "overall": 68,
+            "rawRole": 9
+          },
+          {
+            "position": "WM",
+            "overall": 68,
+            "rawRole": 11
+          }
+        ],
+        "height": 179,
+        "age": 17,
+        "strong_foot": "left",
+        "stats": {
+          "pac": 94,
+          "sho": 51,
+          "pas": 76,
+          "dri": 50,
+          "def": 79,
+          "phy": 69
+        },
+        "raw_stats": {
+          "acceleration": 98,
+          "sprint_speed": 91,
+          "finishing": 54,
+          "shot_power": 54,
+          "long_shots": 50,
+          "attacking_iq": 29,
+          "ground_pass": 83,
+          "through_pass": 79,
+          "crossing": 75,
+          "sprint_dribbling": 57,
+          "close_dribbling": 52,
+          "agility": 40,
+          "defensive_iq": 81,
+          "stand_tackle": 66,
+          "interceptions": 87,
+          "strength": 69,
+          "stamina": 94,
+          "aggression": 81,
+          "heading": 48
+        },
+        "tier": 3,
+        "potential": 75,
+        "upgrades_remaining": 0
+      },
+      "goalsverseClub": {
+        "characterId": "8d45f3f7-5d7b-5ea1-b72d-890ec1dfa6f6",
+        "name": "Alfred Mengue",
+        "overall": 75,
+        "role_raw": 2,
+        "role_resolved": "CB",
+        "tier": 3,
+        "matches_played": 13,
+        "goals": 1,
+        "assists": null,
+        "dataQuality": "basic"
+      },
+      "goalsverseData": {
+        "characterId": "8d45f3f7-5d7b-5ea1-b72d-890ec1dfa6f6",
+        "name": "Alfred Mengue",
+        "overall": 75,
+        "ovr_role_raw": 2,
+        "ovr_role_resolved": "CB",
+        "top_level_role_resolved": null,
+        "roleRatings": [
+          {
+            "position": "CB",
+            "overall": 75,
+            "rawRole": 2
+          },
+          {
+            "position": "FB",
+            "overall": 75,
+            "rawRole": 3
+          },
+          {
+            "position": "WB",
+            "overall": 73,
+            "rawRole": 5
+          },
+          {
+            "position": "DM",
+            "overall": 70,
+            "rawRole": 7
+          },
+          {
+            "position": "AM",
+            "overall": 69,
+            "rawRole": 10
+          },
+          {
+            "position": "CM",
+            "overall": 68,
+            "rawRole": 9
+          },
+          {
+            "position": "WM",
+            "overall": 68,
+            "rawRole": 11
+          }
+        ],
+        "height": 179,
+        "age": 17,
+        "strong_foot": "left",
+        "stats": {
+          "pac": 94,
+          "sho": 51,
+          "pas": 76,
+          "dri": 50,
+          "def": 79,
+          "phy": 69
+        },
+        "raw_stats": {
+          "acceleration": 98,
+          "sprint_speed": 91,
+          "finishing": 54,
+          "shot_power": 54,
+          "long_shots": 50,
+          "attacking_iq": 29,
+          "ground_pass": 83,
+          "through_pass": 79,
+          "crossing": 75,
+          "sprint_dribbling": 57,
+          "close_dribbling": 52,
+          "agility": 40,
+          "defensive_iq": 81,
+          "stand_tackle": 66,
+          "interceptions": 87,
+          "strength": 69,
+          "stamina": 94,
+          "aggression": 81,
+          "heading": 48
+        },
+        "tier": 3,
+        "potential": 75,
+        "upgrades_remaining": 0
+      },
+      "trackerData": {
+        "characterId": "8d45f3f7-5d7b-5ea1-b72d-890ec1dfa6f6",
+        "url": "https://goals-tracker.com/player/8d45f3f7-5d7b-5ea1-b72d-890ec1dfa6f6",
+        "name": null,
+        "primaryPosition": "FB",
+        "primaryOvr": 75,
+        "allPositions": [
+          {
+            "rawPosition": "FB",
+            "position": "FB",
+            "overall": 75
+          },
+          {
+            "rawPosition": "WB",
+            "position": "WB",
+            "overall": 75
+          },
+          {
+            "rawPosition": "CB",
+            "position": "CB",
+            "overall": 73
+          },
+          {
+            "rawPosition": "WM",
+            "position": "WM",
+            "overall": 73
+          },
+          {
+            "rawPosition": "DM",
+            "position": "DM",
+            "overall": 70
+          },
+          {
+            "rawPosition": "CM",
+            "position": "CM",
+            "overall": 70
+          },
+          {
+            "rawPosition": "AM",
+            "position": "AM",
+            "overall": 70
+          },
+          {
+            "rawPosition": "WF",
+            "position": "WF",
+            "overall": 70
+          },
+          {
+            "rawPosition": "CF",
+            "position": "CF",
+            "overall": 70
+          },
+          {
+            "rawPosition": "ST",
+            "position": "ST",
+            "overall": 70
+          }
+        ],
+        "stats": {
+          "pac": 50,
+          "sho": 79,
+          "pas": 69,
+          "dri": 51,
+          "def": 76,
+          "phy": 0
+        },
+        "nextData": null,
+        "rawTextLength": 34269
+      }
+    },
+    {
+      "target": "Elen de Mattos",
+      "appPosition": "DM",
+      "playgoalsPosition": "AM",
+      "trackerExpected": "AM",
+      "characterId": "30ea7689-33ca-5b3e-bb95-6b0f094a7a1f",
+      "goalsverseSquad": {
+        "characterId": "30ea7689-33ca-5b3e-bb95-6b0f094a7a1f",
+        "name": "Elen de Mattos",
+        "overall": 70,
+        "ovr_role_raw": 7,
+        "ovr_role_resolved": "DM",
+        "top_level_role_resolved": null,
+        "roleRatings": [
+          {
+            "position": "DM",
+            "overall": 70,
+            "rawRole": 7
+          },
+          {
+            "position": "WB",
+            "overall": 70,
+            "rawRole": 6
+          },
+          {
+            "position": "AM",
+            "overall": 69,
+            "rawRole": 10
+          },
+          {
+            "position": "CM",
+            "overall": 69,
+            "rawRole": 9
+          },
+          {
+            "position": "WM",
+            "overall": 69,
+            "rawRole": 11
+          },
+          {
+            "position": "FB",
+            "overall": 66,
+            "rawRole": 4
+          },
+          {
+            "position": "CB",
+            "overall": 64,
+            "rawRole": 2
+          }
+        ],
+        "height": 177,
+        "age": 18,
+        "strong_foot": "left",
+        "stats": {
+          "pac": 60,
+          "sho": 57,
+          "pas": 84,
+          "dri": 82,
+          "def": 56,
+          "phy": 42
+        },
+        "raw_stats": {
+          "acceleration": 69,
+          "sprint_speed": 51,
+          "finishing": 44,
+          "shot_power": 46,
+          "long_shots": 50,
+          "attacking_iq": 58,
+          "ground_pass": 90,
+          "through_pass": 98,
+          "crossing": 72,
+          "sprint_dribbling": 89,
+          "close_dribbling": 93,
+          "agility": 88,
+          "defensive_iq": 56,
+          "stand_tackle": 61,
+          "interceptions": 41,
+          "strength": 36,
+          "stamina": 34,
+          "aggression": 26,
+          "heading": 77
+        },
+        "tier": 3,
+        "potential": 72,
+        "upgrades_remaining": 1
+      },
+      "goalsverseClub": {
+        "characterId": "30ea7689-33ca-5b3e-bb95-6b0f094a7a1f",
+        "name": "Elen de Mattos",
+        "overall": 70,
+        "role_raw": 7,
+        "role_resolved": "DM",
+        "tier": 3,
+        "matches_played": 23,
+        "goals": 2,
+        "assists": 9,
+        "dataQuality": "basic"
+      },
+      "goalsverseData": {
+        "characterId": "30ea7689-33ca-5b3e-bb95-6b0f094a7a1f",
+        "name": "Elen de Mattos",
+        "overall": 70,
+        "ovr_role_raw": 7,
+        "ovr_role_resolved": "DM",
+        "top_level_role_resolved": null,
+        "roleRatings": [
+          {
+            "position": "DM",
+            "overall": 70,
+            "rawRole": 7
+          },
+          {
+            "position": "WB",
+            "overall": 70,
+            "rawRole": 6
+          },
+          {
+            "position": "AM",
+            "overall": 69,
+            "rawRole": 10
+          },
+          {
+            "position": "CM",
+            "overall": 69,
+            "rawRole": 9
+          },
+          {
+            "position": "WM",
+            "overall": 69,
+            "rawRole": 11
+          },
+          {
+            "position": "FB",
+            "overall": 66,
+            "rawRole": 4
+          },
+          {
+            "position": "CB",
+            "overall": 64,
+            "rawRole": 2
+          }
+        ],
+        "height": 177,
+        "age": 18,
+        "strong_foot": "left",
+        "stats": {
+          "pac": 60,
+          "sho": 57,
+          "pas": 84,
+          "dri": 82,
+          "def": 56,
+          "phy": 42
+        },
+        "raw_stats": {
+          "acceleration": 69,
+          "sprint_speed": 51,
+          "finishing": 44,
+          "shot_power": 46,
+          "long_shots": 50,
+          "attacking_iq": 58,
+          "ground_pass": 90,
+          "through_pass": 98,
+          "crossing": 72,
+          "sprint_dribbling": 89,
+          "close_dribbling": 93,
+          "agility": 88,
+          "defensive_iq": 56,
+          "stand_tackle": 61,
+          "interceptions": 41,
+          "strength": 36,
+          "stamina": 34,
+          "aggression": 26,
+          "heading": 77
+        },
+        "tier": 3,
+        "potential": 72,
+        "upgrades_remaining": 1
+      },
+      "trackerData": {
+        "characterId": "30ea7689-33ca-5b3e-bb95-6b0f094a7a1f",
+        "url": "https://goals-tracker.com/player/30ea7689-33ca-5b3e-bb95-6b0f094a7a1f",
+        "name": null,
+        "primaryPosition": "AM",
+        "primaryOvr": 70,
+        "allPositions": [
+          {
+            "rawPosition": "AM",
+            "position": "AM",
+            "overall": 70
+          },
+          {
+            "rawPosition": "WM",
+            "position": "WM",
+            "overall": 68
+          },
+          {
+            "rawPosition": "CM",
+            "position": "CM",
+            "overall": 68
+          },
+          {
+            "rawPosition": "CF",
+            "position": "CF",
+            "overall": 68
+          },
+          {
+            "rawPosition": "FB",
+            "position": "FB",
+            "overall": 65
+          },
+          {
+            "rawPosition": "CB",
+            "position": "CB",
+            "overall": 65
+          },
+          {
+            "rawPosition": "WB",
+            "position": "WB",
+            "overall": 65
+          },
+          {
+            "rawPosition": "DM",
+            "position": "DM",
+            "overall": 65
+          },
+          {
+            "rawPosition": "WF",
+            "position": "WF",
+            "overall": 65
+          },
+          {
+            "rawPosition": "ST",
+            "position": "ST",
+            "overall": 65
+          }
+        ],
+        "stats": {
+          "pac": 82,
+          "sho": 56,
+          "pas": 42,
+          "dri": 57,
+          "def": 84,
+          "phy": 0
+        },
+        "nextData": null,
+        "rawTextLength": 39120
+      }
+    },
+    {
+      "target": "Antoinette Sidibe",
+      "appPosition": "WB",
+      "playgoalsPosition": "CM",
+      "trackerExpected": "CM",
+      "characterId": "1b1bafcd-1317-54ca-992c-55b9e0fe4a77",
+      "goalsverseSquad": {
+        "characterId": "1b1bafcd-1317-54ca-992c-55b9e0fe4a77",
+        "name": "Antoinette Sidibe",
+        "overall": 73,
+        "ovr_role_raw": 5,
+        "ovr_role_resolved": "WB",
+        "top_level_role_resolved": null,
+        "roleRatings": [
+          {
+            "position": "WB",
+            "overall": 73,
+            "rawRole": 5
+          },
+          {
+            "position": "FB",
+            "overall": 73,
+            "rawRole": 4
+          },
+          {
+            "position": "DM",
+            "overall": 73,
+            "rawRole": 7
+          },
+          {
+            "position": "AM",
+            "overall": 72,
+            "rawRole": 10
+          },
+          {
+            "position": "CM",
+            "overall": 72,
+            "rawRole": 9
+          },
+          {
+            "position": "WM",
+            "overall": 72,
+            "rawRole": 11
+          },
+          {
+            "position": "CB",
+            "overall": 72,
+            "rawRole": 2
+          }
+        ],
+        "height": 180,
+        "age": 22,
+        "strong_foot": "left",
+        "stats": {
+          "pac": 78,
+          "sho": 73,
+          "pas": 69,
+          "dri": 65,
+          "def": 76,
+          "phy": 58
+        },
+        "raw_stats": {
+          "acceleration": 84,
+          "sprint_speed": 73,
+          "finishing": 79,
+          "shot_power": 72,
+          "long_shots": 70,
+          "attacking_iq": 51,
+          "ground_pass": 67,
+          "through_pass": 61,
+          "crossing": 74,
+          "sprint_dribbling": 56,
+          "close_dribbling": 67,
+          "agility": 57,
+          "defensive_iq": 71,
+          "stand_tackle": 83,
+          "interceptions": 78,
+          "strength": 73,
+          "stamina": 74,
+          "aggression": 70,
+          "heading": 34
+        },
+        "tier": 3,
+        "potential": 75,
+        "upgrades_remaining": 1
+      },
+      "goalsverseClub": {
+        "characterId": "1b1bafcd-1317-54ca-992c-55b9e0fe4a77",
+        "name": "Antoinette Sidibe",
+        "overall": 73,
+        "role_raw": 5,
+        "role_resolved": "WB",
+        "tier": 3,
+        "matches_played": 17,
+        "goals": null,
+        "assists": 3,
+        "dataQuality": "basic"
+      },
+      "goalsverseData": {
+        "characterId": "1b1bafcd-1317-54ca-992c-55b9e0fe4a77",
+        "name": "Antoinette Sidibe",
+        "overall": 73,
+        "ovr_role_raw": 5,
+        "ovr_role_resolved": "WB",
+        "top_level_role_resolved": null,
+        "roleRatings": [
+          {
+            "position": "WB",
+            "overall": 73,
+            "rawRole": 5
+          },
+          {
+            "position": "FB",
+            "overall": 73,
+            "rawRole": 4
+          },
+          {
+            "position": "DM",
+            "overall": 73,
+            "rawRole": 7
+          },
+          {
+            "position": "AM",
+            "overall": 72,
+            "rawRole": 10
+          },
+          {
+            "position": "CM",
+            "overall": 72,
+            "rawRole": 9
+          },
+          {
+            "position": "WM",
+            "overall": 72,
+            "rawRole": 11
+          },
+          {
+            "position": "CB",
+            "overall": 72,
+            "rawRole": 2
+          }
+        ],
+        "height": 180,
+        "age": 22,
+        "strong_foot": "left",
+        "stats": {
+          "pac": 78,
+          "sho": 73,
+          "pas": 69,
+          "dri": 65,
+          "def": 76,
+          "phy": 58
+        },
+        "raw_stats": {
+          "acceleration": 84,
+          "sprint_speed": 73,
+          "finishing": 79,
+          "shot_power": 72,
+          "long_shots": 70,
+          "attacking_iq": 51,
+          "ground_pass": 67,
+          "through_pass": 61,
+          "crossing": 74,
+          "sprint_dribbling": 56,
+          "close_dribbling": 67,
+          "agility": 57,
+          "defensive_iq": 71,
+          "stand_tackle": 83,
+          "interceptions": 78,
+          "strength": 73,
+          "stamina": 74,
+          "aggression": 70,
+          "heading": 34
+        },
+        "tier": 3,
+        "potential": 75,
+        "upgrades_remaining": 1
+      },
+      "trackerData": {
+        "characterId": "1b1bafcd-1317-54ca-992c-55b9e0fe4a77",
+        "url": "https://goals-tracker.com/player/1b1bafcd-1317-54ca-992c-55b9e0fe4a77",
+        "name": null,
+        "primaryPosition": "CM",
+        "primaryOvr": 73,
+        "allPositions": [
+          {
+            "rawPosition": "CM",
+            "position": "CM",
+            "overall": 73
+          },
+          {
+            "rawPosition": "DM",
+            "position": "DM",
+            "overall": 71
+          },
+          {
+            "rawPosition": "WM",
+            "position": "WM",
+            "overall": 71
+          },
+          {
+            "rawPosition": "AM",
+            "position": "AM",
+            "overall": 71
+          },
+          {
+            "rawPosition": "FB",
+            "position": "FB",
+            "overall": 68
+          },
+          {
+            "rawPosition": "CB",
+            "position": "CB",
+            "overall": 68
+          },
+          {
+            "rawPosition": "WB",
+            "position": "WB",
+            "overall": 68
+          },
+          {
+            "rawPosition": "WF",
+            "position": "WF",
+            "overall": 68
+          },
+          {
+            "rawPosition": "CF",
+            "position": "CF",
+            "overall": 68
+          },
+          {
+            "rawPosition": "ST",
+            "position": "ST",
+            "overall": 68
+          }
+        ],
+        "stats": {
+          "pac": 65,
+          "sho": 76,
+          "pas": 58,
+          "dri": 73,
+          "def": 69,
+          "phy": 0
+        },
+        "nextData": null,
+        "rawTextLength": 38875
+      }
+    },
+    {
+      "target": "Jonathan Jones",
+      "appPosition": "DM",
+      "playgoalsPosition": "AM",
+      "trackerExpected": "AM",
+      "characterId": "6dbe494a-0568-58e9-bd59-30c331515659",
+      "goalsverseSquad": {
+        "characterId": "6dbe494a-0568-58e9-bd59-30c331515659",
+        "name": "Jonathan Jones",
+        "overall": 81,
+        "ovr_role_raw": 7,
+        "ovr_role_resolved": "DM",
+        "top_level_role_resolved": null,
+        "roleRatings": [
+          {
+            "position": "DM",
+            "overall": 81,
+            "rawRole": 7
+          },
+          {
+            "position": "WB",
+            "overall": 81,
+            "rawRole": 6
+          },
+          {
+            "position": "CM",
+            "overall": 81,
+            "rawRole": 9
+          },
+          {
+            "position": "AM",
+            "overall": 81,
+            "rawRole": 10
+          },
+          {
+            "position": "WM",
+            "overall": 80,
+            "rawRole": 11
+          },
+          {
+            "position": "FB",
+            "overall": 76,
+            "rawRole": 3
+          },
+          {
+            "position": "CB",
+            "overall": 75,
+            "rawRole": 2
+          }
+        ],
+        "height": 174,
+        "age": 20,
+        "strong_foot": "left",
+        "stats": {
+          "pac": 87,
+          "sho": 74,
+          "pas": 84,
+          "dri": 90,
+          "def": 76,
+          "phy": 38
+        },
+        "raw_stats": {
+          "acceleration": 82,
+          "sprint_speed": 93,
+          "finishing": 84,
+          "shot_power": 94,
+          "long_shots": 91,
+          "attacking_iq": 47,
+          "ground_pass": 78,
+          "through_pass": 79,
+          "crossing": 76,
+          "sprint_dribbling": 90,
+          "close_dribbling": 94,
+          "agility": 97,
+          "defensive_iq": 68,
+          "stand_tackle": 69,
+          "interceptions": 91,
+          "strength": 48,
+          "stamina": 36,
+          "aggression": 22,
+          "heading": 53
+        },
+        "tier": 4,
+        "potential": 83,
+        "upgrades_remaining": 1
+      },
+      "goalsverseClub": {
+        "characterId": "6dbe494a-0568-58e9-bd59-30c331515659",
+        "name": "Jonathan Jones",
+        "overall": 81,
+        "role_raw": 7,
+        "role_resolved": "DM",
+        "tier": 4,
+        "matches_played": 14,
+        "goals": 1,
+        "assists": 7,
+        "dataQuality": "basic"
+      },
+      "goalsverseData": {
+        "characterId": "6dbe494a-0568-58e9-bd59-30c331515659",
+        "name": "Jonathan Jones",
+        "overall": 81,
+        "ovr_role_raw": 7,
+        "ovr_role_resolved": "DM",
+        "top_level_role_resolved": null,
+        "roleRatings": [
+          {
+            "position": "DM",
+            "overall": 81,
+            "rawRole": 7
+          },
+          {
+            "position": "WB",
+            "overall": 81,
+            "rawRole": 6
+          },
+          {
+            "position": "CM",
+            "overall": 81,
+            "rawRole": 9
+          },
+          {
+            "position": "AM",
+            "overall": 81,
+            "rawRole": 10
+          },
+          {
+            "position": "WM",
+            "overall": 80,
+            "rawRole": 11
+          },
+          {
+            "position": "FB",
+            "overall": 76,
+            "rawRole": 3
+          },
+          {
+            "position": "CB",
+            "overall": 75,
+            "rawRole": 2
+          }
+        ],
+        "height": 174,
+        "age": 20,
+        "strong_foot": "left",
+        "stats": {
+          "pac": 87,
+          "sho": 74,
+          "pas": 84,
+          "dri": 90,
+          "def": 76,
+          "phy": 38
+        },
+        "raw_stats": {
+          "acceleration": 82,
+          "sprint_speed": 93,
+          "finishing": 84,
+          "shot_power": 94,
+          "long_shots": 91,
+          "attacking_iq": 47,
+          "ground_pass": 78,
+          "through_pass": 79,
+          "crossing": 76,
+          "sprint_dribbling": 90,
+          "close_dribbling": 94,
+          "agility": 97,
+          "defensive_iq": 68,
+          "stand_tackle": 69,
+          "interceptions": 91,
+          "strength": 48,
+          "stamina": 36,
+          "aggression": 22,
+          "heading": 53
+        },
+        "tier": 4,
+        "potential": 83,
+        "upgrades_remaining": 1
+      },
+      "trackerData": {
+        "characterId": "6dbe494a-0568-58e9-bd59-30c331515659",
+        "url": "https://goals-tracker.com/player/6dbe494a-0568-58e9-bd59-30c331515659",
+        "name": null,
+        "primaryPosition": "AM",
+        "primaryOvr": 81,
+        "allPositions": [
+          {
+            "rawPosition": "AM",
+            "position": "AM",
+            "overall": 81
+          },
+          {
+            "rawPosition": "WM",
+            "position": "WM",
+            "overall": 79
+          },
+          {
+            "rawPosition": "CM",
+            "position": "CM",
+            "overall": 79
+          },
+          {
+            "rawPosition": "CF",
+            "position": "CF",
+            "overall": 79
+          },
+          {
+            "rawPosition": "FB",
+            "position": "FB",
+            "overall": 76
+          },
+          {
+            "rawPosition": "CB",
+            "position": "CB",
+            "overall": 76
+          },
+          {
+            "rawPosition": "WB",
+            "position": "WB",
+            "overall": 76
+          },
+          {
+            "rawPosition": "DM",
+            "position": "DM",
+            "overall": 76
+          },
+          {
+            "rawPosition": "WF",
+            "position": "WF",
+            "overall": 76
+          },
+          {
+            "rawPosition": "ST",
+            "position": "ST",
+            "overall": 76
+          }
+        ],
+        "stats": {
+          "pac": 90,
+          "sho": 76,
+          "pas": 38,
+          "dri": 74,
+          "def": 84,
+          "phy": 25
+        },
+        "nextData": null,
+        "rawTextLength": 24752
+      }
+    },
+    {
+      "target": "Romário Vieira",
+      "appPosition": "CM",
+      "playgoalsPosition": "WF",
+      "trackerExpected": "WF",
+      "characterId": "b5b9e160-ee33-5ab6-82ab-4e660a067b6b",
+      "goalsverseSquad": {
+        "characterId": "b5b9e160-ee33-5ab6-82ab-4e660a067b6b",
+        "name": "Romário Vieira",
+        "overall": 76,
+        "ovr_role_raw": 9,
+        "ovr_role_resolved": "CM",
+        "top_level_role_resolved": null,
+        "roleRatings": [
+          {
+            "position": "CM",
+            "overall": 76,
+            "rawRole": 9
+          },
+          {
+            "position": "WM",
+            "overall": 76,
+            "rawRole": 11
+          },
+          {
+            "position": "AM",
+            "overall": 75,
+            "rawRole": 10
+          },
+          {
+            "position": "WB",
+            "overall": 74,
+            "rawRole": 6
+          },
+          {
+            "position": "DM",
+            "overall": 74,
+            "rawRole": 7
+          },
+          {
+            "position": "FB",
+            "overall": 64,
+            "rawRole": 3
+          },
+          {
+            "position": "CB",
+            "overall": 62,
+            "rawRole": 2
+          }
+        ],
+        "height": 179,
+        "age": 21,
+        "strong_foot": "left",
+        "stats": {
+          "pac": 92,
+          "sho": 83,
+          "pas": 40,
+          "dri": 86,
+          "def": 41,
+          "phy": 50
+        },
+        "raw_stats": {
+          "acceleration": 94,
+          "sprint_speed": 89,
+          "finishing": 77,
+          "shot_power": 82,
+          "long_shots": 80,
+          "attacking_iq": 90,
+          "ground_pass": 43,
+          "through_pass": 33,
+          "crossing": 38,
+          "sprint_dribbling": 96,
+          "close_dribbling": 89,
+          "agility": 77,
+          "defensive_iq": 34,
+          "stand_tackle": 49,
+          "interceptions": 40,
+          "strength": 61,
+          "stamina": 47,
+          "aggression": 42,
+          "heading": 43
+        },
+        "tier": 3,
+        "potential": 76,
+        "upgrades_remaining": 0
+      },
+      "goalsverseClub": {
+        "characterId": "b5b9e160-ee33-5ab6-82ab-4e660a067b6b",
+        "name": "Romário Vieira",
+        "overall": 76,
+        "role_raw": 9,
+        "role_resolved": "CM",
+        "tier": 3,
+        "matches_played": 30,
+        "goals": 6,
+        "assists": 17,
+        "dataQuality": "basic"
+      },
+      "goalsverseData": {
+        "characterId": "b5b9e160-ee33-5ab6-82ab-4e660a067b6b",
+        "name": "Romário Vieira",
+        "overall": 76,
+        "ovr_role_raw": 9,
+        "ovr_role_resolved": "CM",
+        "top_level_role_resolved": null,
+        "roleRatings": [
+          {
+            "position": "CM",
+            "overall": 76,
+            "rawRole": 9
+          },
+          {
+            "position": "WM",
+            "overall": 76,
+            "rawRole": 11
+          },
+          {
+            "position": "AM",
+            "overall": 75,
+            "rawRole": 10
+          },
+          {
+            "position": "WB",
+            "overall": 74,
+            "rawRole": 6
+          },
+          {
+            "position": "DM",
+            "overall": 74,
+            "rawRole": 7
+          },
+          {
+            "position": "FB",
+            "overall": 64,
+            "rawRole": 3
+          },
+          {
+            "position": "CB",
+            "overall": 62,
+            "rawRole": 2
+          }
+        ],
+        "height": 179,
+        "age": 21,
+        "strong_foot": "left",
+        "stats": {
+          "pac": 92,
+          "sho": 83,
+          "pas": 40,
+          "dri": 86,
+          "def": 41,
+          "phy": 50
+        },
+        "raw_stats": {
+          "acceleration": 94,
+          "sprint_speed": 89,
+          "finishing": 77,
+          "shot_power": 82,
+          "long_shots": 80,
+          "attacking_iq": 90,
+          "ground_pass": 43,
+          "through_pass": 33,
+          "crossing": 38,
+          "sprint_dribbling": 96,
+          "close_dribbling": 89,
+          "agility": 77,
+          "defensive_iq": 34,
+          "stand_tackle": 49,
+          "interceptions": 40,
+          "strength": 61,
+          "stamina": 47,
+          "aggression": 42,
+          "heading": 43
+        },
+        "tier": 3,
+        "potential": 76,
+        "upgrades_remaining": 0
+      },
+      "trackerData": {
+        "characterId": "b5b9e160-ee33-5ab6-82ab-4e660a067b6b",
+        "url": "https://goals-tracker.com/player/b5b9e160-ee33-5ab6-82ab-4e660a067b6b",
+        "name": null,
+        "primaryPosition": "WF",
+        "primaryOvr": 76,
+        "allPositions": [
+          {
+            "rawPosition": "WF",
+            "position": "WF",
+            "overall": 76
+          },
+          {
+            "rawPosition": "WM",
+            "position": "WM",
+            "overall": 74
+          },
+          {
+            "rawPosition": "CF",
+            "position": "CF",
+            "overall": 74
+          },
+          {
+            "rawPosition": "ST",
+            "position": "ST",
+            "overall": 74
+          },
+          {
+            "rawPosition": "FB",
+            "position": "FB",
+            "overall": 71
+          },
+          {
+            "rawPosition": "CB",
+            "position": "CB",
+            "overall": 71
+          },
+          {
+            "rawPosition": "WB",
+            "position": "WB",
+            "overall": 71
+          },
+          {
+            "rawPosition": "DM",
+            "position": "DM",
+            "overall": 71
+          },
+          {
+            "rawPosition": "CM",
+            "position": "CM",
+            "overall": 71
+          },
+          {
+            "rawPosition": "AM",
+            "position": "AM",
+            "overall": 71
+          }
+        ],
+        "stats": {
+          "pac": 86,
+          "sho": 41,
+          "pas": 50,
+          "dri": 83,
+          "def": 40,
+          "phy": 0
+        },
+        "nextData": null,
+        "rawTextLength": 38838
+      }
+    },
+    {
+      "target": "Vitor do Monte",
+      "appPosition": "WM",
+      "playgoalsPosition": "ST",
+      "trackerExpected": "ST",
+      "characterId": "7cfe929a-32c9-5ef2-8690-322339963af8",
+      "goalsverseSquad": {
+        "characterId": "7cfe929a-32c9-5ef2-8690-322339963af8",
+        "name": "Vitor do Monte",
+        "overall": 81,
+        "ovr_role_raw": 11,
+        "ovr_role_resolved": "WM",
+        "top_level_role_resolved": null,
+        "roleRatings": [
+          {
+            "position": "WM",
+            "overall": 81,
+            "rawRole": 11
+          },
+          {
+            "position": "CM",
+            "overall": 81,
+            "rawRole": 9
+          },
+          {
+            "position": "AM",
+            "overall": 81,
+            "rawRole": 10
+          },
+          {
+            "position": "WB",
+            "overall": 80,
+            "rawRole": 6
+          },
+          {
+            "position": "DM",
+            "overall": 80,
+            "rawRole": 7
+          },
+          {
+            "position": "FB",
+            "overall": 73,
+            "rawRole": 3
+          },
+          {
+            "position": "CB",
+            "overall": 71,
+            "rawRole": 2
+          }
+        ],
+        "height": 186,
+        "age": 34,
+        "strong_foot": "left",
+        "stats": {
+          "pac": 86,
+          "sho": 82,
+          "pas": 66,
+          "dri": 82,
+          "def": 43,
+          "phy": 72
+        },
+        "raw_stats": {
+          "acceleration": 89,
+          "sprint_speed": 82,
+          "finishing": 69,
+          "shot_power": 96,
+          "long_shots": 89,
+          "attacking_iq": 64,
+          "ground_pass": 69,
+          "through_pass": 73,
+          "crossing": 49,
+          "sprint_dribbling": 75,
+          "close_dribbling": 91,
+          "agility": 89,
+          "defensive_iq": 32,
+          "stand_tackle": 55,
+          "interceptions": 30,
+          "strength": 84,
+          "stamina": 93,
+          "aggression": 64,
+          "heading": 42
+        },
+        "tier": 4,
+        "potential": 83,
+        "upgrades_remaining": 0
+      },
+      "goalsverseClub": {
+        "characterId": "7cfe929a-32c9-5ef2-8690-322339963af8",
+        "name": "Vitor do Monte",
+        "overall": 81,
+        "role_raw": 11,
+        "role_resolved": "WM",
+        "tier": 4,
+        "matches_played": 30,
+        "goals": 53,
+        "assists": 7,
+        "dataQuality": "basic"
+      },
+      "goalsverseData": {
+        "characterId": "7cfe929a-32c9-5ef2-8690-322339963af8",
+        "name": "Vitor do Monte",
+        "overall": 81,
+        "ovr_role_raw": 11,
+        "ovr_role_resolved": "WM",
+        "top_level_role_resolved": null,
+        "roleRatings": [
+          {
+            "position": "WM",
+            "overall": 81,
+            "rawRole": 11
+          },
+          {
+            "position": "CM",
+            "overall": 81,
+            "rawRole": 9
+          },
+          {
+            "position": "AM",
+            "overall": 81,
+            "rawRole": 10
+          },
+          {
+            "position": "WB",
+            "overall": 80,
+            "rawRole": 6
+          },
+          {
+            "position": "DM",
+            "overall": 80,
+            "rawRole": 7
+          },
+          {
+            "position": "FB",
+            "overall": 73,
+            "rawRole": 3
+          },
+          {
+            "position": "CB",
+            "overall": 71,
+            "rawRole": 2
+          }
+        ],
+        "height": 186,
+        "age": 34,
+        "strong_foot": "left",
+        "stats": {
+          "pac": 86,
+          "sho": 82,
+          "pas": 66,
+          "dri": 82,
+          "def": 43,
+          "phy": 72
+        },
+        "raw_stats": {
+          "acceleration": 89,
+          "sprint_speed": 82,
+          "finishing": 69,
+          "shot_power": 96,
+          "long_shots": 89,
+          "attacking_iq": 64,
+          "ground_pass": 69,
+          "through_pass": 73,
+          "crossing": 49,
+          "sprint_dribbling": 75,
+          "close_dribbling": 91,
+          "agility": 89,
+          "defensive_iq": 32,
+          "stand_tackle": 55,
+          "interceptions": 30,
+          "strength": 84,
+          "stamina": 93,
+          "aggression": 64,
+          "heading": 42
+        },
+        "tier": 4,
+        "potential": 83,
+        "upgrades_remaining": 0
+      },
+      "trackerData": {
+        "characterId": "7cfe929a-32c9-5ef2-8690-322339963af8",
+        "url": "https://goals-tracker.com/player/7cfe929a-32c9-5ef2-8690-322339963af8",
+        "name": null,
+        "primaryPosition": "ST",
+        "primaryOvr": 81,
+        "allPositions": [
+          {
+            "rawPosition": "ST",
+            "position": "ST",
+            "overall": 81
+          },
+          {
+            "rawPosition": "WF",
+            "position": "WF",
+            "overall": 79
+          },
+          {
+            "rawPosition": "CF",
+            "position": "CF",
+            "overall": 79
+          },
+          {
+            "rawPosition": "FB",
+            "position": "FB",
+            "overall": 76
+          },
+          {
+            "rawPosition": "CB",
+            "position": "CB",
+            "overall": 76
+          },
+          {
+            "rawPosition": "WB",
+            "position": "WB",
+            "overall": 76
+          },
+          {
+            "rawPosition": "DM",
+            "position": "DM",
+            "overall": 76
+          },
+          {
+            "rawPosition": "WM",
+            "position": "WM",
+            "overall": 76
+          },
+          {
+            "rawPosition": "CM",
+            "position": "CM",
+            "overall": 76
+          },
+          {
+            "rawPosition": "AM",
+            "position": "AM",
+            "overall": 76
+          }
+        ],
+        "stats": {
+          "pac": 82,
+          "sho": 43,
+          "pas": 72,
+          "dri": 82,
+          "def": 66,
+          "phy": 25
+        },
+        "nextData": null,
+        "rawTextLength": 24761
+      }
+    }
+  ]
+}
