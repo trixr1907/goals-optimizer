@@ -1,4 +1,5 @@
-import { Player, PlayerStats, Position, Rarity, PlayerRoleRating, PlayerAging, ALL_POSITIONS } from './types';
+import { Player, PlayerStats, Position, Rarity, PlayerRoleRating, PlayerAging, ALL_POSITIONS, PositionSource, RoleRatingsSource } from './types';
+import { fetchTrackerPlayerData } from './goals-tracker-client';
 
 const GOALSVERSE_BASE = 'https://goalsverse.com';
 const CDN_BASE = 'https://cdn.playgoals.com/character/prod';
@@ -753,16 +754,23 @@ export async function getClubRoster(clubName: string): Promise<GoalsverseFetchRe
       }
     }
 
+    // ── Step 4: Enrich with Goals-Tracker (position + roleRatings overrides) ──
+    // Tracker is authoritative for primary position and uses a more accurate OVR formula.
+    // This is best-effort: if Tracker is down, merged stays intact (sourceWarnings added per player).
+    const trackerEnriched = merged.length > 0
+      ? await enrichWithTracker(merged)
+      : merged;
+
     return {
-      players: merged,
+      players: trackerEnriched,
       clubId,
       // Club profile URL on goalsverse — human-readable page, not the raw API endpoint
       clubUrl: resolvedSlug
         ? `${GOALSVERSE_BASE}/p/${encodeURIComponent(resolvedSlug)}`
         : `${GOALSVERSE_BASE}/v1/club/${clubId}`,
       clubName: clubUsername || clubName,
-      reason: merged.length ? undefined : 'Squad gefunden, aber keine Spieler extrahiert.',
-      errorCode: merged.length ? undefined : 'no_players_found',
+      reason: trackerEnriched.length ? undefined : 'Squad gefunden, aber keine Spieler extrahiert.',
+      errorCode: trackerEnriched.length ? undefined : 'no_players_found',
     };
   } catch (err) {
     const reason = `Fehler beim Abrufen: ${err instanceof Error ? err.message : String(err)}`;
@@ -773,6 +781,116 @@ export async function getClubRoster(clubName: string): Promise<GoalsverseFetchRe
       errorCode: classifyImportError(reason),
     };
   }
+}
+
+/* ── Goals-Tracker enrichment ────────────────────────────────────────────── */
+
+/**
+ * Enrich an array of players with position + roleRatings data from goals-tracker.com.
+ *
+ * Strategy:
+ *  - Fetch tracker data for each player concurrently (bounded to CONCURRENCY parallel requests)
+ *  - On success: overwrite player.position and player.roleRatings from Tracker
+ *  - On failure / timeout: keep Goalsverse data unchanged, add a sourceWarning
+ *  - Never throws — import continues even if Tracker is fully down
+ *
+ * Only enriches players that have a recognisable raw character ID (UUID format).
+ */
+const TRACKER_CONCURRENCY = 5; // max parallel fetch() calls to goals-tracker.com
+
+async function enrichWithTracker(players: Player[]): Promise<Player[]> {
+  // Helper: run an async iterable with bounded concurrency
+  async function runBounded<T, R>(
+    items: T[],
+    limit: number,
+    fn: (item: T, idx: number) => Promise<R>,
+  ): Promise<R[]> {
+    const results: R[] = new Array(items.length);
+    let nextIdx = 0;
+
+    async function worker() {
+      while (nextIdx < items.length) {
+        const i = nextIdx++;
+        results[i] = await fn(items[i], i);
+      }
+    }
+
+    const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
+    await Promise.all(workers);
+    return results;
+  }
+
+  const enriched = await runBounded(players, TRACKER_CONCURRENCY, async (player) => {
+    // Extract raw UUID (without "goalsverse-" prefix)
+    const rawId = player.id.startsWith('goalsverse-')
+      ? player.id.slice('goalsverse-'.length)
+      : null;
+
+    // Skip players without a valid UUID (shouldn't happen but be defensive)
+    if (!rawId || !/^[0-9a-f-]{36}$/i.test(rawId)) {
+      return {
+        ...player,
+        positionSource: 'goalsverse' as PositionSource,
+        roleRatingsSource: 'goalsverse' as RoleRatingsSource,
+      };
+    }
+
+    const trackerData = await fetchTrackerPlayerData(rawId);
+
+    if (!trackerData) {
+      // Tracker unreachable or player not found — keep Goalsverse data
+      return {
+        ...player,
+        positionSource: 'goalsverse' as PositionSource,
+        roleRatingsSource: 'goalsverse' as RoleRatingsSource,
+        sourceWarnings: [
+          ...(player.sourceWarnings ?? []),
+          `goals-tracker: kein Ergebnis für ${rawId}`,
+        ],
+      };
+    }
+
+    // Build the enriched player — Tracker wins over Goalsverse
+    const warnings: string[] = [...(player.sourceWarnings ?? [])];
+
+    // Position: Tracker badge is authoritative
+    const newPosition: Position = trackerData.primaryPosition ?? player.position;
+    const positionSource: PositionSource =
+      trackerData.primaryPosition !== null ? 'goals-tracker' : 'goalsverse';
+
+    if (trackerData.primaryPosition === null) {
+      warnings.push(`goals-tracker: keine Primary-Position für ${rawId}, nutze Goalsverse`);
+    }
+
+    // roleRatings: Tracker's ovr_roles (different OVR formula, more accurate)
+    let newRoleRatings = player.roleRatings;
+    let roleRatingsSource: RoleRatingsSource = 'goalsverse';
+
+    if (trackerData.roleRatings.length > 0) {
+      newRoleRatings = trackerData.roleRatings;
+      roleRatingsSource = 'goals-tracker';
+    } else {
+      warnings.push(`goals-tracker: keine roleRatings für ${rawId}, nutze Goalsverse`);
+    }
+
+    // Recompute secondaryPositions based on new roleRatings + new primary position
+    const newOverall = player.overall;
+    const newSecondary: Position[] = newRoleRatings
+      .filter((r) => r.overall >= newOverall - 10 && r.position !== newPosition)
+      .map((r) => r.position);
+
+    return {
+      ...player,
+      position: newPosition,
+      roleRatings: newRoleRatings,
+      secondaryPositions: newSecondary,
+      positionSource,
+      roleRatingsSource,
+      sourceWarnings: warnings.length > 0 ? warnings : undefined,
+    };
+  });
+
+  return enriched;
 }
 
 // ScraperClient registration — future sources implement the same interface

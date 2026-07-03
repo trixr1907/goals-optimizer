@@ -94,6 +94,9 @@ export interface PlayerStats {
 
 export type DataQuality = 'full' | 'basic';
 
+export type PositionSource = 'goals-tracker' | 'goalsverse' | 'heuristic';
+export type RoleRatingsSource = 'goals-tracker' | 'goalsverse' | 'mixed' | 'none';
+
 export function hasFullStats(player: Pick<Player, 'dataQuality' | 'stats'>): boolean {
   if (player.dataQuality) return player.dataQuality === 'full';
   return Object.values(player.stats).some((value) => typeof value === 'number' && value > 0);
@@ -128,6 +131,13 @@ export interface Player {
 
   /** Data quality indicator: 'full' = has individual stats, 'basic' = only role/OVR */
   dataQuality?: DataQuality;
+
+  /** Which source determined the primary position */
+  positionSource?: PositionSource;
+  /** Which source provided the roleRatings array */
+  roleRatingsSource?: RoleRatingsSource;
+  /** Non-fatal data warnings (e.g. tracker unreachable, fallback used) */
+  sourceWarnings?: string[];
 }
 
 export interface PlayerWithScores extends Player {
