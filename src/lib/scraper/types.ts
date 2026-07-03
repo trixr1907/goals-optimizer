@@ -92,6 +92,13 @@ export interface PlayerStats {
   kicking_power?: number;
 }
 
+export type DataQuality = 'full' | 'basic';
+
+export function hasFullStats(player: Pick<Player, 'dataQuality' | 'stats'>): boolean {
+  if (player.dataQuality) return player.dataQuality === 'full';
+  return Object.values(player.stats).some((value) => typeof value === 'number' && value > 0);
+}
+
 export interface Player {
   id: string;
   name: string;
@@ -118,6 +125,9 @@ export interface Player {
   roleRatings: PlayerRoleRating[];       // All positions with OVR from ovr_roles
   secondaryPositions: Position[];        // Positions with OVR >= primary - 2
   aging?: PlayerAging;
+
+  /** Data quality indicator: 'full' = has individual stats, 'basic' = only role/OVR */
+  dataQuality?: DataQuality;
 }
 
 export interface PlayerWithScores extends Player {

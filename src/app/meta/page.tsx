@@ -71,7 +71,7 @@ export default function MetaPage() {
     setFormation(rec.formation.name, rec.formation.slots);
     setTimeout(() => {
       autoFill(recommendationToLineup(rec));
-      router.push('/lineup');
+      router.push(appPath('/lineup'));
     }, 0);
   }
 

@@ -61,10 +61,28 @@ function mapOvrToRarity(ovr: number): Rarity {
 
 type GoalsverseFetchResult = {
   players: Player[];
+  clubId?: string;
   clubUrl?: string;
   clubName?: string;
   reason?: string;
+  errorCode?: ImportErrorCode;
 };
+
+export type ImportErrorCode =
+  | 'club_not_found'
+  | 'goalsverse_timeout'
+  | 'rsc_payload_incomplete'
+  | 'no_players_found'
+  | 'network_error';
+
+export function classifyImportError(reason: string): ImportErrorCode {
+  const lower = reason.toLowerCase();
+  if (lower.includes('nicht gefunden')) return 'club_not_found';
+  if (lower.includes('timeout') || lower.includes('zeitüberschreitung')) return 'goalsverse_timeout';
+  if (lower.includes('rsc') || lower.includes('payload') || lower.includes('squad-daten')) return 'rsc_payload_incomplete';
+  if (lower.includes('keine spieler') || lower.includes('keine spieler extrahiert')) return 'no_players_found';
+  return 'network_error';
+}
 
 type GoalsverseSearchUser = {
   userId?: string;
@@ -278,7 +296,7 @@ interface ActivityPlayer {
   starts?: number;
 }
 
-function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
+export function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
   const rawId = ap.characterId ?? ap.id ?? 'unknown';
 
   // Activity page uses a single "name" field; full squad page splits first/last
@@ -343,6 +361,7 @@ function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
     assists: ap.assists,
     roleRatings: roleRatings.length > 0 ? roleRatings : [{ position: mappedPosition, overall }],
     secondaryPositions,
+    dataQuality: 'basic',
   };
 }
 
@@ -517,6 +536,7 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
     roleRatings: roleRatings.length > 0 ? roleRatings : [{ position: finalPosition, overall: overall }],
     secondaryPositions,
     aging,
+    dataQuality: 'full',
   };
 }
 
@@ -541,7 +561,8 @@ async function resolveUsernameForClub(clubId: string): Promise<string | null> {
 export async function getClubRoster(clubName: string): Promise<GoalsverseFetchResult> {
   const clubId = await resolveClubId(clubName);
   if (!clubId) {
-    return { players: [], reason: `Club "${clubName}" wurde auf goalsverse nicht gefunden.` };
+    const reason = `Club "${clubName}" wurde auf goalsverse nicht gefunden.`;
+    return { players: [], reason, errorCode: 'club_not_found' };
   }
 
   try {
@@ -550,7 +571,8 @@ export async function getClubRoster(clubName: string): Promise<GoalsverseFetchRe
     const { squad, clubInfo, slug } = extractSquadFromRsc(rscText);
 
     if (!squad || typeof squad !== 'object') {
-      return { players: [], reason: 'Squad-Daten nicht im RSC-Payload gefunden.' };
+      const reason = 'Squad-Daten nicht im RSC-Payload gefunden.';
+      return { players: [], clubId, reason, errorCode: 'rsc_payload_incomplete' };
     }
 
     const squadObj = squad as Record<string, unknown>;
@@ -628,17 +650,22 @@ export async function getClubRoster(clubName: string): Promise<GoalsverseFetchRe
 
     return {
       players: merged,
+      clubId,
       // Club profile URL on goalsverse — human-readable page, not the raw API endpoint
       clubUrl: resolvedSlug
         ? `${GOALSVERSE_BASE}/p/${encodeURIComponent(resolvedSlug)}`
         : `${GOALSVERSE_BASE}/v1/club/${clubId}`,
       clubName: clubUsername || clubName,
       reason: merged.length ? undefined : 'Squad gefunden, aber keine Spieler extrahiert.',
+      errorCode: merged.length ? undefined : 'no_players_found',
     };
   } catch (err) {
+    const reason = `Fehler beim Abrufen: ${err instanceof Error ? err.message : String(err)}`;
     return {
       players: [],
-      reason: `Fehler beim Abrufen: ${err instanceof Error ? err.message : String(err)}`,
+      clubId,
+      reason,
+      errorCode: classifyImportError(reason),
     };
   }
 }

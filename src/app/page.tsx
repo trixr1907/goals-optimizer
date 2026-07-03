@@ -108,6 +108,17 @@ function relativeAge(isoString: string): string {
   return `vor ${Math.floor(days / 30)} Monaten`;
 }
 
+function importErrorMessage(errorCode?: string, fallback = 'Live-Import fehlgeschlagen.'): string {
+  switch (errorCode) {
+    case 'club_not_found': return 'Club nicht gefunden. Prüfe Schreibweise und Sonderzeichen.';
+    case 'goalsverse_timeout': return 'Goalsverse antwortet zu langsam. Bitte gleich erneut versuchen.';
+    case 'rsc_payload_incomplete': return 'Goalsverse hat unvollständige Kaderdaten geliefert.';
+    case 'no_players_found': return 'Keine Spieler im importierten Kader gefunden.';
+    case 'network_error': return 'Netzwerk- oder Goalsverse-API-Fehler.';
+    default: return fallback;
+  }
+}
+
 export default function OnboardingPage() {
   const { clubName, clubId, players, lastImportedAt, setClubName, importPlayers, reimportPlayers, _hasHydrated } =
     useSquadStore();
@@ -146,6 +157,7 @@ export default function OnboardingPage() {
 
   async function fetchAndEnrich(name: string): Promise<{
     players: PlayerWithScores[];
+    clubId?: string;
     clubUrl?: string;
     resolvedName?: string;
   }> {
@@ -156,7 +168,7 @@ export default function OnboardingPage() {
     });
     const data = await res.json();
     if (!res.ok) {
-      throw new Error(data.error ?? 'Live-Import fehlgeschlagen.');
+      throw new Error(importErrorMessage(data.errorCode, data.message ?? data.error));
     }
     const resolvedName = data.clubName && data.source === 'goalsverse'
       ? String(data.clubName)
@@ -164,8 +176,8 @@ export default function OnboardingPage() {
     if (data.clubName && data.source === 'goalsverse') {
       setClubName(data.clubName);
     }
-    if (!data.players?.length) return { players: [], resolvedName, clubUrl: data.clubUrl };
-    return { players: data.players as PlayerWithScores[], clubUrl: data.clubUrl, resolvedName };
+    if (!data.players?.length) return { players: [], clubId: data.clubId, resolvedName, clubUrl: data.clubUrl };
+    return { players: data.players as PlayerWithScores[], clubId: data.clubId, clubUrl: data.clubUrl, resolvedName };
   }
 
   async function handleImport() {
@@ -177,7 +189,7 @@ export default function OnboardingPage() {
     setImportResult(null);
     try {
       const requestedName = inputValue.trim();
-      const { players: incoming, clubUrl, resolvedName } = await fetchAndEnrich(requestedName);
+      const { players: incoming, clubId: resolvedClubId, clubUrl, resolvedName } = await fetchAndEnrich(requestedName);
       if (!incoming.length) {
         setStatus('Keine Spieler gefunden.');
         return;
@@ -189,7 +201,7 @@ export default function OnboardingPage() {
         clubUrl,
       });
       if (isReimport) {
-        const result = reimportPlayers(incoming, clubUrl);
+        const result = reimportPlayers(incoming, clubUrl, resolvedClubId);
         setDelta(result);
         const total =
           result.newPlayers.length + result.updatedPlayers.length + result.removedPlayers.length;
@@ -199,7 +211,7 @@ export default function OnboardingPage() {
             : 'Kein Unterschied zum letzten Import.'
         );
       } else {
-        importPlayers(incoming, clubUrl);
+        importPlayers(incoming, clubUrl, resolvedClubId);
         setStatus(`${incoming.length} Spieler importiert.`);
         router.push(appPath('/lineup'));
       }
@@ -249,7 +261,7 @@ export default function OnboardingPage() {
       setClubName(parsed.clubName || 'Importierter Club');
       importPlayers(enriched);
       setStatus(`${enriched.length} Spieler aus Backup importiert.`);
-      router.push('/squad');
+      router.push(appPath('/squad'));
     } catch {
       setStatus('Backup konnte nicht gelesen werden.');
     } finally {
