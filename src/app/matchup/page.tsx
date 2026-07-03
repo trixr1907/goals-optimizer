@@ -2,20 +2,32 @@
 
 import { useState } from 'react';
 import { useSquadStore } from '@/lib/store/squad-store';
+import { useLineupStore } from '@/lib/store/lineup-store';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { appPath } from '@/lib/app-url';
-import { getClubRoster } from '@/lib/scraper/goalsverse-client';
+import { appPath, apiPath } from '@/lib/app-url';
 import { PlayerWithScores } from '@/lib/scraper/types';
 import { MatchupCanvas } from '@/components/matchup/MatchupCanvas';
 import { MatchupAnalysis } from '@/components/matchup/MatchupAnalysis';
 
 export default function MatchupPage() {
   const { players: myPlayers, clubName: myClubName } = useSquadStore();
+  const { formation, slots, lineup } = useLineupStore();
+
   const [opponentId, setOpponentId] = useState('');
   const [opponentPlayers, setOpponentPlayers] = useState<PlayerWithScores[] | null>(null);
   const [opponentClubName, setOpponentClubName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Build my lineup player list — ordered by slot, falling back to full squad
+  const squadById = new Map(myPlayers.map((p) => [p.id, p]));
+  const lineupPlayers: PlayerWithScores[] = Object.values(lineup)
+    .filter((id): id is string => !!id)
+    .map((id) => squadById.get(id))
+    .filter((p): p is PlayerWithScores => !!p);
+
+  // If lineup is set, use it; otherwise use full squad for analysis
+  const myEffectivePlayers = lineupPlayers.length >= 7 ? lineupPlayers : myPlayers;
 
   async function analyzeOpponent() {
     if (!opponentId.trim()) return;
@@ -23,16 +35,24 @@ export default function MatchupPage() {
     setError('');
 
     try {
-      const result = await getClubRoster(opponentId.trim());
-      if (result.reason) {
-        setError(result.reason);
+      // Use the server-side /api/import endpoint — getClubRoster() is server-only
+      // and cannot be called directly from the browser (no CORS, custom headers).
+      const res = await fetch(apiPath('/api/import'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clubName: opponentId.trim() }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.players?.length) {
+        setError(data.error ?? 'Gegner nicht gefunden.');
         setOpponentPlayers(null);
-      } else {
-        const { enrichPlayerWithScores } = await import('@/lib/scoring/position-fit');
-        const enriched = result.players.map(enrichPlayerWithScores);
-        setOpponentPlayers(enriched);
-        setOpponentClubName(result.clubName || opponentId);
+        return;
       }
+
+      // Players from /api/import are already enriched with fit_scores
+      setOpponentPlayers(data.players as PlayerWithScores[]);
+      setOpponentClubName(data.clubName || opponentId.trim());
     } catch {
       setError('Fehler beim Laden des Gegners.');
     } finally {
@@ -65,6 +85,11 @@ export default function MatchupPage() {
             <h2 className="text-2xl font-bold text-white">Gegner-Analyse</h2>
             <p className="text-sm text-slate-500">
               Gib die goalsverse-ID oder den Club-Namen deines Gegners ein.
+              {lineupPlayers.length >= 7 && (
+                <span className="ml-2 text-emerald-600">
+                  Deine Aufstellung ({formation}) wird verwendet.
+                </span>
+              )}
             </p>
           </div>
 
@@ -81,7 +106,7 @@ export default function MatchupPage() {
             <button
               onClick={analyzeOpponent}
               disabled={loading}
-              className="h-10 px-4 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-500 disabled:opacity-50 transition-colors"
+              className="h-10 px-4 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-500 disabled:opacity-50 transition-colors whitespace-nowrap"
             >
               {loading ? 'Lädt...' : 'Analysieren'}
             </button>
@@ -93,14 +118,19 @@ export default function MatchupPage() {
           {opponentPlayers && (
             <div className="space-y-6">
               <MatchupCanvas
-                myPlayers={myPlayers}
+                myPlayers={myEffectivePlayers}
                 opponentPlayers={opponentPlayers}
                 myClubName={myClubName}
                 opponentClubName={opponentClubName}
+                myFormation={formation}
+                mySlots={slots}
+                myLineup={lineup}
               />
               <MatchupAnalysis
-                myPlayers={myPlayers}
+                myPlayers={myEffectivePlayers}
                 opponentPlayers={opponentPlayers}
+                myClubName={myClubName}
+                opponentClubName={opponentClubName}
               />
             </div>
           )}

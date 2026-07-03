@@ -237,7 +237,8 @@ interface ActivityPlayer {
   last_name?: string;
   role?: number;
   tier?: number;
-  ovr?: number | { overall_rating?: number };
+  ovr?: number | { overall_rating?: number; role?: number | string };
+  ovr_roles?: Array<{ role: number | string; overall_rating: number }>;
   matchesPlayed?: number;
   goals?: number;
   assists?: number;
@@ -294,11 +295,12 @@ function extractActivityPlayersFromRsc(rscText: string): ActivityPlayer[] {
 function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
   const rawId = ap.characterId ?? ap.id ?? 'unknown';
   const firstName = ap.firstName ?? ap.first_name ?? '';
-  const lastName  = ap.lastName  ?? ap.last_name  ?? '';
+  const lastName  = ap.lastName  ?? ap.last_name  ?? ''  ;
   const name = `${firstName} ${lastName}`.trim() || rawId.slice(0, 8);
 
   const role    = typeof ap.role === 'number' ? ap.role : 8;
   const tier    = typeof ap.tier === 'number' ? ap.tier : 0;
+  void tier; // not used downstream but kept for future use
   const overall = typeof ap.ovr === 'number'
     ? ap.ovr
     : typeof ap.ovr === 'object' && ap.ovr !== null
@@ -317,7 +319,26 @@ function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
     div: 0, kic: 0, reflexes: 0, positioning: 0, catching: 0, parrying: 0,
   };
 
-  const mappedPosition: Position = (ROLE_MAP[role] ?? 'CM') as Position;
+  // Primary position from equipped role (ovr.role wins over top-level role field)
+  const ovrObj = (typeof ap.ovr === 'object' && ap.ovr !== null) ? ap.ovr as { overall_rating?: number; role?: number | string } : null;
+  const equippedRole = ovrObj?.role ?? ap.role;
+  const mappedPosition: Position = (typeof equippedRole !== 'undefined' ? resolveRole(equippedRole as number | string) : (ROLE_MAP[role] ?? 'CM')) as Position;
+
+  // Collect secondary positions from ovr_roles if present in the RSC payload
+  const ovrRoles = Array.isArray(ap.ovr_roles) ? ap.ovr_roles : [];
+  const roleRatingsMap = new Map<Position, number>();
+  for (const r of ovrRoles) {
+    const pos = resolveRole(r.role);
+    if (!ALL_POSITIONS.includes(pos)) continue;
+    const current = roleRatingsMap.get(pos) ?? 0;
+    if (r.overall_rating > current) roleRatingsMap.set(pos, r.overall_rating);
+  }
+  const roleRatings: PlayerRoleRating[] = Array.from(roleRatingsMap.entries())
+    .map(([position, ovr]) => ({ position, overall: ovr }));
+
+  const secondaryPositions: Position[] = roleRatings
+    .filter((r) => r.overall >= overall - 10 && r.position !== mappedPosition)
+    .map((r) => r.position);
 
   return {
     id: `goalsverse-${rawId}`,
@@ -330,17 +351,12 @@ function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
     matches_played: ap.matchesPlayed,
     goals: ap.goals,
     assists: ap.assists,
-    roleRatings: [{ position: mappedPosition, overall: overall }],
-    secondaryPositions: [],
+    roleRatings: roleRatings.length > 0 ? roleRatings : [{ position: mappedPosition, overall }],
+    secondaryPositions,
   };
 }
 
 /* ── Player mapping (full squad) ─────────────────────────────────────────── */
-
-function mapRoleToPosition(roleId: number): Position {
-  return ROLE_MAP[roleId] || 'CM';
-}
-
 function extractStatValue(stats: Record<string, unknown>, path: string[]): number {
   let current: unknown = stats;
   for (const key of path) {
@@ -400,9 +416,11 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
   // Overall from equipped card
   const equippedOverall = overall;
 
-  // Secondary = all ovr_roles positions with OVR >= equippedOverall - 3, excluding primary
+  // Secondary = all ovr_roles positions with OVR >= equippedOverall - 10, excluding primary.
+  // Threshold is intentionally wide: GOALS players regularly play multiple positions with
+  // significant OVR gaps (e.g. AM 85 → CF 81 → CM 80 are all valid secondary slots).
   const secondaryPositions: Position[] = roleRatings
-    .filter((r) => r.overall >= equippedOverall - 3 && r.position !== equippedPosition)
+    .filter((r) => r.overall >= equippedOverall - 10 && r.position !== equippedPosition)
     .map((r) => r.position);
 
   // Aging data
@@ -512,6 +530,22 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
   };
 }
 
+/* ── Resolve username from club ID (for activity page) ───────────────────── */
+
+/**
+ * Fetch the username (slug) for a given user/club ID.
+ * The activity page is at /p/{username} — we need the username, not the UUID.
+ * Falls back to null if the API call fails or returns no username.
+ */
+async function resolveUsernameForClub(clubId: string): Promise<string | null> {
+  try {
+    const data = await fetchJson<{ username?: string; display_name?: string }>(`${GOALSVERSE_BASE}/api/v1/users/${encodeURIComponent(clubId)}`);
+    return data.username ?? data.display_name ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /* ── Public API ──────────────────────────────────────────────────────────── */
 
 export async function getClubRoster(clubName: string): Promise<GoalsverseFetchResult> {
@@ -547,15 +581,32 @@ export async function getClubRoster(clubName: string): Promise<GoalsverseFetchRe
       : undefined;
 
     // ── Step 2: Load /p/{slug} — gives ~60 players with basic stats ──
+    // Priority: RSC slug > club API username > /api/v1/users/{id} lookup > original search term
+    // We avoid using the raw clubName input as slug when it looks like a UUID or was
+    // a partial search string — that would produce a 404 and miss all non-squad players.
     let activityPlayers: Player[] = [];
-    const resolvedSlug = slug ?? clubUsername ?? clubName;
 
-    try {
-      const activityRsc = await fetchRsc(`/p/${encodeURIComponent(resolvedSlug)}`);
-      const rawActivity = extractActivityPlayersFromRsc(activityRsc);
-      activityPlayers = rawActivity.map(mapActivityPlayerToBasic);
-    } catch {
-      // Activity page is best-effort — don't fail the whole import if it 404s
+    // Best slug from RSC payload or club data (fastest, no extra request)
+    let resolvedSlug = slug ?? clubUsername ?? null;
+
+    // If still no slug and clubId is a UUID, do a dedicated username lookup
+    if (!resolvedSlug && /^[0-9a-f-]{36}$/i.test(clubId)) {
+      resolvedSlug = await resolveUsernameForClub(clubId);
+    }
+
+    // Last resort: use the original search input only if it doesn't look like a UUID
+    if (!resolvedSlug && !/^[0-9a-f-]{36}$/i.test(clubName)) {
+      resolvedSlug = clubName;
+    }
+
+    if (resolvedSlug) {
+      try {
+        const activityRsc = await fetchRsc(`/p/${encodeURIComponent(resolvedSlug)}`);
+        const rawActivity = extractActivityPlayersFromRsc(activityRsc);
+        activityPlayers = rawActivity.map(mapActivityPlayerToBasic);
+      } catch {
+        // Activity page is best-effort — don't fail the whole import if it 404s
+      }
     }
 
     // ── Step 3: Merge — squad (full stats) wins over activity (basic) ──
@@ -581,7 +632,10 @@ export async function getClubRoster(clubName: string): Promise<GoalsverseFetchRe
 
     return {
       players: merged,
-      clubUrl: `${GOALSVERSE_BASE}/v1/club/${clubId}`,
+      // Club profile URL on goalsverse — human-readable page, not the raw API endpoint
+      clubUrl: resolvedSlug
+        ? `${GOALSVERSE_BASE}/p/${encodeURIComponent(resolvedSlug)}`
+        : `${GOALSVERSE_BASE}/v1/club/${clubId}`,
       clubName: clubUsername || clubName,
       reason: merged.length ? undefined : 'Squad gefunden, aber keine Spieler extrahiert.',
     };

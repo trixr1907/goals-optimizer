@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useSquadStore } from '@/lib/store/squad-store';
-import { PlayerWithScores, Position, ALL_POSITIONS, displayPosition, getPositionType } from '@/lib/scraper/types';
+import { PlayerWithScores, Position, ALL_POSITIONS, displayPosition } from '@/lib/scraper/types';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { appPath } from '@/lib/app-url';
 import { Input } from '@/components/ui/input';
@@ -611,8 +611,73 @@ export default function SquadPage() {
             <span className="ml-auto self-center text-xs text-slate-600">{sorted.length} Treffer</span>
           </div>
 
-          {/* Tabelle */}
-          <div className="overflow-x-auto rounded-xl border border-slate-800">
+          {/* ── Mobile Card-Liste (< lg) ── */}
+          <div className="lg:hidden space-y-2">
+            {sorted.map((player) => {
+              const mainMeta  = player.fit_scores[player.position] ?? 0;
+              const [bestPos, bestFit] = getBestPos(player);
+              const isWasted   = bestPos !== player.position && bestFit - mainMeta >= 10;
+              const isExpanded = expandedId === player.id;
+
+              return (
+                <div key={player.id} className="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+                  {/* Card Header — tap to expand */}
+                  <button
+                    className="w-full text-left p-3 flex items-center gap-3"
+                    onClick={() => setExpandedId(isExpanded ? null : player.id)}
+                  >
+                    <PlayerAvatar player={player} size={40} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-white truncate">{player.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold text-white ${RARITY_COLOR[player.rarity] ?? 'bg-slate-600'}`}>
+                          {player.rarity[0]}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-xs text-slate-400">{displayPosition(player.position)}</span>
+                        <span className="text-xs font-mono text-white">{player.overall}</span>
+                        <span className={`text-xs font-mono ${metaColor(mainMeta)}`}>Meta {mainMeta.toFixed(0)}</span>
+                        {isWasted && (
+                          <span className="text-[10px] text-amber-400">
+                            ↑ {displayPosition(bestPos)} +{(bestFit - mainMeta).toFixed(0)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {clubUrl && (
+                        <a
+                          href={clubUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-slate-500 hover:text-white text-sm"
+                        >
+                          🔗
+                        </a>
+                      )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setSelectedPlayer(player); setComparePlayer(null); }}
+                        className="text-slate-500 hover:text-emerald-400 text-sm"
+                      >
+                        📊
+                      </button>
+                      <span className="text-slate-600 text-xs">{isExpanded ? '▲' : '▼'}</span>
+                    </div>
+                  </button>
+                  {/* Expanded Details */}
+                  {isExpanded && <DetailsPanel player={player} />}
+                </div>
+              );
+            })}
+            {sorted.length === 0 && (
+              <p className="text-center text-slate-500 text-sm py-8">Keine Spieler gefunden.</p>
+            )}
+          </div>
+
+          {/* ── Desktop Tabelle (lg+) ── */}
+          <div className="hidden lg:block overflow-x-auto rounded-xl border border-slate-800">
             <table className="w-full min-w-[800px] text-sm border-collapse">
               <thead className="bg-slate-900 border-b border-slate-800">
                 <tr>
@@ -762,7 +827,7 @@ export default function SquadPage() {
           </div>
 
           {sorted.length === 0 && (
-            <p className="text-center text-slate-500 text-sm py-8">Keine Spieler gefunden.</p>
+            <p className="hidden lg:block text-center text-slate-500 text-sm py-8">Keine Spieler gefunden.</p>
           )}
         </div>
       </main>

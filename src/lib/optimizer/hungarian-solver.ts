@@ -2,6 +2,7 @@ import { PlayerWithScores, Position } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
 import { calcPositionFitScore } from '@/lib/scoring/position-fit';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const Munkres = require('munkres-js');
 
 export interface HungarianAssignment {
