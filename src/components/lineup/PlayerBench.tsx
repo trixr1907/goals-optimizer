@@ -10,7 +10,7 @@ const RARITY_BADGE: Record<string, string> = {
   Epic: 'bg-purple-700',
   Legendary: 'bg-amber-600',
   Mythic: 'bg-red-700',
-  Iconic: 'bg-cyan-700',
+  Common: 'bg-stone-500',
 };
 
 function BenchPlayer({ player, targetPosition }: { player: PlayerWithScores; targetPosition?: Position }) {
@@ -30,9 +30,19 @@ function BenchPlayer({ player, targetPosition }: { player: PlayerWithScores; tar
         isDragging ? 'opacity-30' : 'hover:bg-slate-800/60'
       }`}
     >
-      <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${RARITY_BADGE[player.rarity] ?? 'bg-slate-600'} text-white`}>
-        {player.overall}
-      </span>
+      {player.image_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={player.image_url}
+          alt={player.name}
+          className="w-6 h-6 rounded-full object-cover shrink-0"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+        />
+      ) : (
+        <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${RARITY_BADGE[player.rarity] ?? 'bg-slate-600'} text-white`}>
+          {player.overall}
+        </span>
+      )}
       <span className="text-sm text-white flex-1 truncate">{player.name}</span>
       <span className="text-xs text-slate-500">{displayPosition(player.position)}</span>
       {fitScore !== null && (

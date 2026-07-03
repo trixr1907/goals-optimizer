@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { TACTICS_SETTINGS } from '@/lib/tactics/tactics-engine';
 
 interface TacticsState {
   settings: Record<string, string>;
@@ -8,9 +7,7 @@ interface TacticsState {
   resetAll: () => void;
 }
 
-const DEFAULT_SETTINGS = Object.fromEntries(
-  TACTICS_SETTINGS.map((s) => [s.id, s.default])
-);
+const DEFAULT_SETTINGS: Record<string, string> = {};
 
 export const useTacticsStore = create<TacticsState>()(
   persist(

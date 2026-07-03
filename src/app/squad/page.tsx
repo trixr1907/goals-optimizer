@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useSquadStore } from '@/lib/store/squad-store';
-import { PlayerWithScores, Position, ALL_POSITIONS, displayPosition } from '@/lib/scraper/types';
+import { PlayerWithScores, Position, ALL_POSITIONS, displayPosition, getPositionType } from '@/lib/scraper/types';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { appPath } from '@/lib/app-url';
 import { Input } from '@/components/ui/input';
@@ -17,15 +17,15 @@ const StatRadarChart = dynamic(
 // ── Farben / Rarity ──────────────────────────────────────────────────────────
 
 const RARITY_COLOR: Record<string, string> = {
-  Basic: 'bg-slate-600', Uncommon: 'bg-green-700', Rare: 'bg-blue-700',
-  Epic: 'bg-purple-700', Legendary: 'bg-amber-600', Mythic: 'bg-red-700', Iconic: 'bg-cyan-700',
+  Basic: 'bg-slate-600', Common: 'bg-stone-500', Uncommon: 'bg-green-700', Rare: 'bg-blue-700',
+  Epic: 'bg-purple-700', Legendary: 'bg-amber-600', Mythic: 'bg-red-700',
 };
 const RARITY_TEXT: Record<string, string> = {
-  Basic: 'text-slate-300', Uncommon: 'text-green-300', Rare: 'text-blue-300',
-  Epic: 'text-purple-300', Legendary: 'text-amber-300', Mythic: 'text-red-300', Iconic: 'text-cyan-300',
+  Basic: 'text-slate-300', Common: 'text-stone-300', Uncommon: 'text-green-300', Rare: 'text-blue-300',
+  Epic: 'text-purple-300', Legendary: 'text-amber-300', Mythic: 'text-red-300',
 };
 const RARITY_ORDER: Record<string, number> = {
-  Basic: 0, Uncommon: 1, Rare: 2, Epic: 3, Legendary: 4, Mythic: 5, Iconic: 6,
+  Basic: 0, Common: 1, Uncommon: 2, Rare: 3, Epic: 4, Legendary: 5, Mythic: 6,
 };
 
 // ── Stat-Gruppen ─────────────────────────────────────────────────────────────
@@ -169,6 +169,11 @@ function DetailsPanel({ player }: { player: PlayerWithScores }) {
             {player.height_cm && <> · {player.height_cm} cm</>}
             {player.preferred_foot && <> · {player.preferred_foot === 'left' ? 'Links' : 'Rechts'}</>}
           </p>
+          {player.aging && (
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Alter: {player.aging.currentAge} | Potential: {player.aging.potentialRange[0]}–{player.aging.potentialRange[1]} | Upgrades: {player.aging.upgradesRemaining}
+            </p>
+          )}
           {(player.matches_played !== undefined || player.goals !== undefined) && (
             <p className="text-[11px] text-slate-500 mt-0.5">
               {player.matches_played !== undefined && <>{player.matches_played} Spiele</>}
@@ -537,6 +542,11 @@ export default function SquadPage() {
                         {/* Position */}
                         <td className="px-3 py-2.5 text-xs text-slate-400">
                           {displayPosition(player.position)}
+                          {' '}
+                          {(() => {
+                            const pt = player.positionType?.[player.position] ?? 'primary';
+                            return pt === 'primary' ? '🟢' : pt === 'secondary' ? '⚪' : '🔴';
+                          })()}
                         </td>
 
                         {/* OVR */}

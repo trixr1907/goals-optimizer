@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { PlayerWithScores, Position } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
-import { analyzeTactics, TACTICS_SETTINGS, TacticsTip, TipCategory } from '@/lib/tactics/tactics-engine';
+import { analyzeTactics, TacticsTip, TipCategory } from '@/lib/tactics/tactics-engine';
 import { useTacticsStore } from '@/lib/store/tactics-store';
 
 const CAT_LABEL: Record<TipCategory, string> = {
@@ -82,59 +82,6 @@ function TipCard({ tip }: { tip: TacticsTip }) {
         <p className="mt-2 text-xs text-slate-300 leading-relaxed border-t border-slate-700 pt-2">
           {tip.detail}
         </p>
-      )}
-    </div>
-  );
-}
-
-const SETTING_GROUPS = [...new Set(TACTICS_SETTINGS.map((s) => s.group))];
-
-function TacticsSettings() {
-  const { settings, setSetting, resetAll } = useTacticsStore();
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/30">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-4 text-sm"
-      >
-        <span className="text-slate-300 font-medium">⚙️ Taktik-Einstellungen</span>
-        <span className="text-slate-500 text-xs">{open ? '▲ einklappen' : '▼ ausklappen'}</span>
-      </button>
-
-      {open && (
-        <div className="px-4 pb-4 space-y-5 border-t border-slate-800 pt-4">
-          {SETTING_GROUPS.map((group) => (
-            <div key={group}>
-              <p className="text-[10px] uppercase tracking-wide text-slate-500 mb-2">{group}</p>
-              <div className="space-y-2">
-                {TACTICS_SETTINGS.filter((s) => s.group === group).map((setting) => (
-                  <div key={setting.id} className="flex items-center justify-between gap-3">
-                    <label className="text-xs text-slate-400 shrink-0 w-40">{setting.label}</label>
-                    {setting.type === 'select' && setting.options && (
-                      <select
-                        value={settings[setting.id] ?? setting.default}
-                        onChange={(e) => setSetting(setting.id, e.target.value)}
-                        className="flex-1 rounded border border-slate-700 bg-slate-800 text-xs text-white px-2 py-1 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      >
-                        {setting.options.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-          <button
-            onClick={resetAll}
-            className="text-[11px] text-slate-500 hover:text-red-300 mt-2"
-          >
-            Alle zurücksetzen
-          </button>
-        </div>
       )}
     </div>
   );
@@ -235,8 +182,6 @@ export function TacticsPanel({ slots, lineup, players, slotKeyFor }: TacticsPane
         </div>
       )}
 
-      {/* Taktik-Einstellungen */}
-      <TacticsSettings />
     </div>
   );
 }

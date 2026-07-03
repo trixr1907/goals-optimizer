@@ -31,10 +31,10 @@ const RARITY_COLOR: Record<string, string> = {
   Epic: 'bg-purple-700',
   Legendary: 'bg-amber-600',
   Mythic: 'bg-red-700',
-  Iconic: 'bg-cyan-700',
+  Common: 'bg-stone-500',
 };
 
-const RARITY_ORDER = ['Basic', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Iconic'];
+const RARITY_ORDER = ['Basic', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Common'];
 
 const STAT_LABELS: Record<string, string> = {
   pac: 'Pace',

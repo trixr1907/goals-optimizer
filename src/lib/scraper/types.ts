@@ -6,7 +6,19 @@ export const ALL_POSITIONS = [
 
 export type Position = (typeof ALL_POSITIONS)[number];
 
-export type Rarity = 'Basic' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary' | 'Mythic' | 'Iconic';
+export type Rarity = 'Basic' | 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary' | 'Mythic';
+
+export interface PlayerRoleRating {
+  position: Position;
+  overall: number;
+}
+
+export interface PlayerAging {
+  currentAge: number;
+  targetRating: number;
+  upgradesRemaining: number;
+  potentialRange: [number, number]; // [min, max]
+}
 
 // UI displays the original GOALS position abbreviations.
 // Internal scoring uses the same Position values, so this is intentionally identity.
@@ -101,8 +113,33 @@ export interface Player {
   matches_played?: number;
   goals?: number;
   assists?: number;
+
+  // GOALS position system
+  roleRatings: PlayerRoleRating[];       // All positions with OVR from ovr_roles
+  secondaryPositions: Position[];        // Positions with OVR >= primary - 2
+  aging?: PlayerAging;
 }
 
 export interface PlayerWithScores extends Player {
   fit_scores: Record<Position, number>;
+  positionType: Record<Position, 'primary' | 'secondary' | 'out'>;
+  effectiveStats: Record<Position, PlayerStats>;
+}
+
+export function getPositionType(player: Player, position: Position): 'primary' | 'secondary' | 'out' {
+  if (player.position === position) return 'primary';
+  if (player.secondaryPositions && player.secondaryPositions.includes(position)) return 'secondary';
+  return 'out';
+}
+
+export function getEffectiveStats(player: Player, position: Position): PlayerStats {
+  const type = getPositionType(player, position);
+  const penalty = type === 'primary' ? 0 : type === 'secondary' ? 2 : 5;
+  const stats = { ...player.stats };
+  (Object.keys(stats) as Array<keyof PlayerStats>).forEach((key) => {
+    if (typeof stats[key] === 'number') {
+      (stats as Record<string, number>)[key as string] = Math.max(1, (stats[key] as number) - penalty);
+    }
+  });
+  return stats;
 }

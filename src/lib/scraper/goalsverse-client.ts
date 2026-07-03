@@ -1,4 +1,4 @@
-import { Player, PlayerStats, Position, Rarity } from './types';
+import { Player, PlayerStats, Position, Rarity, PlayerRoleRating, PlayerAging, ALL_POSITIONS } from './types';
 
 const GOALSVERSE_BASE = 'https://goalsverse.com';
 const CDN_BASE = 'https://cdn.playgoals.com/character/prod';
@@ -27,15 +27,15 @@ const ROLE_MAP: Record<number, Position> = {
   16: 'ST',
 };
 
-const TIER_TO_RARITY: Record<number, Rarity> = {
-  0: 'Basic',
-  1: 'Uncommon',
-  2: 'Rare',
-  3: 'Epic',
-  4: 'Legendary',
-  5: 'Mythic',
-  6: 'Iconic',
-};
+function mapOvrToRarity(ovr: number): Rarity {
+  if (ovr >= 95) return 'Mythic';
+  if (ovr >= 90) return 'Legendary';
+  if (ovr >= 85) return 'Epic';
+  if (ovr >= 80) return 'Rare';
+  if (ovr >= 70) return 'Uncommon';
+  if (ovr >= 60) return 'Common';
+  return 'Basic';
+}
 
 type GoalsverseFetchResult = {
   players: Player[];
@@ -238,17 +238,21 @@ function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
     div: 0, kic: 0, reflexes: 0, positioning: 0, catching: 0, parrying: 0,
   };
 
+  const mappedPosition: Position = (ROLE_MAP[role] ?? 'CM') as Position;
+
   return {
     id: `goalsverse-${rawId}`,
     name,
-    position: ROLE_MAP[role] ?? 'CM',
+    position: mappedPosition,
     overall,
-    rarity: TIER_TO_RARITY[tier] ?? 'Basic',
+    rarity: mapOvrToRarity(overall),
     stats: emptyStats,
     image_url: characterImageUrl(rawId),
     matches_played: ap.matchesPlayed,
     goals: ap.goals,
     assists: ap.assists,
+    roleRatings: [{ position: mappedPosition, overall: overall }],
+    secondaryPositions: [],
   };
 }
 
@@ -256,10 +260,6 @@ function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
 
 function mapRoleToPosition(roleId: number): Position {
   return ROLE_MAP[roleId] || 'CM';
-}
-
-function mapTierToRarity(tier: number): Rarity {
-  return TIER_TO_RARITY[tier] || 'Basic';
 }
 
 function extractStatValue(stats: Record<string, unknown>, path: string[]): number {
@@ -285,13 +285,58 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
   const role    = typeof ovr.role === 'number' ? ovr.role : 8;
   const overall = typeof ovr.overall_rating === 'number' ? ovr.overall_rating : 50;
 
-  const tier   = typeof raw.tier === 'number' ? raw.tier : 0;
   const height = typeof raw.height === 'number' ? raw.height : undefined;
   const age    = typeof raw.current_age === 'number' ? raw.current_age : undefined;
   const foot   = typeof raw.strong_foot === 'number' ? raw.strong_foot : undefined;
 
   // Raw character ID (without "goalsverse-" prefix) for CDN URL
   const rawId = raw.id as string;
+
+  // ovr_roles extrahieren
+  const ovrRoles = Array.isArray(raw.ovr_roles)
+    ? (raw.ovr_roles as Array<{ role: number; overall_rating: number }>)
+    : [];
+
+  const roleRatings: PlayerRoleRating[] = ovrRoles
+    .map((r) => ({
+      position: (ROLE_MAP[r.role] ?? 'ST') as Position,
+      overall: r.overall_rating ?? 0,
+    }))
+    .filter((r) => ALL_POSITIONS.includes(r.position));
+
+  // Primary = highest OVR in roleRatings (fallback: current position/overall)
+  const primaryRoleRating = roleRatings.length
+    ? [...roleRatings].sort((a, b) => b.overall - a.overall)[0]
+    : null;
+  const primaryPosition: Position = primaryRoleRating?.position ?? (ROLE_MAP[role] as Position) ?? 'ST';
+  const primaryOverall: number = primaryRoleRating?.overall ?? overall;
+
+  // Secondary = all with OVR >= primaryOverall - 2 (except primary itself)
+  const secondaryPositions: Position[] = roleRatings
+    .filter((r) => r.overall >= primaryOverall - 2 && r.position !== primaryPosition)
+    .map((r) => r.position);
+
+  // Aging data
+  const aging: PlayerAging | undefined =
+    typeof raw.current_age === 'number' || typeof raw.max_potential_rating === 'number'
+      ? {
+          currentAge: typeof raw.current_age === 'number' ? raw.current_age : 0,
+          targetRating: typeof raw.max_potential_rating === 'number' ? raw.max_potential_rating : primaryOverall,
+          upgradesRemaining: typeof raw.upgrades_remaining === 'number' ? raw.upgrades_remaining : 0,
+          potentialRange: [
+            Math.max(0, (typeof raw.max_potential_rating === 'number' ? raw.max_potential_rating : primaryOverall)
+              - (typeof raw.upgrades_remaining === 'number' ? raw.upgrades_remaining : 0)),
+            (typeof raw.max_potential_rating === 'number' ? raw.max_potential_rating : primaryOverall)
+              + (typeof raw.upgrades_remaining === 'number' ? raw.upgrades_remaining : 0),
+          ] as [number, number],
+        }
+      : undefined;
+
+  // Override position to primary (highest OVR) if role_ratings exist
+  let finalPosition = mapRoleToPosition(role);
+  if (primaryRoleRating) {
+    finalPosition = primaryPosition;
+  }
 
   const playerStats: PlayerStats = {
     // Pace
@@ -360,17 +405,16 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
   // ── GK fallback ──────────────────────────────────────────────────────────
   // goalsverse sometimes assigns role=12 (RM) to goalkeepers.
   // If the player has high diving stats we override to GK.
-  let position = mapRoleToPosition(role);
-  if (position !== 'GK' && playerStats.div > 80) {
-    position = 'GK';
+  if (finalPosition !== 'GK' && playerStats.div > 80) {
+    finalPosition = 'GK';
   }
 
   return {
     id: `goalsverse-${rawId}`,
     name,
-    position,
+    position: finalPosition,
     overall,
-    rarity: mapTierToRarity(tier),
+    rarity: mapOvrToRarity(overall),
     stats: playerStats,
     age,
     height_cm: height,
@@ -380,6 +424,9 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
       : undefined,
     xp_current: typeof raw.current_xp === 'number' ? raw.current_xp : undefined,
     image_url: characterImageUrl(rawId),
+    roleRatings: roleRatings.length > 0 ? roleRatings : [{ position: finalPosition, overall: overall }],
+    secondaryPositions,
+    aging,
   };
 }
 

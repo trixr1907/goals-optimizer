@@ -11,7 +11,7 @@ const RARITY_COLORS: Record<string, string> = {
   Epic: '#7c3aed',
   Legendary: '#d97706',
   Mythic: '#dc2626',
-  Iconic: '#0891b2',
+  Common: '#78716c',
 };
 
 function fitColor(score: number): string {
@@ -54,12 +54,29 @@ function PlayerToken({ player, slotKey, position, isLocked, onLockToggle }: Play
     >
       <circle cx={0} cy={0} r={18} fill={rarityColor} opacity={0.85} />
       <circle cx={0} cy={0} r={15} fill="#1e293b" />
-      <text x={0} y={-3} textAnchor="middle" fontSize={9} fill="white" fontWeight="bold">
-        {player.overall}
-      </text>
-      <text x={0} y={7} textAnchor="middle" fontSize={6} fill="#94a3b8">
-        {player.name.split(' ').pop()?.slice(0, 8) ?? ''}
-      </text>
+      {player.image_url && (
+        <foreignObject x={-15} y={-15} width={30} height={30}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={player.image_url}
+            alt={player.name}
+            width={30}
+            height={30}
+            className="rounded-full object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        </foreignObject>
+      )}
+      {!player.image_url && (
+        <>
+          <text x={0} y={-3} textAnchor="middle" fontSize={9} fill="white" fontWeight="bold">
+            {player.overall}
+          </text>
+          <text x={0} y={7} textAnchor="middle" fontSize={6} fill="#94a3b8">
+            {player.name.split(' ').pop()?.slice(0, 8) ?? ''}
+          </text>
+        </>
+      )}
       <rect x={-14} y={17} width={28} height={10} rx={4} fill={fitColor(fitScore)} opacity={0.9} />
       <text x={0} y={25} textAnchor="middle" fontSize={7} fill="#0f172a" fontWeight="bold">
         {fitScore.toFixed(0)}

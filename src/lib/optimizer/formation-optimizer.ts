@@ -71,11 +71,15 @@ function solveGreedy(players: PlayerWithScores[], slots: LineupSlot[], mode: 'ba
     const originalIndex = slots.findIndex((candidate, idx) => candidate === slot || (candidate.position === slot.position && candidate.x === slot.x && candidate.y === slot.y && !assignmentsByOriginalIndex.has(idx)));
     const best = players
       .filter((player) => !used.has(player.id))
-      .map((player) => ({
-        player,
-        fit: player.fit_scores[slot.position] ?? 0,
-        score: (player.fit_scores[slot.position] ?? 0) + getRoleBias(player, slot.position, mode),
-      }))
+      .map((player) => {
+        const posType = player.positionType?.[slot.position] ?? 'out';
+        const primaryBonus = posType === 'primary' ? 8 : posType === 'secondary' ? 3 : 0;
+        return {
+          player,
+          fit: player.fit_scores[slot.position] ?? 0,
+          score: (player.fit_scores[slot.position] ?? 0) + getRoleBias(player, slot.position, mode) + primaryBonus,
+        };
+      })
       .sort((a, b) => b.score - a.score)[0];
 
     if (best && originalIndex >= 0) {

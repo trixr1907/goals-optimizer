@@ -1,4 +1,4 @@
-import { Player, PlayerWithScores, Position, ALL_POSITIONS } from '@/lib/scraper/types';
+import { Player, PlayerWithScores, Position, ALL_POSITIONS, getPositionType, getEffectiveStats } from '@/lib/scraper/types';
 import type { PlayerStats } from '@/lib/scraper/types';
 import detailedWeights from '@/config/position-weights-detailed.json';
 
@@ -118,10 +118,16 @@ export function calcPositionFitScore(player: Player, position: Position): number
 
 export function enrichPlayerWithScores(player: Player): PlayerWithScores {
   const fit_scores = {} as Record<Position, number>;
+  const positionType = {} as Record<Position, 'primary' | 'secondary' | 'out'>;
+  const effectiveStats = {} as Record<Position, PlayerStats>;
+
   for (const pos of ALL_POSITIONS) {
     fit_scores[pos] = calcPositionFitScore(player, pos);
+    positionType[pos] = getPositionType(player, pos);
+    effectiveStats[pos] = getEffectiveStats(player, pos);
   }
-  return { ...player, fit_scores };
+
+  return { ...player, fit_scores, positionType, effectiveStats };
 }
 
 // ─────────────────────────────────────────────────────────────

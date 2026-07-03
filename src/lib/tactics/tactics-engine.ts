@@ -326,33 +326,3 @@ export function analyzeTactics(
     overallWarnings,
   };
 }
-
-// ── Taktik-Settings ──────────────────────────────────────────────────────────
-
-export type TacticsSettingType = 'select' | 'range';
-
-export interface TacticsSetting {
-  id: string;
-  label: string;
-  type: TacticsSettingType;
-  options?: string[];
-  min?: number;
-  max?: number;
-  default: string;
-  group: string;
-}
-
-export const TACTICS_SETTINGS: TacticsSetting[] = [
-  // Spielstil
-  { id: 'style',              label: 'Spielstil',            type: 'select', options: ['Offensiv','Ausgewogen','Defensiv','Konter'],          default: 'Ausgewogen', group: 'Spielstil' },
-  { id: 'tempo',              label: 'Tempo',                type: 'select', options: ['Schnell','Normal','Langsam'],                         default: 'Normal',     group: 'Spielstil' },
-  { id: 'width',              label: 'Spielbreite',          type: 'select', options: ['Breit','Normal','Eng'],                               default: 'Normal',     group: 'Spielstil' },
-  // Pressing
-  { id: 'pressing_intensity', label: 'Pressing-Intensität',  type: 'select', options: ['Hoch','Mittel','Niedrig'],                           default: 'Mittel',     group: 'Pressing'  },
-  { id: 'pressing_trigger',   label: 'Pressing auslösen bei',type: 'select', options: ['Ballverlust','Einwurf','Torabstoß','Immer'],          default: 'Ballverlust',group: 'Pressing'  },
-  { id: 'defensive_line',     label: 'Abwehrlinie',          type: 'select', options: ['Hoch','Mittel','Tief'],                               default: 'Mittel',     group: 'Pressing'  },
-  // Angriff
-  { id: 'attack_runs',        label: 'Tiefenläufe',          type: 'select', options: ['Häufig','Manchmal','Selten'],                        default: 'Manchmal',   group: 'Angriff'   },
-  { id: 'crossing',           label: 'Flankenspiel',         type: 'select', options: ['Viel','Normal','Wenig'],                             default: 'Normal',     group: 'Angriff'   },
-  { id: 'forward_runs',       label: 'Läufe von Außenvert.', type: 'select', options: ['Häufig','Manchmal','Selten'],                        default: 'Manchmal',   group: 'Angriff'   },
-];
