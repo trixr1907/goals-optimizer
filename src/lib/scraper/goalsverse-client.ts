@@ -157,7 +157,22 @@ async function resolveClubId(clubName: string): Promise<string | null> {
 
 /* ── RSC parsing ─────────────────────────────────────────────────────────── */
 
-function extractJsonObject(text: string, startIndex: number): unknown | null {
+interface JsonResult {
+  value: unknown;
+  endIndex: number; // index of the closing } or ] in the source text
+}
+
+/**
+ * Scan `text` starting at `startIndex` for the first complete JSON object or
+ * array and return both the parsed value AND the end index so callers can skip
+ * past it instead of re-scanning the same characters.
+ *
+ * Returns null when no valid JSON structure is found from startIndex onwards.
+ *
+ * Complexity: O(n) in the length of the matched JSON fragment — the caller
+ * must advance by endIndex+1 to keep the full scan linear.
+ */
+function extractJsonObject(text: string, startIndex: number): JsonResult | null {
   let depth = 0;
   let inString = false;
   let escaped = false;
@@ -165,20 +180,27 @@ function extractJsonObject(text: string, startIndex: number): unknown | null {
 
   for (let i = startIndex; i < text.length; i++) {
     const ch = text[i];
+
     if (escaped) { escaped = false; continue; }
     if (ch === '\\') { escaped = true; continue; }
-    if (ch === '"' && !inString) { inString = true; continue; }
-    if (ch === '"' && inString) { inString = false; continue; }
+    if (ch === '"') { inString = !inString; continue; }
     if (inString) continue;
 
     if (ch === '{' || ch === '[') {
       if (depth === 0) objStart = i;
       depth++;
     } else if (ch === '}' || ch === ']') {
+      if (depth === 0) continue; // unmatched closing bracket — skip
       depth--;
       if (depth === 0 && objStart >= 0) {
-        try { return JSON.parse(text.slice(objStart, i + 1)); }
-        catch { return null; }
+        try {
+          const value = JSON.parse(text.slice(objStart, i + 1));
+          return { value, endIndex: i };
+        } catch {
+          // Malformed JSON at this position — reset and keep scanning
+          objStart = -1;
+          return null; // one bad structure → bail; caller advances by 1
+        }
       }
     }
   }
@@ -187,16 +209,20 @@ function extractJsonObject(text: string, startIndex: number): unknown | null {
 
 function extractSquadFromRsc(rscText: string): { squad?: unknown; clubInfo?: unknown; slug?: string } {
   const squadIdx = rscText.indexOf('"squad":');
-  const squad = squadIdx >= 0 ? extractJsonObject(rscText, squadIdx + 7) : null;
+  const squadResult = squadIdx >= 0 ? extractJsonObject(rscText, squadIdx + 7) : null;
 
   const dataIdx = rscText.indexOf('"data":');
-  const clubInfo = dataIdx >= 0 ? extractJsonObject(rscText, dataIdx + 6) : null;
+  const clubInfoResult = dataIdx >= 0 ? extractJsonObject(rscText, dataIdx + 6) : null;
 
   // Extract slug from RSC payload — appears as "slug":"turbulence"
   const slugMatch = rscText.match(/"slug"\s*:\s*"([^"]+)"/);
   const slug = slugMatch?.[1];
 
-  return { squad, clubInfo, slug };
+  return {
+    squad:    squadResult?.value,
+    clubInfo: clubInfoResult?.value,
+    slug,
+  };
 }
 
 /* ── Activity page player extraction ─────────────────────────────────────── */
@@ -231,15 +257,18 @@ function extractActivityPlayersFromRsc(rscText: string): ActivityPlayer[] {
   const results: ActivityPlayer[] = [];
   const seen = new Set<string>();
 
-  // Scan for all JSON arrays and objects that look like player lists
+  // Linear scan: find each '[', parse it, then jump PAST the closing ']'.
+  // Without the endIndex jump we'd re-enter every nested '[' inside an
+  // already-parsed array, making the scan O(n²) on dense RSC payloads.
   let i = 0;
   while (i < rscText.length) {
     const arrIdx = rscText.indexOf('[', i);
     if (arrIdx < 0) break;
 
-    const parsed = extractJsonObject(rscText, arrIdx);
-    if (Array.isArray(parsed)) {
-      for (const item of parsed) {
+    const result = extractJsonObject(rscText, arrIdx);
+
+    if (result !== null && Array.isArray(result.value)) {
+      for (const item of result.value) {
         if (item && typeof item === 'object' && !Array.isArray(item)) {
           const rec = item as Record<string, unknown>;
           if (looksLikeActivityPlayer(rec)) {
@@ -251,10 +280,12 @@ function extractActivityPlayersFromRsc(rscText: string): ActivityPlayer[] {
           }
         }
       }
+      // Jump past the end of this array — avoids re-parsing every nested '['
+      i = result.endIndex + 1;
+    } else {
+      // No valid array here (null result or non-array value) — skip past this '['
+      i = arrIdx + 1;
     }
-
-    // Advance past this array (rough skip — find next [ after arrIdx+1)
-    i = arrIdx + 1;
   }
 
   return results;
