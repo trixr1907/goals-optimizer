@@ -13,30 +13,6 @@ export interface HungarianAssignment {
 
 export type OptimizationMode = 'balanced' | 'offensiv' | 'defensiv' | 'gegenMeta';
 
-export function clonePlayersWithFitBias(
-  players: PlayerWithScores[],
-  slots: LineupSlot[],
-  mode: OptimizationMode,
-  getRoleBias: (player: PlayerWithScores, position: Position, mode: OptimizationMode) => number,
-): PlayerWithScores[] {
-  if (mode === 'balanced') return players;
-
-  const slotPositions = new Set(slots.map((slot) => slot.position));
-
-  return players.map((player) => {
-    const fitScores = { ...player.fit_scores };
-
-    slotPositions.forEach((position) => {
-      fitScores[position] = (fitScores[position] ?? 0) + getRoleBias(player, position, mode);
-    });
-
-    return {
-      ...player,
-      fit_scores: fitScores,
-    };
-  });
-}
-
 export function solveHungarian(
   players: PlayerWithScores[],
   slots: LineupSlot[],

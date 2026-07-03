@@ -268,6 +268,7 @@ function PlayerDevCard({ player }: { player: PlayerWithScores }) {
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-3 min-w-0">
               {player.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element -- GOALS CDN avatars use plain <img> to keep the lightweight onError fallback without adding next/image remote config.
                 <img
                   src={player.image_url}
                   alt={player.name}
