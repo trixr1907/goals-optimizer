@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { PlayerWithScores } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
 import { FormationAssignment } from '@/lib/optimizer/formation-optimizer';
@@ -245,22 +245,31 @@ export function ShareCard({
   assignments,
   onClose,
 }: ShareCardProps) {
-  const canvasRef  = useRef<HTMLCanvasElement>(null);
+  const canvasRef   = useRef<HTMLCanvasElement>(null);
+  const renderGenRef = useRef<number>(0); // incremented per render; stale renders bail when gen changes
   const [rendered, setRendered] = useState(false);
   const [copying,  setCopying]  = useState(false);
   const [copyOk,   setCopyOk]   = useState(false);
 
-  const playerById = new Map(players.map((p) => [p.id, p]));
+  const playerById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
 
-  // Build slot→player list from lineup or assignments
-  const slotPlayers: Array<{ slot: LineupSlot; player: PlayerWithScores }> = assignments
-    ? assignments.map((a) => ({ slot: a.slot, player: a.player }))
-    : slots.flatMap((slot, i) => {
-        const key = `${slot.position}-${i}`;
-        const pid = lineup[key];
-        const player = pid ? playerById.get(pid) : null;
-        return player ? [{ slot, player }] : [];
-      });
+  // Stable derived list — only recomputed when actual inputs change.
+  // Without useMemo, slotPlayers is a new array reference every render,
+  // which made useCallback([slotPlayers]) re-fire on every parent re-render
+  // and could cause concurrent async renders racing each other (R-5).
+  const slotPlayers = useMemo<Array<{ slot: LineupSlot; player: PlayerWithScores }>>(
+    () =>
+      assignments
+        ? assignments.map((a) => ({ slot: a.slot, player: a.player }))
+        : slots.flatMap((slot, i) => {
+            const key = `${slot.position}-${i}`;
+            const pid = lineup[key];
+            const player = pid ? playerById.get(pid) : null;
+            return player ? [{ slot, player }] : [];
+          }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [assignments, slots, lineup, playerById],
+  );
 
   const render = useCallback(async () => {
     const canvas = canvasRef.current;
@@ -268,9 +277,20 @@ export function ShareCard({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Generation counter: each render increments it and only "owns" the canvas
+    // if no newer render started while avatars were loading. This prevents an
+    // old slow render (e.g. CDN timeout) from overwriting a newer one.
+    const myGen = ++renderGenRef.current;
+
+    // Reset so the loading state shows while images are fetched
+    setRendered(false);
+
     // Load all player avatars in parallel
     const avatarUrls = slotPlayers.map(({ player }) => playerImageUrl(player));
     const avatarImgs = await Promise.all(avatarUrls.map(loadImage));
+
+    // If a newer render started while we were loading images, bail out
+    if (myGen !== renderGenRef.current) return;
 
     drawPitch(ctx);
 
@@ -290,8 +310,9 @@ export function ShareCard({
     });
 
     setRendered(true);
-  }, [slotPlayers, clubName, formationName]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [slotPlayers, clubName, formationName]);
 
+  // Re-render whenever the stable slotPlayers / header props change
   useEffect(() => {
     render();
   }, [render]);
