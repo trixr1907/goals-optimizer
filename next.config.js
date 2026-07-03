@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '/goals';
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH !== undefined
+  ? process.env.NEXT_PUBLIC_BASE_PATH
+  : '/goals';
 
 const nextConfig = {
   basePath,
