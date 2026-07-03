@@ -91,6 +91,23 @@ function DeltaReport({ delta, onDismiss }: { delta: ImportDelta; onDismiss: () =
 
 // ── Haupt-Seite ──────────────────────────────────────────────────────────────
 
+/** Returns a human-readable relative age string for a past ISO timestamp. */
+function relativeAge(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime();
+  const minutes = Math.floor(diff / 60_000);
+  const hours   = Math.floor(diff / 3_600_000);
+  const days    = Math.floor(diff / 86_400_000);
+  if (minutes < 2)  return 'gerade eben';
+  if (minutes < 60) return `vor ${minutes} Min.`;
+  if (hours   < 24) return `vor ${hours} Std.`;
+  if (days    < 2)  return 'gestern';
+  if (days    < 7)  return `vor ${days} Tagen`;
+  if (days    < 14) return 'vor 1 Woche';
+  if (days    < 30) return `vor ${Math.floor(days / 7)} Wochen`;
+  if (days    < 60) return 'vor 1 Monat';
+  return `vor ${Math.floor(days / 30)} Monaten`;
+}
+
 export default function OnboardingPage() {
   const { clubName, clubId, players, lastImportedAt, setClubName, importPlayers, reimportPlayers, _hasHydrated } =
     useSquadStore();
@@ -106,10 +123,10 @@ export default function OnboardingPage() {
     }
   }, [_hasHydrated, clubName]);
 
-  // Auto-Redirect: Club-ID + Spieler vorhanden → direkt zu Squad
+  // Auto-Redirect: Club-ID + Spieler vorhanden → direkt zur Aufstellung (nicht Squad-Liste)
   useEffect(() => {
     if (_hasHydrated && clubId && players.length > 0) {
-      router.push(appPath('/squad'));
+      router.push(appPath('/lineup'));
     }
   }, [_hasHydrated, clubId, players.length, router]);
 
@@ -163,7 +180,7 @@ export default function OnboardingPage() {
       } else {
         importPlayers(incoming, clubUrl);
         setStatus(`${incoming.length} Spieler importiert.`);
-        router.push('/squad');
+        router.push(appPath('/lineup'));
       }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Fehler beim Import.');
@@ -240,22 +257,41 @@ export default function OnboardingPage() {
           </div>
 
           {/* Aktueller Kader-Status */}
-          {hasSquad && (
-            <div className="rounded-xl border border-emerald-900/60 bg-emerald-950/20 px-4 py-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-medium text-white">{clubName || 'Kader geladen'}</p>
-                <p className="text-xs text-emerald-400">
-                  {players.length} Spieler
-                  {lastImportedAt && (
-                    <> · zuletzt importiert {new Date(lastImportedAt).toLocaleDateString('de-DE')}</>
+          {hasSquad && (() => {
+            const isStale = lastImportedAt
+              ? Date.now() - new Date(lastImportedAt).getTime() > 3 * 86_400_000
+              : false;
+            return (
+              <div className={`rounded-xl border px-4 py-3 flex items-center justify-between gap-3 ${
+                isStale
+                  ? 'border-amber-900/60 bg-amber-950/20'
+                  : 'border-emerald-900/60 bg-emerald-950/20'
+              }`}>
+                <div>
+                  <p className="text-sm font-medium text-white">{clubName || 'Kader geladen'}</p>
+                  <p className={`text-xs ${isStale ? 'text-amber-400' : 'text-emerald-400'}`}>
+                    {players.length} Spieler
+                    {lastImportedAt && (
+                      <> · {isStale ? '⚠️ ' : ''}importiert {relativeAge(lastImportedAt)}</>
+                    )}
+                  </p>
+                  {isStale && (
+                    <p className="text-xs text-amber-500 mt-0.5">
+                      Kader ist veraltet — Re-Import empfohlen.
+                    </p>
                   )}
-                </p>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <a href={appPath('/lineup')} className="text-xs text-emerald-400 underline whitespace-nowrap">
+                    → Aufstellung
+                  </a>
+                  <a href={appPath('/squad')} className="text-xs text-slate-500 underline whitespace-nowrap">
+                    Kader ansehen
+                  </a>
+                </div>
               </div>
-              <a href={appPath('/squad')} className="text-xs text-emerald-400 underline whitespace-nowrap">
-                → Kader ansehen
-              </a>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Import-Formular */}
           <div className="space-y-3">
