@@ -21,10 +21,60 @@ import { appPath } from '@/lib/app-url';
 import { TacticsPanel } from '@/components/lineup/TacticsPanel';
 import { Position, PlayerWithScores } from '@/lib/scraper/types';
 import formationsData from '@/config/formations.json';
-import { recommendationToLineup, recommendFormations } from '@/lib/optimizer/formation-optimizer';
+import { recommendationToLineup, recommendFormations, FormationAssignment } from '@/lib/optimizer/formation-optimizer';
+import { OptimizationMode } from '@/lib/optimizer/hungarian-solver';
 import { explainFootFit } from '@/lib/scoring/position-fit';
 
 const FORMATIONS = formationsData as Record<string, { name: string; slots: LineupSlot[] }>;
+
+// ── Variant config ────────────────────────────────────────────────────────────
+
+const VARIANT_TABS: {
+  mode: OptimizationMode;
+  label: string;
+  emoji: string;
+  hint: string;
+  color: string;
+  activeClass: string;
+}[] = [
+  {
+    mode: 'balanced',
+    label: 'Ausgewogen',
+    emoji: '⚖️',
+    hint: 'Bestes Gesamtpaket — optimaler Kompromiss aus Angriff und Abwehr.',
+    color: 'text-slate-300',
+    activeClass: 'bg-slate-700 border-slate-500 text-white',
+  },
+  {
+    mode: 'offensiv',
+    label: 'Offensiv',
+    emoji: '⚡',
+    hint: 'Maximiert Pace, Finishing & Dribbling in Angriff und Mittelfeld.',
+    color: 'text-rose-300',
+    activeClass: 'bg-rose-900/60 border-rose-600 text-rose-200',
+  },
+  {
+    mode: 'defensiv',
+    label: 'Defensiv',
+    emoji: '🛡️',
+    hint: 'Priorisiert Defending, Physicality & Pace der Abwehrreihe.',
+    color: 'text-sky-300',
+    activeClass: 'bg-sky-900/60 border-sky-600 text-sky-200',
+  },
+  {
+    mode: 'gegenMeta',
+    label: 'Gegen-Meta',
+    emoji: '🎯',
+    hint: 'Konter-Taktik: hohe Pace + Defensive Recovery gegen Through-Ball-Spieler.',
+    color: 'text-amber-300',
+    activeClass: 'bg-amber-900/60 border-amber-600 text-amber-200',
+  },
+];
+
+/** Convert FormationAssignment[] → Record<slotKey, playerId> (same shape as recommendationToLineup) */
+function assignmentsToLineup(assignments: FormationAssignment[]): Record<string, string> {
+  return Object.fromEntries(assignments.map((a) => [a.slotKey, a.player.id]));
+}
 
 const POSITION_COLORS: Record<string, string> = {
   GK: 'bg-yellow-600',
@@ -192,6 +242,7 @@ export default function LineupPage() {
 
   const [selectedSlotKey, setSelectedSlotKey] = useState<string | null>(null);
   const [activePlayerId, setActivePlayerId] = useState<string | null>(null);
+  const [activeVariant, setActiveVariant] = useState<OptimizationMode>('balanced');
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -263,9 +314,26 @@ export default function LineupPage() {
   const handleApplyRecommendation = useCallback((index: number) => {
     const rec = formationRecommendations[index];
     if (!rec) return;
+    // Use pre-computed variant assignments if available, fall back to balanced
+    const assignments = activeVariant === 'balanced'
+      ? recommendationToLineup(rec)
+      : assignmentsToLineup(rec.variants[activeVariant as 'offensiv' | 'defensiv' | 'gegenMeta']);
     // Atomic: formation + slots + assignments in one store update — no setTimeout needed
-    setFormationWithLineup(rec.formation.name, rec.formation.slots as LineupSlot[], recommendationToLineup(rec));
-  }, [formationRecommendations, setFormationWithLineup]);
+    setFormationWithLineup(rec.formation.name, rec.formation.slots as LineupSlot[], assignments);
+  }, [formationRecommendations, activeVariant, setFormationWithLineup]);
+
+  /** Switch variant tab and immediately re-apply to the currently active formation recommendation */
+  const handleVariantChange = useCallback((mode: OptimizationMode) => {
+    setActiveVariant(mode);
+    // Find the recommendation that matches the currently loaded formation
+    const rec = formationRecommendations.find((r) => r.formation.name === formation)
+      ?? formationRecommendations[0];
+    if (!rec) return;
+    const assignments = mode === 'balanced'
+      ? recommendationToLineup(rec)
+      : assignmentsToLineup(rec.variants[mode as 'offensiv' | 'defensiv' | 'gegenMeta']);
+    setFormationWithLineup(rec.formation.name, rec.formation.slots as LineupSlot[], assignments);
+  }, [formationRecommendations, formation, setFormationWithLineup]);
 
   const handlePlayerAssign = useCallback((playerId: string) => {
     if (selectedSlotKey) {
@@ -343,22 +411,66 @@ export default function LineupPage() {
                   <a href={appPath('/meta')} className="text-xs text-emerald-400 underline">Meta Center öffnen</a>
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
-                  {formationRecommendations.slice(0, 3).map((rec, index) => (
-                    <button key={rec.formationKey} onClick={() => handleApplyRecommendation(index)} className="rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-left transition-colors hover:border-emerald-600 hover:bg-slate-900">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-white">{rec.formation.name}</span>
-                        <span className={`font-mono text-sm ${rec.squadMatch >= 78 ? 'text-emerald-400' : rec.squadMatch >= 68 ? 'text-amber-400' : 'text-red-400'}`}>
-                          {rec.squadMatch.toFixed(0)}%
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs text-slate-500">{rec.formation.playstyle} · Ø Meta {rec.averageFit.toFixed(1)}</p>
-                      <p className="mt-2 line-clamp-2 text-xs text-slate-400">{rec.reasons[0]}</p>
-                      {rec.warnings[0] && <p className="mt-2 line-clamp-1 text-xs text-amber-300">⚠️ {rec.warnings[0]}</p>}
-                    </button>
-                  ))}
+                  {formationRecommendations.slice(0, 3).map((rec, index) => {
+                    const variantAssignments = activeVariant === 'balanced'
+                      ? rec.assignments
+                      : rec.variants[activeVariant as 'offensiv' | 'defensiv' | 'gegenMeta'];
+                    const variantAvgFit = variantAssignments.length
+                      ? variantAssignments.reduce((s, a) => s + a.fit, 0) / variantAssignments.length
+                      : rec.averageFit;
+                    return (
+                      <button key={rec.formationKey} onClick={() => handleApplyRecommendation(index)} className="rounded-xl border border-slate-800 bg-slate-950/40 p-3 text-left transition-colors hover:border-emerald-600 hover:bg-slate-900">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-white">{rec.formation.name}</span>
+                          <span className={`font-mono text-sm ${rec.squadMatch >= 78 ? 'text-emerald-400' : rec.squadMatch >= 68 ? 'text-amber-400' : 'text-red-400'}`}>
+                            {rec.squadMatch.toFixed(0)}%
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {rec.formation.playstyle} · Ø Meta{' '}
+                          <span className={activeVariant !== 'balanced' ? 'text-white font-semibold' : ''}>
+                            {variantAvgFit.toFixed(1)}
+                          </span>
+                        </p>
+                        <p className="mt-2 line-clamp-2 text-xs text-slate-400">{rec.reasons[0]}</p>
+                        {rec.warnings[0] && <p className="mt-2 line-clamp-1 text-xs text-amber-300">⚠️ {rec.warnings[0]}</p>}
+                      </button>
+                    );
+                  })}
                 </div>
               </section>
             )}
+
+            {/* ── Variant tabs ── */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-3 space-y-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-slate-500 uppercase tracking-wide font-medium shrink-0">Variante:</span>
+                {VARIANT_TABS.map((tab) => {
+                  const isActive = activeVariant === tab.mode;
+                  return (
+                    <button
+                      key={tab.mode}
+                      onClick={() => handleVariantChange(tab.mode)}
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                        isActive
+                          ? tab.activeClass
+                          : 'border-slate-700 text-slate-500 hover:text-slate-300 hover:border-slate-600'
+                      }`}
+                    >
+                      {tab.emoji} {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Hint line for active variant */}
+              {VARIANT_TABS.map((tab) =>
+                tab.mode === activeVariant ? (
+                  <p key={tab.mode} className={`text-xs ${tab.color}`}>
+                    {tab.hint}
+                  </p>
+                ) : null
+              )}
+            </div>
 
             <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-3">
               <p className="text-xs text-slate-500 mb-3">Ziehe Spieler aus Bank oder Startelf auf einen Slot. Auf Mobile: kurz halten und ziehen.</p>
