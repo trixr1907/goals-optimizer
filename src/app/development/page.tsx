@@ -228,6 +228,13 @@ function PlayerDevCard({ player }: { player: PlayerWithScores }) {
   const rarityIndex = RARITY_ORDER.indexOf(player.rarity);
   const retirementWarning = getRetirementWarning(player, rarityIndex);
   const upgradeHistory = tracked?.upgradeHistory ?? [];
+  const aging = player.aging;
+  const [minPotential, maxPotential] = aging?.potentialRange ?? [player.overall, player.overall];
+  const potentialWidth = Math.max(1, maxPotential - minPotential);
+  const potentialProgress = Math.max(
+    0,
+    Math.min(100, ((player.overall - minPotential) / potentialWidth) * 100),
+  );
   const [showHistory, setShowHistory] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
@@ -245,9 +252,25 @@ function PlayerDevCard({ player }: { player: PlayerWithScores }) {
         <CardContent className="p-4 space-y-3">
           {/* Header */}
           <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="font-semibold text-white text-sm">{player.name}</p>
-              <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            <div className="flex items-start gap-3 min-w-0">
+              {player.image_url ? (
+                <img
+                  src={player.image_url}
+                  alt={player.name}
+                  className="h-12 w-12 rounded-full object-cover bg-slate-800 shrink-0"
+                  loading="lazy"
+                  onError={(event) => {
+                    event.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <div className="h-12 w-12 rounded-full bg-slate-800 grid place-items-center text-xs font-bold text-slate-400 shrink-0">
+                  {player.overall}
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="font-semibold text-white text-sm truncate">{player.name}</p>
+                <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                 <span
                   className={`text-xs px-1.5 py-0.5 rounded font-bold text-white ${RARITY_COLOR[player.rarity] ?? 'bg-slate-600'}`}
                 >
@@ -257,7 +280,8 @@ function PlayerDevCard({ player }: { player: PlayerWithScores }) {
                 <span className={`text-xs font-mono font-bold ${fitColor}`}>
                   Meta {mainFit.toFixed(0)}
                 </span>
-                <span className="text-xs font-mono text-cyan-300">Dev {developmentScore}</span>
+                  <span className="text-xs font-mono text-cyan-300">Dev {developmentScore}</span>
+                </div>
               </div>
             </div>
             <div className="text-right text-xs text-slate-500">
@@ -318,6 +342,34 @@ function PlayerDevCard({ player }: { player: PlayerWithScores }) {
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Potential-Bar from goalsverse aging data */}
+          <div className="rounded-lg bg-slate-800/50 p-2 text-xs space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-slate-400">Potential</span>
+              {aging ? (
+                <span className="font-mono text-emerald-300">
+                  Alter {aging.currentAge} · Ziel {aging.targetRating} · {aging.upgradesRemaining} Upgrades
+                </span>
+              ) : (
+                <span className="font-mono text-slate-500">Keine Aging-Daten</span>
+              )}
+            </div>
+            {aging && (
+              <>
+                <div className="flex justify-between text-[10px] text-slate-500">
+                  <span>Min {minPotential}</span>
+                  <span>{player.overall} / {maxPotential}</span>
+                </div>
+                <div className="h-2 rounded-full bg-slate-700 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-cyan-400"
+                    style={{ width: `${potentialProgress}%` }}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {/* Stat-Bars */}
@@ -491,7 +543,12 @@ export default function DevelopmentPage() {
       const ri = RARITY_ORDER.indexOf(player.rarity);
       return getRetirementWarning(player, ri) !== null;
     }).length;
-    return { minutes, xp, playNow, train, retirementRisk };
+    const withAging = players.filter((player) => player.aging).length;
+    const remainingUpgrades = players.reduce(
+      (sum, player) => sum + (player.aging?.upgradesRemaining ?? 0),
+      0,
+    );
+    return { minutes, xp, playNow, train, retirementRisk, withAging, remainingUpgrades };
   }, [notesByPlayerId, players]);
 
   const sorted = useMemo(() => {
@@ -550,8 +607,8 @@ export default function DevelopmentPage() {
                 <p className="text-2xl font-bold text-white">{summary.minutes}m</p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-3">
-                <p className="text-xs text-slate-500">XP-Schätzung</p>
-                <p className="text-2xl font-bold text-white">{summary.xp}</p>
+                <p className="text-xs text-slate-500">Aging-Daten</p>
+                <p className="text-2xl font-bold text-white">{summary.withAging}</p>
               </div>
               <div className="rounded-xl border border-emerald-900 bg-emerald-950/30 p-3">
                 <p className="text-xs text-emerald-500">Sofort spielen</p>

@@ -1,6 +1,7 @@
 import { PlayerWithScores, Position } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
 import formationsData from '@/config/formations.json';
+import { clonePlayersWithFitBias, OptimizationMode, solveHungarian } from './hungarian-solver';
 
 export interface FormationMeta {
   name: string;
@@ -37,7 +38,7 @@ function slotKeyFor(position: Position, index: number) {
   return `${position}-${index}`;
 }
 
-function getRoleBias(player: PlayerWithScores, position: Position, mode: 'balanced' | 'offensiv' | 'defensiv' | 'gegenMeta') {
+function getRoleBias(player: PlayerWithScores, position: Position, mode: OptimizationMode) {
   if (mode === 'balanced') return 0;
   const stats = player.stats;
   if (mode === 'offensiv') {
@@ -54,7 +55,7 @@ function getRoleBias(player: PlayerWithScores, position: Position, mode: 'balanc
   return stats.pac * 0.07 + stats.def * 0.06 + stats.phy * 0.03;
 }
 
-function solveGreedy(players: PlayerWithScores[], slots: LineupSlot[], mode: 'balanced' | 'offensiv' | 'defensiv' | 'gegenMeta') {
+function solveGreedy(players: PlayerWithScores[], slots: LineupSlot[], mode: OptimizationMode) {
   const used = new Set<string>();
   const sortedSlots = [...slots].sort((a, b) => {
     const bestA = Math.max(...players.map((p) => p.fit_scores[a.position] ?? 0));
@@ -94,6 +95,39 @@ function solveGreedy(players: PlayerWithScores[], slots: LineupSlot[], mode: 'ba
     .map(([, assignment]) => assignment);
 }
 
+function toAssignments(
+  result: Array<{ slotIndex: number; playerId: string; fit: number }>,
+  players: PlayerWithScores[],
+  slots: LineupSlot[],
+): FormationAssignment[] {
+  const playersById = new Map(players.map((player) => [player.id, player]));
+
+  return result
+    .map((assignment) => {
+      const slot = slots[assignment.slotIndex];
+      const player = playersById.get(assignment.playerId);
+      if (!slot || !player) return null;
+
+      return {
+        slotKey: slotKeyFor(slot.position, assignment.slotIndex),
+        slot,
+        player,
+        fit: assignment.fit,
+      } satisfies FormationAssignment;
+    })
+    .filter((assignment): assignment is FormationAssignment => Boolean(assignment));
+}
+
+function solveOptimal(players: PlayerWithScores[], slots: LineupSlot[], mode: OptimizationMode) {
+  const optimizedPlayers = clonePlayersWithFitBias(players, slots, mode, getRoleBias);
+  const optimal = solveHungarian(optimizedPlayers, slots);
+  const assignments = toAssignments(optimal, players, slots);
+
+  if (assignments.length === slots.length) return assignments;
+
+  return solveGreedy(players, slots, mode);
+}
+
 function makeWarnings(assignments: FormationAssignment[]) {
   const warnings: string[] = [];
   const weak = assignments.filter((item) => item.fit < 62).sort((a, b) => a.fit - b.fit).slice(0, 3);
@@ -126,7 +160,7 @@ export function recommendFormations(players: PlayerWithScores[]): FormationRecom
 
   return Object.entries(FORMATIONS)
     .map(([formationKey, formation]) => {
-      const assignments = solveGreedy(players, formation.slots, 'balanced');
+      const assignments = solveOptimal(players, formation.slots, 'balanced');
       const totalFit = assignments.reduce((sum, item) => sum + item.fit, 0);
       const averageFit = assignments.length ? totalFit / assignments.length : 0;
       const squadMatch = Math.max(0, Math.min(100, averageFit));
@@ -140,9 +174,9 @@ export function recommendFormations(players: PlayerWithScores[]): FormationRecom
         warnings: makeWarnings(assignments),
         reasons: makeReasons(formation, assignments, averageFit, squadMatch),
         variants: {
-          offensiv: solveGreedy(players, formation.slots, 'offensiv'),
-          defensiv: solveGreedy(players, formation.slots, 'defensiv'),
-          gegenMeta: solveGreedy(players, formation.slots, 'gegenMeta'),
+          offensiv: solveOptimal(players, formation.slots, 'offensiv'),
+          defensiv: solveOptimal(players, formation.slots, 'defensiv'),
+          gegenMeta: solveOptimal(players, formation.slots, 'gegenMeta'),
         },
       } satisfies FormationRecommendation;
     })
