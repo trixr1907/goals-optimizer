@@ -92,17 +92,27 @@ function DeltaReport({ delta, onDismiss }: { delta: ImportDelta; onDismiss: () =
 // ── Haupt-Seite ──────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
-  const { clubName, clubId, players, lastImportedAt, setClubName, importPlayers, reimportPlayers } =
+  const { clubName, clubId, players, lastImportedAt, setClubName, importPlayers, reimportPlayers, _hasHydrated } =
     useSquadStore();
   const router = useRouter();
 
+  // Local input state — decoupled from store to avoid hydration-timing disabled bug
+  const [inputValue, setInputValue] = useState('');
+
+  // Sync store clubName → inputValue once after hydration (for re-import label)
+  useEffect(() => {
+    if (_hasHydrated && clubName) {
+      setInputValue(clubName);
+    }
+  }, [_hasHydrated, clubName]);
+
   // Auto-Redirect: Club-ID + Spieler vorhanden → direkt zu Squad
-  const { _hasHydrated } = useSquadStore();
   useEffect(() => {
     if (_hasHydrated && clubId && players.length > 0) {
       router.push(appPath('/squad'));
     }
   }, [_hasHydrated, clubId, players.length, router]);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
@@ -129,12 +139,13 @@ export default function OnboardingPage() {
   }
 
   async function handleImport() {
-    if (!clubName.trim()) return;
+    if (!inputValue.trim()) return;
+    setClubName(inputValue.trim());
     setLoading(true);
     setStatus('Importiere…');
     setDelta(null);
     try {
-      const { players: incoming, clubUrl } = await fetchAndEnrich(clubName.trim());
+      const { players: incoming, clubUrl } = await fetchAndEnrich(inputValue.trim());
       if (!incoming.length) {
         setStatus('Keine Spieler gefunden.');
         return;
@@ -251,14 +262,14 @@ export default function OnboardingPage() {
             <input
               type="text"
               placeholder="Club-Name eingeben..."
-              value={clubName}
-              onChange={(e) => setClubName(e.target.value)}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleImport()}
               className="w-full px-4 py-3 rounded-lg border border-slate-700 bg-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
             />
             <button
               onClick={handleImport}
-              disabled={loading || !clubName.trim()}
+              disabled={loading || !inputValue.trim()}
               className="w-full py-3 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
             >
               {importButtonLabel}
