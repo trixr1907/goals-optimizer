@@ -1,5 +1,5 @@
 import { Player, PlayerStats, Position, Rarity, PlayerRoleRating, PlayerAging, ALL_POSITIONS, PositionSource, RoleRatingsSource } from './types';
-import { fetchTrackerPlayerData } from './goals-tracker-client';
+import { fetchTrackerPlayerData, TRACKER_CONCURRENCY } from './goals-tracker-client';
 
 const GOALSVERSE_BASE = 'https://goalsverse.com';
 const CDN_BASE = 'https://cdn.playgoals.com/character/prod';
@@ -786,20 +786,18 @@ export async function getClubRoster(clubName: string): Promise<GoalsverseFetchRe
 /* ── Goals-Tracker enrichment ────────────────────────────────────────────── */
 
 /**
- * Enrich an array of players with position + roleRatings data from goals-tracker.com.
+ * Enrich an array of players with position + roleRatings from goals-tracker.com.
  *
  * Strategy:
- *  - Fetch tracker data for each player concurrently (bounded to CONCURRENCY parallel requests)
- *  - On success: overwrite player.position and player.roleRatings from Tracker
- *  - On failure / timeout: keep Goalsverse data unchanged, add a sourceWarning
+ *  - Bounded concurrency (TRACKER_CONCURRENCY=3, exported from tracker client)
+ *  - fetchTrackerPlayerData retries once internally on transient failures
+ *  - On success: overwrite position and roleRatings from Tracker
+ *  - On partial success: apply what we have, warn about the missing part
+ *  - On full failure: keep Goalsverse data, set sourceWarning with typed reason
  *  - Never throws — import continues even if Tracker is fully down
- *
- * Only enriches players that have a recognisable raw character ID (UUID format).
  */
-const TRACKER_CONCURRENCY = 5; // max parallel fetch() calls to goals-tracker.com
-
 async function enrichWithTracker(players: Player[]): Promise<Player[]> {
-  // Helper: run an async iterable with bounded concurrency
+  // Bounded concurrency runner
   async function runBounded<T, R>(
     items: T[],
     limit: number,
@@ -807,26 +805,22 @@ async function enrichWithTracker(players: Player[]): Promise<Player[]> {
   ): Promise<R[]> {
     const results: R[] = new Array(items.length);
     let nextIdx = 0;
-
     async function worker() {
       while (nextIdx < items.length) {
         const i = nextIdx++;
         results[i] = await fn(items[i], i);
       }
     }
-
     const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
     await Promise.all(workers);
     return results;
   }
 
   const enriched = await runBounded(players, TRACKER_CONCURRENCY, async (player) => {
-    // Extract raw UUID (without "goalsverse-" prefix)
     const rawId = player.id.startsWith('goalsverse-')
       ? player.id.slice('goalsverse-'.length)
       : null;
 
-    // Skip players without a valid UUID (shouldn't happen but be defensive)
     if (!rawId || !/^[0-9a-f-]{36}$/i.test(rawId)) {
       return {
         ...player,
@@ -835,45 +829,51 @@ async function enrichWithTracker(players: Player[]): Promise<Player[]> {
       };
     }
 
-    const trackerData = await fetchTrackerPlayerData(rawId);
+    const { data: trackerData, failReason, failDetail } = await fetchTrackerPlayerData(rawId);
 
-    if (!trackerData) {
-      // Tracker unreachable or player not found — keep Goalsverse data
+    // ── Full failure: nothing usable ──────────────────────────────────────
+    if (!trackerData || (trackerData.primaryPosition === null && trackerData.roleRatings.length === 0)) {
+      const reason = failReason ?? 'network_error';
+      const detail = failDetail ? ` (${failDetail})` : '';
       return {
         ...player,
         positionSource: 'goalsverse' as PositionSource,
         roleRatingsSource: 'goalsverse' as RoleRatingsSource,
         sourceWarnings: [
           ...(player.sourceWarnings ?? []),
-          `goals-tracker: kein Ergebnis für ${rawId}`,
+          `goals-tracker: ${reason}${detail} für ${rawId}`,
         ],
       };
     }
 
-    // Build the enriched player — Tracker wins over Goalsverse
+    // ── Partial or full success ───────────────────────────────────────────
+    // trackerData is non-null here (full-failure guard above already returned)
+    const td = trackerData!;
     const warnings: string[] = [...(player.sourceWarnings ?? [])];
 
     // Position: Tracker badge is authoritative
-    const newPosition: Position = trackerData.primaryPosition ?? player.position;
+    const newPosition: Position = td.primaryPosition ?? player.position;
     const positionSource: PositionSource =
-      trackerData.primaryPosition !== null ? 'goals-tracker' : 'goalsverse';
+      td.primaryPosition !== null ? 'goals-tracker' : 'goalsverse';
 
-    if (trackerData.primaryPosition === null) {
-      warnings.push(`goals-tracker: keine Primary-Position für ${rawId}, nutze Goalsverse`);
+    if (td.primaryPosition === null) {
+      const detail = failDetail ? ` (${failDetail})` : '';
+      warnings.push(`goals-tracker: parse_primary_missing${detail} für ${rawId}, nutze Goalsverse`);
     }
 
-    // roleRatings: Tracker's ovr_roles (different OVR formula, more accurate)
+    // roleRatings: Tracker pitch buttons (different OVR formula)
     let newRoleRatings = player.roleRatings;
     let roleRatingsSource: RoleRatingsSource = 'goalsverse';
 
-    if (trackerData.roleRatings.length > 0) {
-      newRoleRatings = trackerData.roleRatings;
+    if (td.roleRatings.length > 0) {
+      newRoleRatings = td.roleRatings;
       roleRatingsSource = 'goals-tracker';
     } else {
-      warnings.push(`goals-tracker: keine roleRatings für ${rawId}, nutze Goalsverse`);
+      const detail = failDetail ? ` (${failDetail})` : '';
+      warnings.push(`goals-tracker: parse_roleRatings_missing${detail} für ${rawId}, nutze Goalsverse`);
     }
 
-    // Recompute secondaryPositions based on new roleRatings + new primary position
+    // Recompute secondaryPositions from new roleRatings + new primary
     const newOverall = player.overall;
     const newSecondary: Position[] = newRoleRatings
       .filter((r) => r.overall >= newOverall - 10 && r.position !== newPosition)

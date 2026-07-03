@@ -3,36 +3,62 @@
  *
  * goals-tracker.com is the authoritative source for:
  *   - primaryPosition  (their badge = what PlayGOALS shows)
- *   - roleRatings      (the visible Positions pitch — different ratings than Goalsverse ovr_roles)
+ *   - roleRatings      (the visible Positions pitch — different OVR formula than Goalsverse)
  *
  * URL pattern: https://goals-tracker.com/player/{characterId}
  * (characterId = UUID without the "goalsverse-" prefix)
  *
- * The page is a Next.js App Router app with two relevant rendering artefacts:
+ * The page is a Next.js App Router app. Two relevant rendering artefacts:
  *
- *   1. Lime badge  — "AM  81 OVR  full rating" in the SSR header area.
- *      This is the authoritative primary position.
+ *   1. Lime badge  — "AM  81 OVR  full rating" in the SSR header.
+ *      Authoritative primary position.
  *
- *   2. Positions pitch  — the interactive football-pitch SVG with position buttons.
- *      Each non-GK, non-disabled button shows a 2-3 char label + its Tracker OVR rating.
- *      LB and RB both appear as "FB"; LWB and RWB as "WB"; etc.
- *      We aggregate these by max rating per position group.
- *      This is the authoritative roleRatings source — it shows a completely
- *      different set of numbers than Goalsverse ovr_roles (different OVR formula).
+ *   2. Positions pitch  — football-pitch SVG with interactive position buttons.
+ *      Each non-disabled button shows label + Tracker OVR rating.
+ *      LB+RB both render as "FB", LWB+RWB as "WB" — aggregated by max.
+ *      Authoritative roleRatings source.
  *
- * NOTE: We do NOT use __next_f.push ovr_roles for roleRatings — those are
- * Goalsverse-equivalent values, not the visible Tracker ratings.
+ * NOTE: __next_f.push ovr_roles is NOT used for roleRatings — those equal Goalsverse values.
+ *
+ * Vercel notes:
+ *   - 15 s timeout (up from 10 s) — Pietsch/Mengue pages are 147–178 KB, largest in the squad,
+ *     and were the exact two timing out on Vercel's US edge location.
+ *   - 1 retry with 400 ms backoff for timeout/network/parse-miss failures.
+ *   - Concurrency 3 (down from 5) to reduce simultaneous connections from Vercel.
  */
 
 import type { PlayerRoleRating, Position } from './types';
 import { ALL_POSITIONS } from './types';
 
-const TRACKER_BASE = 'https://goals-tracker.com';
-const TRACKER_TIMEOUT_MS = 10_000;
+const TRACKER_BASE       = 'https://goals-tracker.com';
+const TRACKER_TIMEOUT_MS = 15_000;   // 15 s — covers largest pages on Vercel edge
+const RETRY_COUNT        = 1;        // one retry on transient failures
+const RETRY_DELAY_MS     = 400;      // backoff between attempts
+export const TRACKER_CONCURRENCY = 3; // exported so goalsverse-client can import it
+
 const USER_AGENT = 'Mozilla/5.0 (compatible; GOALS Squad Optimizer/1.0)';
 
 /** All valid GOALS position labels for validation */
 const VALID_POSITIONS = new Set<string>(ALL_POSITIONS);
+
+// ── Error taxonomy ─────────────────────────────────────────────────────────
+
+/** Distinguishable failure reasons for sourceWarnings. */
+export type TrackerFetchFailReason =
+  | 'timeout'
+  | 'http_status'
+  | 'network_error'
+  | 'empty_html'
+  | 'parse_primary_missing'
+  | 'parse_roleRatings_missing';
+
+export interface TrackerFetchResult {
+  data: TrackerPlayerData | null;
+  /** Set when the fetch/parse failed — populated into player.sourceWarnings. */
+  failReason?: TrackerFetchFailReason;
+  /** Human-readable detail for sourceWarnings. */
+  failDetail?: string;
+}
 
 export interface TrackerPlayerData {
   characterId: string;
@@ -40,11 +66,10 @@ export interface TrackerPlayerData {
   primaryPosition: Position | null;
   /**
    * Role ratings from the Positions pitch buttons (Tracker's own OVR formula).
-   * Empty array means the pitch section was not found / parseable — caller should
-   * keep Goalsverse roleRatings and set roleRatingsSource='goalsverse'.
+   * Empty array → pitch section absent/unparseable → caller keeps Goalsverse roleRatings.
    */
   roleRatings: PlayerRoleRating[];
-  /** Match stats — fetched but not consumed by the enrichment layer yet */
+  /** Match stats — stored for future use, not consumed by enrichment layer yet */
   matchStats?: {
     matchesPlayed?: number;
     goals?: number;
@@ -65,27 +90,26 @@ function withTimeout(ms: number): { signal: AbortSignal; clear: () => void } {
 /**
  * Extract the primary position badge from the static server-rendered HTML.
  *
- * The tracker renders a lime-green badge (style="background:#9EFF00") containing
- * the 2-3 letter position abbreviation followed by the OVR span and "full rating".
+ * Pattern: lime badge (background:#9EFF00) → position label → OVR number → "full rating"
  *
- * Example fragment (from the attributes panel header):
- *   <span style="background:#9EFF00;color:#...">AM</span>
- *   <span ...>81<!-- --> OVR</span>
- *   <span ...>full rating</span>
+ * Example fragment (attributes panel header):
+ *   <span style="background:#9EFF00;color:#1a1f25">AM</span>
+ *   <span style="color:#9EFF00">81<!-- --> OVR</span>
+ *   <span class="hidden ...">full rating</span>
  */
 export function extractPrimaryPositionFromHtml(html: string): Position | null {
-  // Pattern: lime badge position + OVR number + "full rating" label
+  // Primary pattern: lime badge + OVR span
   const badge = html.match(
-    /style="background:#9EFF00[^"]*"[^>]*>([A-Z]{2,3})<\/span>\s*<span[^>]*>\s*\d+\s*(?:<!--[^>]*-->)?\s*OVR<\/span>/
+    /style="background:#9EFF00[^"]*"[^>]*>([A-Z]{2,3})<\/span>\s*<span[^>]*>\s*\d+\s*(?:<!--[^>]*-->)?\s*OVR<\/span>/,
   );
   if (badge) {
     const pos = badge[1] as string;
     if (VALID_POSITIONS.has(pos)) return pos as Position;
   }
 
-  // Fallback: broader pattern with "full rating" anchor
+  // Fallback: "full rating" anchor — handles minor whitespace variations
   const fullRating = html.match(
-    /([A-Z]{2,3})\s*<\/span><span[^>]*>\s*(\d+)\s*(?:<!--[^>]*-->)?\s*OVR\s*<\/span>\s*<span[^>]*>full rating<\/span>/
+    /([A-Z]{2,3})\s*<\/span><span[^>]*>\s*(\d+)\s*(?:<!--[^>]*-->)?\s*OVR\s*<\/span>\s*<span[^>]*>full rating<\/span>/,
   );
   if (fullRating) {
     const pos = fullRating[1] as string;
@@ -98,34 +122,28 @@ export function extractPrimaryPositionFromHtml(html: string): Position | null {
 /**
  * Extract role ratings from the visible Positions pitch in the tracker HTML.
  *
- * The tracker renders an interactive football-pitch SVG with buttons for each
- * position. Each enabled button (cursor:pointer, not cursor:default) shows:
- *   <span>FB</span><span style="color:...">76</span>
+ * The tracker renders an interactive football-pitch SVG with buttons for each position.
+ * Each enabled button (cursor:pointer) shows a label + rating.
+ * Disabled positions (cursor:default, e.g. GK for field players) have no rating — skipped.
  *
- * The pitch contains both LB + RB (both labelled "FB"), LWB + RWB (both "WB"), etc.
- * We aggregate: per position label, keep the highest rating seen.
+ * Symmetric slots: LB+RB both render as "FB", LWB+RWB as "WB" → aggregate with max().
  *
- * The pitch section is anchored by "Tap a position" text and contains
- * the football field SVG followed by all position buttons.
+ * Section anchor: "Tap a position" text (always present in the pitch header).
+ * We scan 15 KB after the anchor — the full pitch fits within this window.
  *
- * Returns empty array if the pitch section is not found or yields no results.
+ * Returns empty array if the pitch section is absent or yields no valid entries.
  */
 export function extractRoleRatingsFromHtml(html: string): PlayerRoleRating[] {
-  // Anchor: the pitch section header text
   const pitchStart = html.indexOf('Tap a position');
   if (pitchStart < 0) return [];
 
-  // Limit scan to ~15 KB after the anchor (the whole pitch is within this range)
   const chunk = html.slice(pitchStart, pitchStart + 15_000);
 
-  // Each position button has the structure:
+  // Button structure:
   //   <button ... style="...cursor:pointer...">
   //     <span ...>FB</span>
   //     <span ... style="color:...">76</span>
   //   </button>
-  //
-  // Disabled positions (e.g. GK for a field player) use cursor:default and
-  // have no rating span — we skip them by requiring a rating.
   const buttonPattern =
     /<button[^>]*style="([^"]*)"[^>]*>\s*<span[^>]*>([A-Z]{1,3})<\/span>(?:\s*<span[^>]*style="([^"]*)"[^>]*>([\d]+)<\/span>)?/g;
 
@@ -135,12 +153,9 @@ export function extractRoleRatingsFromHtml(html: string): PlayerRoleRating[] {
   while ((match = buttonPattern.exec(chunk)) !== null) {
     const btnStyle  = match[1];
     const posLabel  = match[2];
-    const ratingStr = match[4]; // may be undefined for disabled buttons
+    const ratingStr = match[4];
 
-    // Skip disabled positions (no rating or cursor:default)
     if (!ratingStr || btnStyle.includes('cursor:default')) continue;
-
-    // Only accept known position labels
     if (!VALID_POSITIONS.has(posLabel)) continue;
 
     const rating = parseInt(ratingStr, 10);
@@ -157,8 +172,7 @@ export function extractRoleRatingsFromHtml(html: string): PlayerRoleRating[] {
 }
 
 /**
- * Extract basic match stats from the rendered HTML.
- * Shown as number + label below the player card.
+ * Extract match stats shown below the player card.
  * Stored for future use — not yet consumed by the enrichment layer.
  */
 export function extractMatchStatsFromHtml(html: string): TrackerPlayerData['matchStats'] {
@@ -173,50 +187,127 @@ export function extractMatchStatsFromHtml(html: string): TrackerPlayerData['matc
   return stats;
 }
 
-// ── Network fetch ──────────────────────────────────────────────────────────
+// ── Single attempt ─────────────────────────────────────────────────────────
 
 /**
- * Fetch and parse data for a single player from goals-tracker.com.
- *
- * @param characterId - UUID (with or without "goalsverse-" prefix)
- * @returns TrackerPlayerData or null if the fetch fails or player not found
+ * One fetch+parse attempt. Returns a TrackerFetchResult with either data or a
+ * typed failure reason — never throws.
  */
-export async function fetchTrackerPlayerData(
-  characterId: string,
-): Promise<TrackerPlayerData | null> {
-  // Strip the "goalsverse-" prefix if present (defensive normalisation)
-  const rawId = characterId.startsWith('goalsverse-')
-    ? characterId.slice('goalsverse-'.length)
-    : characterId;
-
+async function fetchOnce(rawId: string): Promise<TrackerFetchResult> {
   const url = `${TRACKER_BASE}/player/${rawId}`;
   const { signal, clear } = withTimeout(TRACKER_TIMEOUT_MS);
 
   try {
     const res = await fetch(url, {
       signal,
+      redirect: 'follow',
+      cache:    'no-store',
       headers: {
         'user-agent': USER_AGENT,
-        accept: 'text/html,application/xhtml+xml',
+        accept:       'text/html,application/xhtml+xml',
       },
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      return {
+        data:       null,
+        failReason: 'http_status',
+        failDetail: `HTTP ${res.status}`,
+      };
+    }
 
     const html = await res.text();
 
+    if (!html || html.length < 500) {
+      return {
+        data:       null,
+        failReason: 'empty_html',
+        failDetail: `body ${html.length} bytes`,
+      };
+    }
+
     const primaryPosition = extractPrimaryPositionFromHtml(html);
-    const roleRatings      = extractRoleRatingsFromHtml(html);
-    const matchStats       = extractMatchStatsFromHtml(html);
+    const roleRatings     = extractRoleRatingsFromHtml(html);
+    const matchStats      = extractMatchStatsFromHtml(html);
 
-    // If we couldn't extract anything useful, treat as a miss
-    if (primaryPosition === null && roleRatings.length === 0) return null;
+    // Both missing → nothing useful extracted
+    if (primaryPosition === null && roleRatings.length === 0) {
+      return {
+        data:       null,
+        failReason: 'parse_primary_missing',
+        failDetail: `html ${html.length}b, badge absent, pitch absent`,
+      };
+    }
 
-    return { characterId: rawId, primaryPosition, roleRatings, matchStats };
-  } catch {
-    // Timeout, network error, etc. — caller decides how to handle
-    return null;
+    // Partial parse — still return data with warnings encoded in failReason
+    if (primaryPosition === null) {
+      return {
+        data:       { characterId: rawId, primaryPosition: null, roleRatings, matchStats },
+        failReason: 'parse_primary_missing',
+        failDetail: `html ${html.length}b, badge absent`,
+      };
+    }
+    if (roleRatings.length === 0) {
+      return {
+        data:       { characterId: rawId, primaryPosition, roleRatings: [], matchStats },
+        failReason: 'parse_roleRatings_missing',
+        failDetail: `html ${html.length}b, pitch absent`,
+      };
+    }
+
+    return { data: { characterId: rawId, primaryPosition, roleRatings, matchStats } };
+
+  } catch (err) {
+    const isAbort =
+      err instanceof Error && (err.name === 'AbortError' || err.message.includes('abort'));
+    return {
+      data:       null,
+      failReason: isAbort ? 'timeout' : 'network_error',
+      failDetail: err instanceof Error ? err.message : String(err),
+    };
   } finally {
     clear();
   }
+}
+
+// ── Public API ─────────────────────────────────────────────────────────────
+
+/**
+ * Fetch and parse data for a single player from goals-tracker.com.
+ *
+ * Retries once (RETRY_COUNT=1) with a short backoff on transient failures
+ * (timeout, network_error, parse misses). HTTP errors and empty HTML are
+ * not retried since a second attempt is unlikely to help.
+ *
+ * @param characterId - UUID (with or without "goalsverse-" prefix)
+ * @returns TrackerFetchResult — always resolves, never rejects.
+ */
+export async function fetchTrackerPlayerData(
+  characterId: string,
+): Promise<TrackerFetchResult> {
+  const rawId = characterId.startsWith('goalsverse-')
+    ? characterId.slice('goalsverse-'.length)
+    : characterId;
+
+  // Reasons worth retrying
+  const retryable: Set<TrackerFetchFailReason> = new Set([
+    'timeout',
+    'network_error',
+    'parse_primary_missing',
+    'parse_roleRatings_missing',
+  ]);
+
+  let result = await fetchOnce(rawId);
+
+  for (let attempt = 0; attempt < RETRY_COUNT; attempt++) {
+    // Stop if we have complete data or a non-retryable failure
+    if (result.data?.primaryPosition !== null && result.data?.roleRatings.length) break;
+    if (result.failReason && !retryable.has(result.failReason)) break;
+    if (!result.failReason && result.data !== null) break; // success
+
+    await new Promise<void>((r) => setTimeout(r, RETRY_DELAY_MS));
+    result = await fetchOnce(rawId);
+  }
+
+  return result;
 }
