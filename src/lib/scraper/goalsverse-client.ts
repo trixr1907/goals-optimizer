@@ -9,7 +9,7 @@ function characterImageUrl(characterId?: string): string | undefined {
   const rawId = characterId.startsWith('goalsverse-')
     ? characterId.slice('goalsverse-'.length)
     : characterId;
-  return `${CDN_BASE}/${rawId}.png`;
+  return `${CDN_BASE}/${rawId}.png?w=128`;
 }
 
 // GOALS role IDs → Positionen

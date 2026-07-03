@@ -1,18 +1,15 @@
 {
   "4-3-3": {
     "name": "4-3-3",
-    "winrate_current_patch": 52.4,
-    "usage_rate": 18.7,
-    "skill_cohort": "Mittel/Top",
     "playstyle": "Offensiv",
     "strengths": [
-      "Breite Fl\u00fcgelangriffe",
+      "Breite Flügelangriffe",
       "Gute Pressing-Struktur",
       "Klare Rollen im Angriff"
     ],
     "weaknesses": [
-      "CMs m\u00fcssen viel Raum abdecken",
-      "Anf\u00e4llig bei schwachen Au\u00dfenverteidigern"
+      "CMs müssen viel Raum abdecken",
+      "Anfällig bei schwachen Außenverteidigern"
     ],
     "slots": [
       {
@@ -74,18 +71,15 @@
   },
   "4-4-2": {
     "name": "4-4-2",
-    "winrate_current_patch": 50.8,
-    "usage_rate": 12.5,
-    "skill_cohort": "Anf\u00e4nger/Mittel",
     "playstyle": "Ausgewogen",
     "strengths": [
       "Stabile Grundordnung",
-      "Zwei klare St\u00fcrmer",
+      "Zwei klare Stürmer",
       "Einfach zu rotieren"
     ],
     "weaknesses": [
-      "Weniger zentrale \u00dcberzahl",
-      "Fl\u00fcgel brauchen Ausdauer"
+      "Weniger zentrale Überzahl",
+      "Flügel brauchen Ausdauer"
     ],
     "slots": [
       {
@@ -147,18 +141,15 @@
   },
   "4-2-3-1": {
     "name": "4-2-3-1",
-    "winrate_current_patch": 51.6,
-    "usage_rate": 14.2,
-    "skill_cohort": "Mittel",
     "playstyle": "Ausgewogen",
     "strengths": [
-      "Doppelsechs sch\u00fctzt langsame CBs",
+      "Doppelsechs schützt langsame CBs",
       "CAM als Kreativzentrum",
       "Gute Balance gegen Konter"
     ],
     "weaknesses": [
-      "Alleiniger ST braucht hohe Qualit\u00e4t",
-      "LAM/RAM m\u00fcssen defensiv mitarbeiten"
+      "Alleiniger ST braucht hohe Qualität",
+      "LAM/RAM müssen defensiv mitarbeiten"
     ],
     "slots": [
       {
@@ -220,19 +211,16 @@
   },
   "3-5-2": {
     "name": "3-5-2",
-    "winrate_current_patch": 49.9,
-    "usage_rate": 8.1,
-    "skill_cohort": "Top",
     "playstyle": "Defensiv",
     "strengths": [
-      "Zentrale \u00dcberzahl",
-      "Zwei St\u00fcrmer f\u00fcr Pressing",
-      "Wingbacks k\u00f6nnen breit schieben"
+      "Zentrale Überzahl",
+      "Zwei Stürmer für Pressing",
+      "Wingbacks können breit schieben"
     ],
     "weaknesses": [
       "Wingbacks sind kritisch",
-      "Au\u00dfen offen bei Ballverlust",
-      "Schwierig f\u00fcr Anf\u00e4nger"
+      "Außen offen bei Ballverlust",
+      "Schwierig für Anfänger"
     ],
     "slots": [
       {
@@ -294,18 +282,15 @@
   },
   "4-1-2-1-2": {
     "name": "4-1-2-1-2",
-    "winrate_current_patch": 51.1,
-    "usage_rate": 9.4,
-    "skill_cohort": "Mittel/Top",
     "playstyle": "Konter",
     "strengths": [
       "Stark durchs Zentrum",
-      "CAM + zwei ST f\u00fcr schnelle Kombinationen",
+      "CAM + zwei ST für schnelle Kombinationen",
       "CDM sichert ab"
     ],
     "weaknesses": [
-      "Kaum nat\u00fcrliche Breite",
-      "Au\u00dfenverteidiger m\u00fcssen Qualit\u00e4t haben"
+      "Kaum natürliche Breite",
+      "Außenverteidiger müssen Qualität haben"
     ],
     "slots": [
       {

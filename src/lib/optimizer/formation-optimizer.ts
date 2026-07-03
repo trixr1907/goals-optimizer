@@ -5,9 +5,6 @@ import formationsData from '@/config/formations.json';
 export interface FormationMeta {
   name: string;
   slots: LineupSlot[];
-  winrate_current_patch?: number;
-  usage_rate?: number;
-  skill_cohort?: string;
   playstyle?: 'Offensiv' | 'Defensiv' | 'Ausgewogen' | 'Konter' | string;
   strengths?: string[];
   weaknesses?: string[];
@@ -26,7 +23,6 @@ export interface FormationRecommendation {
   assignments: FormationAssignment[];
   totalFit: number;
   averageFit: number;
-  metaScore: number;
   squadMatch: number;
   warnings: string[];
   reasons: string[];
@@ -117,7 +113,7 @@ function makeWarnings(assignments: FormationAssignment[]) {
 function makeReasons(formation: FormationMeta, assignments: FormationAssignment[], averageFit: number, squadMatch: number) {
   const reasons: string[] = [];
   reasons.push(`${squadMatch.toFixed(0)}% Kader-Fit bei ${averageFit.toFixed(1)} durchschnittlichem Slot-Fit.`);
-  if (formation.winrate_current_patch) reasons.push(`Meta-Winrate aktuell ca. ${formation.winrate_current_patch.toFixed(1)}%.`);
+  reasons.push('Ranking basiert auf deinem aktuellen Squad, nicht auf erfundenen globalen Winrates.');
   if (formation.playstyle) reasons.push(`Spielstil: ${formation.playstyle}.`);
 
   const bestLine = assignments.slice().sort((a, b) => b.fit - a.fit).slice(0, 2);
@@ -133,15 +129,13 @@ export function recommendFormations(players: PlayerWithScores[]): FormationRecom
       const assignments = solveGreedy(players, formation.slots, 'balanced');
       const totalFit = assignments.reduce((sum, item) => sum + item.fit, 0);
       const averageFit = assignments.length ? totalFit / assignments.length : 0;
-      const metaScore = (formation.winrate_current_patch ?? 50) * 0.65 + (formation.usage_rate ?? 5) * 0.35;
-      const squadMatch = Math.max(0, Math.min(100, averageFit * 0.9 + metaScore * 0.1));
+      const squadMatch = Math.max(0, Math.min(100, averageFit));
       return {
         formationKey,
         formation,
         assignments,
         totalFit,
         averageFit,
-        metaScore,
         squadMatch,
         warnings: makeWarnings(assignments),
         reasons: makeReasons(formation, assignments, averageFit, squadMatch),

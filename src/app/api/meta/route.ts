@@ -2,11 +2,6 @@ import { NextResponse } from 'next/server';
 import { fetchGoalsverseLiveMeta } from '@/lib/meta/goalsverse-meta';
 import formationsData from '@/config/formations.json';
 
-type StaticFormationMeta = {
-  usage_rate?: number;
-  winrate_current_patch?: number;
-};
-
 export const revalidate = 60 * 30; // 30 min
 
 export async function GET() {
@@ -14,17 +9,18 @@ export async function GET() {
     const live = await fetchGoalsverseLiveMeta();
     return NextResponse.json(live);
   } catch (error) {
-    // Fallback to bundled static meta so the UI never hard-fails.
-    const fallbackFormations = Object.entries(formationsData as Record<string, StaticFormationMeta>).map(([key, value]) => ({
+    // Fallback only preserves known formation keys. It intentionally does not
+    // invent winrates/usage values when goalsverse live meta is unavailable.
+    const fallbackFormations = Object.keys(formationsData).map((key) => ({
       key,
       matches: 0,
-      matchShare: (value.usage_rate ?? 0) / 100,
+      matchShare: 0,
       players: 0,
       playerShare: 0,
       wins: 0,
       draws: 0,
       losses: 0,
-      winRate: (value.winrate_current_patch ?? 50) / 100,
+      winRate: 0,
       avgGoalsFor: 0,
       avgGoalsAgainst: 0,
       avgGoalDiff: 0,

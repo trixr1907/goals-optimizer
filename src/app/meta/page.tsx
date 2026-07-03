@@ -48,19 +48,14 @@ export default function MetaPage() {
         if (!live) return rec;
         const liveWinrate = live.winRate * 100;
         const liveUsage = live.matchShare * 100;
-        const metaScore = liveWinrate * 0.65 + liveUsage * 0.35;
-        const squadMatch = Math.max(0, Math.min(100, rec.averageFit * 0.9 + metaScore * 0.1));
+        const squadMatch = Math.max(0, Math.min(100, rec.averageFit));
         return {
           ...rec,
-          metaScore,
           squadMatch,
-          formation: {
-            ...rec.formation,
-            winrate_current_patch: liveWinrate,
-            usage_rate: liveUsage,
-          },
+          liveWinrate,
+          liveUsage,
           reasons: [
-            `${squadMatch.toFixed(0)}% Kader-Meta mit Live-Meta von goalsverse (${live.matches} Matches).`,
+            `${squadMatch.toFixed(0)}% Squad-Fit. Live-Meta nur als Kontext: ${liveWinrate.toFixed(1)}% Winrate bei ${live.matches} Matches.`,
             ...rec.reasons.slice(1),
           ],
         };
@@ -94,9 +89,9 @@ export default function MetaPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-bold text-white">Meta Center</h2>
-                <p className="mt-1 text-sm text-slate-500">Formation-Ranking aus Kader-Meta, Live-Meta-Winrate und Risiko-Warnungen.</p>
+                <p className="mt-1 text-sm text-slate-500">Formation-Ranking aus deinem Squad-Fit, plus echte Live-Meta nur als Kontext.</p>
                 <p className="mt-2 text-xs text-slate-600">
-                  Meta-Daten: {metaStatus === 'ok' ? `Live von goalsverse · Patch ${liveMeta?.patch ?? '?'} · ${liveMeta?.matches ?? '?'} Matches` : metaStatus === 'fallback' ? 'Fallback aus lokaler Config' : metaStatus === 'loading' ? 'Lade goalsverse…' : 'Live-Meta nicht erreichbar'}
+                  Meta-Daten: {metaStatus === 'ok' ? `Live von goalsverse · Patch ${liveMeta?.patch ?? '?'} · ${liveMeta?.matches ?? '?'} Matches` : metaStatus === 'fallback' ? 'Live-Meta nicht erreichbar · keine erfundenen Fallback-Werte' : metaStatus === 'loading' ? 'Lade goalsverse…' : 'Live-Meta nicht erreichbar'}
                 </p>
               </div>
               {best && (
@@ -116,18 +111,18 @@ export default function MetaPage() {
                       <div>
                         <p className="text-xs uppercase tracking-wide text-slate-500">Top {index + 1}</p>
                         <h3 className="text-xl font-bold text-white">{rec.formation.name}</h3>
-                        <p className="text-xs text-slate-500">{rec.formation.playstyle} · {rec.formation.skill_cohort}</p>
+                        <p className="text-xs text-slate-500">{rec.formation.playstyle ?? 'Squad-basiert'} · basierend auf deinem Kader</p>
                       </div>
                       <div className={`rounded-xl border px-3 py-2 text-center ${scoreColor(rec.squadMatch)}`}>
                         <p className="text-lg font-bold">{rec.squadMatch.toFixed(0)}%</p>
-                        <p className="text-[10px] opacity-80">Kader-Meta</p>
+                        <p className="text-[10px] opacity-80">Squad-Fit</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div className="rounded-lg bg-slate-950/60 p-2"><p className="text-slate-500">Ø Meta</p><p className="font-mono text-white">{rec.averageFit.toFixed(1)}</p></div>
-                      <div className="rounded-lg bg-slate-950/60 p-2"><p className="text-slate-500">Winrate</p><p className="font-mono text-white">{rec.formation.winrate_current_patch?.toFixed(1) ?? '-'}%</p></div>
-                      <div className="rounded-lg bg-slate-950/60 p-2"><p className="text-slate-500">Usage</p><p className="font-mono text-white">{rec.formation.usage_rate?.toFixed(1) ?? '-'}%</p></div>
+                      <div className="rounded-lg bg-slate-950/60 p-2"><p className="text-slate-500">Ø Fit</p><p className="font-mono text-white">{rec.averageFit.toFixed(1)}</p></div>
+                      <div className="rounded-lg bg-slate-950/60 p-2"><p className="text-slate-500">Primary</p><p className="font-mono text-white">{rec.assignments.filter((item) => item.player.positionType?.[item.slot.position] === 'primary').length}</p></div>
+                      <div className="rounded-lg bg-slate-950/60 p-2"><p className="text-slate-500">Secondary</p><p className="font-mono text-white">{rec.assignments.filter((item) => item.player.positionType?.[item.slot.position] === 'secondary').length}</p></div>
                     </div>
 
                     {live && (
@@ -174,7 +169,7 @@ export default function MetaPage() {
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full min-w-[760px] text-sm">
                   <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
-                    <tr><th className="py-2">Formation</th><th>Kader-Meta</th><th>Ø Meta</th><th>Live Meta</th><th>Matches</th><th>Größtes Risiko</th></tr>
+                    <tr><th className="py-2">Formation</th><th>Squad-Fit</th><th>Ø Fit</th><th>Live-Kontext</th><th>Matches</th><th>Größtes Risiko</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
                     {recommendations.map((rec) => {
@@ -184,7 +179,7 @@ export default function MetaPage() {
                           <td className="py-3 font-semibold text-white">{rec.formation.name}</td>
                           <td>{rec.squadMatch.toFixed(0)}%</td>
                           <td>{rec.averageFit.toFixed(1)}</td>
-                          <td>{rec.formation.winrate_current_patch?.toFixed(1) ?? '-'}% / {rec.formation.usage_rate?.toFixed(1) ?? '-'}%</td>
+                          <td>{live ? `${(live.winRate * 100).toFixed(1)}% WR / ${(live.matchShare * 100).toFixed(1)}% Usage` : 'keine Live-Daten'}</td>
                           <td>{live?.matches ?? '-'}</td>
                           <td className="max-w-md text-xs text-slate-500">{rec.warnings[0] ?? 'Keine harte Warnung.'}</td>
                         </tr>
