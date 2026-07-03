@@ -192,7 +192,7 @@ function PitchSlot({
 
   const [imgError, setImgError] = useState(false);
   const fit = player ? player.fit_scores[slot.position] ?? 0 : 0;
-  const footHint = player ? explainFootFit(player, slot.position) : null;
+  const footHint = player ? explainFootFit(player, slot.position, slot.x) : null;
   const avatarUrl = player && !imgError ? playerImageUrl(player) : undefined;
 
   return (

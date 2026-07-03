@@ -17,6 +17,7 @@ function applyContextModifiers(
   baseWeights: Record<string, number>,
   player: Player,
   position: Position,
+  slotX?: number, // 0–100 pitch coordinate; undefined = position-level scoring (no side info)
 ): Record<string, number> {
   // Shallow copy so we never mutate the imported constant.
   const w = { ...baseWeights };
@@ -41,44 +42,58 @@ function applyContextModifiers(
   }
 
   // ── Foot / wide position modifiers ───────────────────────
-  if (foot) {
-    const isInvertedLeft  = position === 'WF' && foot === 'right';
-    const isInvertedRight = position === 'WF' && foot === 'left';
-    const isNaturalLeft   = position === 'WF' && foot === 'left';
-    const isNaturalRight  = position === 'WF' && foot === 'right';
+  //
+  // These modifiers require slot-side context (left vs right wing) to be
+  // meaningful. When slotX is provided we can determine the side:
+  //   slotX < 40  → left wing slot
+  //   slotX > 60  → right wing slot
+  //
+  // Without slotX (position-level scoring in enrichPlayerWithScores) we skip
+  // side-dependent modifiers entirely — a neutral score is more honest than
+  // a modifier applied to the wrong half of WF players.
+  if (foot && slotX !== undefined) {
+    const isLeftSlot  = slotX < 40;
+    const isRightSlot = slotX > 60;
 
-    if (isInvertedLeft || isInvertedRight) {
-      // Inside-forward: cuts inside → finishing & curve are the money stats
-      w['finishing'] = (w['finishing'] ?? 0) * 1.4;
-      w['curve']     = (w['curve']     ?? 0) * 1.4;
-    }
+    if (position === 'WF') {
+      // Inverted winger: right-footer on left wing, or left-footer on right wing
+      const isInverted =
+        (isLeftSlot  && foot === 'right') ||
+        (isRightSlot && foot === 'left');
+      // Natural winger: foot matches the side
+      const isNatural =
+        (isLeftSlot  && foot === 'left') ||
+        (isRightSlot && foot === 'right');
 
-    if (isNaturalLeft || isNaturalRight) {
-      // Traditional winger: hugs the line → crossing is the primary weapon
-      w['crossing'] = (w['crossing'] ?? 0) * 1.5;
+      if (isInverted) {
+        // Inside-forward: cuts inside → finishing & curve are the money stats
+        w['finishing'] = (w['finishing'] ?? 0) * 1.4;
+        w['curve']     = (w['curve']     ?? 0) * 1.4;
+      } else if (isNatural) {
+        // Traditional winger: hugs the line → crossing is the primary weapon
+        w['crossing'] = (w['crossing'] ?? 0) * 1.5;
+      }
     }
 
     // ── Weak-foot quality scaling ─────────────────────────
-    // wfStat < 70: penalise all stats normally executed with the weak foot.
-    //   The penalty shrinks the weights of the *wrong* foot's dominant actions,
-    //   simulating reduced reliability. We scale down bilateral technical stats.
-    // wfStat > 85: both feet are reliable → no asymmetric modifier needed.
-    if (wfStat < 70) {
-      // Determine which side the player's weak foot is
-      const isOnWrongSide =
-        (['FB','WB','WM','WF'].includes(position) && foot === 'right') ||
-        (['FB','WB','WM','WF'].includes(position) && foot === 'left');
+    // Only penalise actions on the weak-foot side when we know which side the
+    // slot is on. A FB/WB/WM on the wrong side of their preferred foot will
+    // be less reliable with crosses, passes, and finishes.
+    if (wfStat < 70 && ['FB', 'WB', 'WM', 'WF'].includes(position)) {
+      const isWrongSide =
+        (isLeftSlot  && foot === 'right') ||
+        (isRightSlot && foot === 'left');
 
-      if (isOnWrongSide) {
+      if (isWrongSide) {
         // Actions requiring the weak foot under pressure are less reliable
         const penalty = 0.5 + (wfStat / 70) * 0.4; // 0.50 at wf=0 … 0.90 at wf=70
-        w['crossing']  = (w['crossing']  ?? 0) * penalty;
-        w['finishing'] = (w['finishing'] ?? 0) * penalty;
-        w['curve']     = (w['curve']     ?? 0) * penalty;
+        w['crossing']     = (w['crossing']     ?? 0) * penalty;
+        w['finishing']    = (w['finishing']    ?? 0) * penalty;
+        w['curve']        = (w['curve']        ?? 0) * penalty;
         w['through_pass'] = (w['through_pass'] ?? 0) * penalty;
       }
     }
-    // wfStat > 85 → no change: both feet treated as equally good
+    // wfStat >= 70 → no asymmetric penalty; wfStat > 85 → both feet reliable
   }
 
   return w;
@@ -92,7 +107,7 @@ function applyContextModifiers(
 // Result is clamped to [1, 99].
 // ─────────────────────────────────────────────────────────────
 
-export function calcPositionFitScore(player: Player, position: Position): number {
+export function calcPositionFitScore(player: Player, position: Position, slotX?: number): number {
   const hasFullStats =
     player.stats.pac > 0 ||
     player.stats.sho > 0 ||
@@ -117,7 +132,7 @@ export function calcPositionFitScore(player: Player, position: Position): number
   const base = WEIGHTS[position as string];
   if (!base) return 50;
 
-  const w = applyContextModifiers(base, player, position);
+  const w = applyContextModifiers(base, player, position, slotX);
 
   const stats = player.stats as unknown as Record<string, number>;
 
@@ -156,33 +171,51 @@ export function enrichPlayerWithScores(player: Player): PlayerWithScores {
 // or bad — used in the UI tooltip.
 // ─────────────────────────────────────────────────────────────
 
-export function explainFootFit(player: Player, position: Position): string | null {
+export function explainFootFit(player: Player, position: Position, slotX?: number): string | null {
   if (!player.preferred_foot || position === 'GK') return null;
 
   const foot   = player.preferred_foot;
   const wfStat = player.stats.weak_foot ?? 70;
 
-  const isInverted =
-    (position === 'WF' && foot === 'right') ||
-    (position === 'WF' && foot === 'left');
-  const isNatural =
-    (position === 'WF' && foot === 'left') ||
-    (position === 'WF' && foot === 'right');
-  const isWrongSideWide =
-    (['FB','WB','WM'].includes(position) && foot === 'right') ||
-    (['FB','WB','WM'].includes(position) && foot === 'left');
+  // Without slot-side context we can only give generic weak-foot warnings
+  // for non-wide positions (CM, ST, etc.) — not side-specific WF/FB hints.
+  if (slotX === undefined) {
+    if (wfStat < 60) {
+      return 'Schwacher Schwachfuß — kann auf breiten Positionen problematisch sein.';
+    }
+    return null;
+  }
 
-  if (isInverted) {
-    return wfStat < 70
-      ? 'Invertierter Flügelstürmer — schwache Flanken, aber Cut-Inside-Stärke.'
-      : 'Guter Inverted Winger: Abschluss & Kurve profitieren.';
+  const isLeftSlot  = slotX < 40;
+  const isRightSlot = slotX > 60;
+
+  if (position === 'WF') {
+    const isInverted =
+      (isLeftSlot  && foot === 'right') ||
+      (isRightSlot && foot === 'left');
+    const isNatural =
+      (isLeftSlot  && foot === 'left') ||
+      (isRightSlot && foot === 'right');
+
+    if (isInverted) {
+      return wfStat < 70
+        ? 'Invertierter Flügelstürmer — schwache Flanken, aber Cut-Inside-Stärke.'
+        : 'Guter Inverted Winger: Abschluss & Kurve profitieren.';
+    }
+    if (isNatural) {
+      return 'Natürliche Seite: Flanken & Liniendribblings werden verstärkt.';
+    }
   }
-  if (isNatural) {
-    return 'Natürliche Seite: Flanken & Liniendribblings werden verstärkt.';
+
+  if (['FB', 'WB', 'WM'].includes(position)) {
+    const isWrongSide =
+      (isLeftSlot  && foot === 'right') ||
+      (isRightSlot && foot === 'left');
+    if (isWrongSide && wfStat < 70) {
+      return 'Weak-Foot-Risiko: Flanken & Pässe auf dieser Seite weniger verlässlich.';
+    }
   }
-  if (isWrongSideWide && wfStat < 70) {
-    return 'Weak-Foot-Risiko: Flanken & Pässe auf dieser Seite weniger verlässlich.';
-  }
+
   return null;
 }
 
@@ -194,11 +227,12 @@ export function topWeightedStats(
   player: Player,
   position: Position,
   n = 5,
+  slotX?: number,
 ): Array<{ stat: string; value: number; weight: number; contribution: number }> {
   const base = WEIGHTS[position as string];
   if (!base) return [];
 
-  const w = applyContextModifiers(base, player, position);
+  const w = applyContextModifiers(base, player, position, slotX);
   const stats = player.stats as unknown as Record<string, number>;
 
   const entries = Object.entries(w)

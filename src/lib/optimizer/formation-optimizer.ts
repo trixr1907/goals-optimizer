@@ -2,6 +2,7 @@ import { PlayerWithScores, Position } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
 import formationsData from '@/config/formations.json';
 import { clonePlayersWithFitBias, OptimizationMode, solveHungarian } from './hungarian-solver';
+import { calcPositionFitScore } from '@/lib/scoring/position-fit';
 
 export interface FormationMeta {
   name: string;
@@ -55,11 +56,20 @@ function getRoleBias(player: PlayerWithScores, position: Position, mode: Optimiz
   return stats.pac * 0.07 + stats.def * 0.06 + stats.phy * 0.03;
 }
 
+function slotFit(player: PlayerWithScores, slot: LineupSlot): number {
+  // Slot-aware: recomputes with slot.x so foot/side modifiers apply correctly.
+  // Activity players (no full stats) fall back to cached fit_scores.
+  const hasFullStats = player.stats.pac > 0 || player.stats.dri > 0 || player.stats.def > 0;
+  return hasFullStats
+    ? calcPositionFitScore(player, slot.position, slot.x)
+    : (player.fit_scores[slot.position] ?? 0);
+}
+
 function solveGreedy(players: PlayerWithScores[], slots: LineupSlot[], mode: OptimizationMode) {
   const used = new Set<string>();
   const sortedSlots = [...slots].sort((a, b) => {
-    const bestA = Math.max(...players.map((p) => p.fit_scores[a.position] ?? 0));
-    const bestB = Math.max(...players.map((p) => p.fit_scores[b.position] ?? 0));
+    const bestA = Math.max(...players.map((p) => slotFit(p, a)));
+    const bestB = Math.max(...players.map((p) => slotFit(p, b)));
     return bestA - bestB;
   });
 
@@ -71,10 +81,11 @@ function solveGreedy(players: PlayerWithScores[], slots: LineupSlot[], mode: Opt
       .map((player) => {
         const posType = player.positionType?.[slot.position] ?? 'out';
         const primaryBonus = posType === 'primary' ? 8 : posType === 'secondary' ? 3 : 0;
+        const fit = slotFit(player, slot);
         return {
           player,
-          fit: player.fit_scores[slot.position] ?? 0,
-          score: (player.fit_scores[slot.position] ?? 0) + getRoleBias(player, slot.position, mode) + primaryBonus,
+          fit,
+          score: fit + getRoleBias(player, slot.position, mode) + primaryBonus,
         };
       })
       .sort((a, b) => b.score - a.score)[0];

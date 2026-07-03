@@ -1,5 +1,6 @@
 import { PlayerWithScores, Position } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
+import { calcPositionFitScore } from '@/lib/scoring/position-fit';
 
 const Munkres = require('munkres-js');
 
@@ -53,7 +54,12 @@ export function solveHungarian(
 
     for (let slotIndex = 0; slotIndex < size; slotIndex++) {
       if (player && slotIndex < slotCount) {
-        const fit = player.fit_scores[slots[slotIndex].position] ?? 0;
+        const slot = slots[slotIndex];
+        // Recompute with slot.x so foot/side modifiers fire correctly (K-1 / K-3 fix).
+        // Falls back to cached fit_scores when full stats are unavailable (activity players).
+        const fit = player.stats.pac > 0 || player.stats.dri > 0 || player.stats.def > 0
+          ? calcPositionFitScore(player, slot.position, slot.x)
+          : (player.fit_scores[slot.position] ?? 0);
         row.push(100 - fit);
       } else {
         row.push(0);
@@ -67,10 +73,13 @@ export function solveHungarian(
 
   return assignments
     .filter(([playerIndex, slotIndex]) => playerIndex < playerCount && slotIndex < slotCount)
-    .map(([playerIndex, slotIndex]) => ({
-      slotIndex,
-      playerId: players[playerIndex].id,
-      fit: players[playerIndex].fit_scores[slots[slotIndex].position] ?? 0,
-    }))
+    .map(([playerIndex, slotIndex]) => {
+      const slot = slots[slotIndex];
+      const player = players[playerIndex];
+      const fit = player.stats.pac > 0 || player.stats.dri > 0 || player.stats.def > 0
+        ? calcPositionFitScore(player, slot.position, slot.x)
+        : (player.fit_scores[slot.position] ?? 0);
+      return { slotIndex, playerId: player.id, fit };
+    })
     .sort((a, b) => a.slotIndex - b.slotIndex);
 }
