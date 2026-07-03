@@ -415,10 +415,31 @@ export default function SquadPage() {
       });
   }, [players, search, filterPos, filterRarity, sortKey, sortDir]);
 
-  const summary = useMemo(() => ({
-    avgOvr:  players.length ? Math.round(players.reduce((s, p) => s + p.overall, 0)                          / players.length) : 0,
-    avgMeta: players.length ? Math.round(players.reduce((s, p) => s + (p.fit_scores[p.position] ?? 0), 0) / players.length) : 0,
-  }), [players]);
+  const summary = useMemo(() => {
+    if (!players.length) return { avgOvr: 0, avgMeta: 0, avgAge: null, totalUpgrades: 0, rarityDist: [] as { rarity: string; count: number; pct: number }[] };
+
+    const avgOvr  = Math.round(players.reduce((s, p) => s + p.overall, 0) / players.length);
+    const avgMeta = Math.round(players.reduce((s, p) => s + (p.fit_scores[p.position] ?? 0), 0) / players.length);
+
+    // Age — only players where aging data is present
+    const withAge = players.filter((p) => p.aging?.currentAge);
+    const avgAge  = withAge.length
+      ? Math.round((withAge.reduce((s, p) => s + (p.aging!.currentAge), 0) / withAge.length) * 10) / 10
+      : null;
+
+    // Total remaining upgrades across squad
+    const totalUpgrades = players.reduce((s, p) => s + (p.aging?.upgradesRemaining ?? 0), 0);
+
+    // Rarity distribution
+    const rarityCount: Record<string, number> = {};
+    for (const p of players) rarityCount[p.rarity] = (rarityCount[p.rarity] ?? 0) + 1;
+    const rarityOrder = ['Mythic', 'Legendary', 'Epic', 'Rare', 'Uncommon', 'Common', 'Basic'];
+    const rarityDist = rarityOrder
+      .filter((r) => rarityCount[r])
+      .map((r) => ({ rarity: r, count: rarityCount[r], pct: Math.round((rarityCount[r] / players.length) * 100) }));
+
+    return { avgOvr, avgMeta, avgAge, totalUpgrades, rarityDist };
+  }, [players]);
 
   function SortTh({ label, sk }: { label: string; sk: SortKey }) {
     const active = sortKey === sk;
@@ -470,11 +491,99 @@ export default function SquadPage() {
           <div className="flex items-start justify-between flex-wrap gap-3">
             <div>
               <h2 className="text-xl font-bold text-white">{clubName || 'Kader'}</h2>
-              <p className="text-sm text-slate-500">
-                {players.length} Spieler · Ø OVR {summary.avgOvr} · Ø Meta {summary.avgMeta}
-              </p>
+              {clubUrl && (
+                <a href={clubUrl} target="_blank" rel="noopener noreferrer"
+                  className="text-xs text-slate-500 hover:text-emerald-400 transition-colors">
+                  goalsverse.com ↗
+                </a>
+              )}
             </div>
             <p className="text-xs text-slate-600">Details → alle Einzelstats · 📊 → Radar-Chart</p>
+          </div>
+
+          {/* ── Squad Stats ── */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {/* Spieler */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Spieler</p>
+              <p className="text-2xl font-bold text-white">{players.length}</p>
+              <p className="text-[10px] text-slate-600 mt-0.5">im Kader</p>
+            </div>
+
+            {/* Ø OVR */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Ø OVR</p>
+              <p className={`text-2xl font-bold ${summary.avgOvr >= 85 ? 'text-emerald-400' : summary.avgOvr >= 75 ? 'text-amber-400' : 'text-slate-200'}`}>
+                {summary.avgOvr}
+              </p>
+              <p className="text-[10px] text-slate-600 mt-0.5">Overall Rating</p>
+            </div>
+
+            {/* Ø Meta */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Ø Meta</p>
+              <p className={`text-2xl font-bold ${summary.avgMeta >= 80 ? 'text-emerald-400' : summary.avgMeta >= 68 ? 'text-amber-400' : 'text-slate-200'}`}>
+                {summary.avgMeta}
+              </p>
+              <p className="text-[10px] text-slate-600 mt-0.5">Position-Fit</p>
+            </div>
+
+            {/* Ø Alter */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Ø Alter</p>
+              {summary.avgAge !== null ? (
+                <>
+                  <p className={`text-2xl font-bold ${summary.avgAge <= 24 ? 'text-emerald-400' : summary.avgAge <= 28 ? 'text-amber-400' : 'text-red-400'}`}>
+                    {summary.avgAge}
+                  </p>
+                  <p className="text-[10px] text-slate-600 mt-0.5">Jahre</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-2xl font-bold text-slate-600">—</p>
+                  <p className="text-[10px] text-slate-600 mt-0.5">keine Daten</p>
+                </>
+              )}
+            </div>
+
+            {/* Upgrades */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Upgrades</p>
+              <p className={`text-2xl font-bold ${summary.totalUpgrades > 0 ? 'text-purple-400' : 'text-slate-600'}`}>
+                {summary.totalUpgrades > 0 ? summary.totalUpgrades : '—'}
+              </p>
+              <p className="text-[10px] text-slate-600 mt-0.5">verbleibend</p>
+            </div>
+
+            {/* Rarity-Mix */}
+            <div className="rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Rarity-Mix</p>
+              {summary.rarityDist.length > 0 ? (
+                <div className="space-y-1 mt-1">
+                  {/* Stacked bar */}
+                  <div className="flex h-2 rounded-full overflow-hidden gap-px">
+                    {summary.rarityDist.map(({ rarity, pct }) => (
+                      <div
+                        key={rarity}
+                        title={`${rarity}: ${pct}%`}
+                        style={{ width: `${pct}%` }}
+                        className={`h-full ${RARITY_COLOR[rarity] ?? 'bg-slate-600'}`}
+                      />
+                    ))}
+                  </div>
+                  {/* Top-2 legend */}
+                  <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                    {summary.rarityDist.slice(0, 3).map(({ rarity, count }) => (
+                      <span key={rarity} className={`text-[10px] ${RARITY_TEXT[rarity] ?? 'text-slate-400'}`}>
+                        {rarity[0]} ×{count}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-2xl font-bold text-slate-600">—</p>
+              )}
+            </div>
           </div>
 
           {/* Filter */}
