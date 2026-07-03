@@ -307,7 +307,6 @@ export function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
     `${firstName} ${lastName}`.trim() ||        // squad page: split name
     rawId.slice(0, 8);
 
-  const role    = typeof ap.role === 'number' ? ap.role : 8;
   const overall = typeof ap.ovr === 'number'
     ? ap.ovr
     : typeof ap.ovr === 'object' && ap.ovr !== null
@@ -326,11 +325,6 @@ export function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
     div: 0, kic: 0, reflexes: 0, positioning: 0, catching: 0, parrying: 0,
   };
 
-  // Primary position from equipped role (ovr.role wins over top-level role field)
-  const ovrObj = (typeof ap.ovr === 'object' && ap.ovr !== null) ? ap.ovr as { overall_rating?: number; role?: number | string } : null;
-  const equippedRole = ovrObj?.role ?? ap.role;
-  const mappedPosition: Position = (typeof equippedRole !== 'undefined' ? resolveRole(equippedRole as number | string) : (ROLE_MAP[role] ?? 'CM')) as Position;
-
   // Collect secondary positions from ovr_roles if present in the RSC payload
   const ovrRoles = Array.isArray(ap.ovr_roles) ? ap.ovr_roles : [];
   const roleRatingsMap = new Map<Position, number>();
@@ -342,6 +336,17 @@ export function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
   }
   const roleRatings: PlayerRoleRating[] = Array.from(roleRatingsMap.entries())
     .map(([position, ovr]) => ({ position, overall: ovr }));
+
+  // Primary position via bestPositionFromRatings (no stats for basic players → rating-only logic).
+  // ovr.role (equippedRole) used only as last-resort fallback, matching full-player behaviour.
+  const ovrObj = (typeof ap.ovr === 'object' && ap.ovr !== null) ? ap.ovr as { overall_rating?: number; role?: number | string } : null;
+  const equippedRole = ovrObj?.role ?? ap.role;
+  const mappedPosition: Position = bestPositionFromRatings(
+    roleRatings,
+    ap.role,              // top-level role as tiebreaker
+    equippedRole,         // ovr.role as last resort
+    null,                 // no stats for basic players
+  );
 
   const secondaryPositions: Position[] = roleRatings
     .filter((r) => r.overall >= overall - 10 && r.position !== mappedPosition)
@@ -365,6 +370,89 @@ export function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
   };
 }
 
+/* ── Best position logic ─────────────────────────────────────────────────── */
+
+/**
+ * Determine the display/primary position from roleRatings + raw role fields.
+ *
+ * Priority chain:
+ * 1. Only one position with the highest OVR → pick it directly.
+ * 2. raw.role (top-level, not ovr.role) points to one of the best-rated positions → prefer it.
+ * 3. Stat-based tie-break for Full players (stats provided):
+ *    - creative profile (dri/pas/pac/sho) → prefer AM/WF/CF/ST positions
+ *    - holding profile (def/phy) → prefer DM/CB/FB/WB positions
+ * 4. Last resort: fall back to ovrRole (equipped, ovr.role).
+ */
+function bestPositionFromRatings(
+  roleRatings: PlayerRoleRating[],
+  rawTopLevelRole: number | string | undefined,
+  ovrRole: number | string | undefined,
+  stats: { pac: number; sho: number; pas: number; dri: number; def: number; phy: number } | null,
+): Position {
+  if (roleRatings.length === 0) {
+    return resolveRole(ovrRole);
+  }
+
+  // Find the highest OVR among all rated positions
+  const maxOvr = Math.max(...roleRatings.map((r) => r.overall));
+  const topPositions = roleRatings.filter((r) => r.overall === maxOvr).map((r) => r.position);
+
+  // Case 1: single best position
+  if (topPositions.length === 1) return topPositions[0];
+
+  // Case 2: raw.role (top-level) is one of the best-rated → prefer it
+  if (rawTopLevelRole !== undefined) {
+    const rawPos = resolveRole(rawTopLevelRole);
+    if (topPositions.includes(rawPos)) return rawPos;
+  }
+
+  // Case 3: stat-based tie-break (only for full players with real stats)
+  if (stats && (stats.pac > 0 || stats.sho > 0 || stats.pas > 0 || stats.dri > 0)) {
+    // Creative profile score: attackers, wide players, playmakers
+    const creativeScore = stats.dri * 0.35 + stats.pas * 0.30 + stats.pac * 0.20 + stats.sho * 0.15;
+    // Holding/defensive profile score: CBs, DMs, FBs
+    const holdingScore  = stats.def * 0.55 + Math.max(stats.phy, 0) * 0.45;
+
+    const CREATIVE_POSITIONS: Position[] = ['AM', 'WF', 'CF', 'ST', 'CM', 'WM'];
+    const HOLDING_POSITIONS:  Position[] = ['DM', 'CB', 'FB', 'WB'];
+
+    const topCreative = topPositions.filter((p) => CREATIVE_POSITIONS.includes(p));
+    const topHolding  = topPositions.filter((p) => HOLDING_POSITIONS.includes(p));
+
+    // Strong creative profile: dri >= 80 AND pas >= 75 AND clearly outscores holding
+    if (
+      topCreative.length > 0 &&
+      creativeScore >= holdingScore + 10 &&
+      stats.dri >= 80 && stats.pas >= 75
+    ) {
+      // Prefer AM if available, then WM, then WF, then whatever creative is first
+      for (const preferred of ['AM', 'WM', 'WF', 'CF', 'ST', 'CM'] as Position[]) {
+        if (topCreative.includes(preferred)) return preferred;
+      }
+      return topCreative[0];
+    }
+
+    // Strong holding profile: def >= 78 AND phy reasonably high
+    if (
+      topHolding.length > 0 &&
+      holdingScore >= creativeScore + 10 &&
+      stats.def >= 78
+    ) {
+      for (const preferred of ['DM', 'CB', 'FB', 'WB'] as Position[]) {
+        if (topHolding.includes(preferred)) return preferred;
+      }
+      return topHolding[0];
+    }
+  }
+
+  // Case 4: last resort — ovr.role as tiebreaker
+  const ovrRolePos = resolveRole(ovrRole);
+  if (topPositions.includes(ovrRolePos)) return ovrRolePos;
+
+  // Absolute fallback: first in the sorted list
+  return topPositions[0];
+}
+
 /* ── Player mapping (full squad) ─────────────────────────────────────────── */
 function extractStatValue(stats: Record<string, unknown>, path: string[]): number {
   let current: unknown = stats;
@@ -378,7 +466,7 @@ function extractStatValue(stats: Record<string, unknown>, path: string[]): numbe
   return typeof current === 'number' ? Math.round(current) : 50;
 }
 
-function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
+export function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
   const stats = (raw.stats as Record<string, unknown>) || {};
 
   const firstName = (raw.first_name as string) || '';
@@ -419,8 +507,25 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
   const roleRatings: PlayerRoleRating[] = Array.from(roleRatingsMap.entries())
     .map(([position, overall]) => ({ position, overall }));
 
-  // Primary position = ovr.role (the EQUIPPED card role, not the highest in ovr_roles)
-  const equippedPosition = resolveRole(ovrRole as number | string | undefined);
+  // Top-level role field — present in some API shapes, used as tiebreaker in bestPositionFromRatings()
+  const rawTopLevelRole = raw.role as number | string | undefined;
+
+  // Compute primary position from roleRatings + stat profile.
+  // ovr.role (equipped) is used only as last-resort fallback — it often does NOT match
+  // the display position shown on PlayGOALS / Goals-Tracker (confirmed via 7 known discrepancies).
+  const primaryPosition = bestPositionFromRatings(
+    roleRatings,
+    rawTopLevelRole,
+    ovrRole as number | string | undefined,
+    {
+      pac: extractStatValue(stats, ['pace', 'weighted_value']),
+      sho: extractStatValue(stats, ['shooting', 'weighted_value']),
+      pas: extractStatValue(stats, ['passing', 'weighted_value']),
+      dri: extractStatValue(stats, ['dribbling', 'weighted_value']),
+      def: extractStatValue(stats, ['defending', 'weighted_value']),
+      phy: extractStatValue(stats, ['physicality', 'weighted_value']),
+    },
+  );
 
   // Overall from equipped card
   const equippedOverall = overall;
@@ -429,7 +534,7 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
   // Threshold is intentionally wide: GOALS players regularly play multiple positions with
   // significant OVR gaps (e.g. AM 85 → CF 81 → CM 80 are all valid secondary slots).
   const secondaryPositions: Position[] = roleRatings
-    .filter((r) => r.overall >= equippedOverall - 10 && r.position !== equippedPosition)
+    .filter((r) => r.overall >= equippedOverall - 10 && r.position !== primaryPosition)
     .map((r) => r.position);
 
   // Aging data
@@ -513,7 +618,7 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
   };
 
   // GK fallback — goalsverse sometimes assigns wrong role to goalkeepers
-  let finalPosition = equippedPosition;
+  let finalPosition = primaryPosition;
   if (finalPosition !== 'GK' && playerStats.div > 80) {
     finalPosition = 'GK';
   }
