@@ -33,6 +33,31 @@ const POSITION_COLORS: Record<string, string> = {
   ST: 'bg-red-600', LW: 'bg-red-500', RW: 'bg-red-500', CF: 'bg-red-500',
 };
 
+// ── Avatar helpers ────────────────────────────────────────────────────────────
+
+function playerImageUrl(player: PlayerWithScores): string | undefined {
+  if (player.image_url) return player.image_url;
+  const rawId = player.id.startsWith('goalsverse-') ? player.id.slice('goalsverse-'.length) : player.id;
+  return rawId ? `https://cdn.playgoals.com/character/prod/${rawId}.png` : undefined;
+}
+
+function MiniAvatar({ player }: { player: PlayerWithScores }) {
+  const [error, setError] = useState(false);
+  const url = playerImageUrl(player);
+  if (error || !url) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt={player.name}
+      width={20}
+      height={20}
+      onError={() => setError(true)}
+      className="w-5 h-5 rounded-full object-cover shrink-0"
+    />
+  );
+}
+
 function slotKeyFor(pos: Position, idx: number) {
   return `${pos}-${idx}`;
 }
@@ -78,11 +103,12 @@ function DraggablePlayerChip({
       {...listeners}
       {...attributes}
       type="button"
-      className={`touch-none select-none rounded-lg border border-slate-700 bg-slate-900/70 text-slate-200 hover:bg-slate-800 transition-colors cursor-grab active:cursor-grabbing ${
+      className={`touch-none select-none rounded-lg border border-slate-700 bg-slate-900/70 text-slate-200 hover:bg-slate-800 transition-colors cursor-grab active:cursor-grabbing flex items-center gap-1.5 ${
         compact ? 'px-2 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'
       } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       title="Ziehen auf einen Pitch-Slot"
     >
+      <MiniAvatar player={player} />
       <span className="font-medium">{player.name}</span>{' '}
       <span className="text-slate-500">{player.overall}</span>
       {fit !== undefined && (
@@ -113,8 +139,10 @@ function PitchSlot({
     disabled: locked,
   });
 
+  const [imgError, setImgError] = useState(false);
   const fit = player ? player.fit_scores[slot.position] ?? 0 : 0;
   const footHint = player ? explainFootFit(player, slot.position) : null;
+  const avatarUrl = player && !imgError ? playerImageUrl(player) : undefined;
 
   return (
     <div
@@ -125,23 +153,33 @@ function PitchSlot({
       <button
         type="button"
         onClick={onClick}
-        className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 transition-all shadow-lg ${
+        className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 transition-all shadow-lg overflow-hidden ${
           player
-            ? `${POSITION_COLORS[slot.position] ?? 'bg-slate-600'} ${fitColor(fit)}`
+            ? `${avatarUrl ? 'bg-slate-900' : (POSITION_COLORS[slot.position] ?? 'bg-slate-600')} ${fitColor(fit)}`
             : 'bg-slate-800/75 border-dashed border-slate-500 text-slate-400'
         } ${selected ? 'scale-110 ring-2 ring-yellow-400' : ''} ${locked ? 'ring-2 ring-amber-400' : ''} ${isOver ? 'scale-110 ring-4 ring-emerald-400/60' : ''}`}
       >
+        {/* Player avatar as full background */}
+        {avatarUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt={player!.name}
+            onError={() => setImgError(true)}
+            className="absolute inset-0 w-full h-full object-cover object-top opacity-80"
+          />
+        )}
         {player ? (
-          <div className="text-center leading-tight pointer-events-none">
-            <div className="text-[10px] sm:text-[11px] max-w-12 truncate">{player.name.split(' ')[0]}</div>
-            <div className={`text-[9px] font-mono ${fitText(fit)}`}>Meta {fit.toFixed(0)}</div>
-            <div className="text-[8px] opacity-75">OVR {player.overall}</div>
+          <div className="relative text-center leading-tight pointer-events-none z-10 bg-black/30 rounded-full px-0.5">
+            <div className="text-[10px] sm:text-[11px] max-w-12 truncate drop-shadow">{player.name.split(' ')[0]}</div>
+            <div className={`text-[9px] font-mono ${fitText(fit)} drop-shadow`}>Meta {fit.toFixed(0)}</div>
+            <div className="text-[8px] opacity-75 drop-shadow">OVR {player.overall}</div>
           </div>
         ) : (
           <span className="text-[10px]">{slot.position}</span>
         )}
-        {locked && <span className="absolute -top-2 -right-2 text-[10px]">🔒</span>}
-        {footHint && <span className="absolute -bottom-2 -right-2 text-[10px]" title={footHint}>🦶</span>}
+        {locked && <span className="absolute -top-2 -right-2 text-[10px] z-20">🔒</span>}
+        {footHint && <span className="absolute -bottom-2 -right-2 text-[10px] z-20" title={footHint}>🦶</span>}
       </button>
       <div className="mt-1 text-center text-[10px] font-mono text-slate-500">{slot.position}</div>
     </div>
