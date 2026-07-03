@@ -40,9 +40,15 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# OpenHands runtime artifacts
-openhands-result-*/
+# Local runtime artifacts
+*-result-*/
 bash_events/
 conversations/
-OPENHANDS_TASK_BRIEF.md
-openhands_task_*.md
+*_TASK_BRIEF.md
+TASK-*.md
+*_task_*.md
+[Aa][Gg][Ee][Nn][Tt][Ss].md
+[Cc][Ll][Aa][Uu][Dd][Ee].md
+*[Hh][Aa][Nn][Dd][Oo][Ff][Ff]*.md
+*[Pp][Rr][Oo][Mm][Pp][Tt]*.md
+research/
