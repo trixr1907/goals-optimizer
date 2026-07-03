@@ -646,17 +646,16 @@ export default function SquadPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      {clubUrl && (
-                        <a
-                          href={clubUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-slate-500 hover:text-white text-sm"
-                        >
-                          🔗
-                        </a>
-                      )}
+                      <a
+                        href={`https://goals-tracker.com/player/${player.id.replace('goalsverse-', '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-slate-500 hover:text-white text-sm"
+                        title="Auf goals-tracker ansehen"
+                      >
+                        🔗
+                      </a>
                       <button
                         onClick={(e) => { e.stopPropagation(); setSelectedPlayer(player); setComparePlayer(null); }}
                         className="text-slate-500 hover:text-emerald-400 text-sm"
@@ -689,7 +688,7 @@ export default function SquadPage() {
                   <SortTh label="Beste Position"  sk="bestPos" />
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">Details</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">Chart</th>
-                  {clubUrl && <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">⚡</th>}
+                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">⚡</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -795,26 +794,24 @@ export default function SquadPage() {
                           </button>
                         </td>
 
-                        {/* goalsverse-Link */}
-                        {clubUrl && (
-                          <td className="px-3 py-2.5">
-                            <a
-                              href={clubUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[11px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-colors"
-                              title="Auf goalsverse überprüfen"
-                            >
-                              🔗
-                            </a>
-                          </td>
-                        )}
+                        {/* goals-tracker Link — jeder Spieler hat eine eigene Seite */}
+                        <td className="px-3 py-2.5">
+                          <a
+                            href={`https://goals-tracker.com/player/${player.id.replace('goalsverse-', '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-colors"
+                            title="Auf goals-tracker ansehen"
+                          >
+                            🔗
+                          </a>
+                        </td>
                       </tr>
 
                       {/* Inline Expand-Panel */}
                       {isExpanded && (
                         <tr key={`${player.id}-details`}>
-                          <td colSpan={clubUrl ? 9 : 8} className="p-0">
+                          <td colSpan={9} className="p-0">
                             <DetailsPanel player={player} />
                           </td>
                         </tr>

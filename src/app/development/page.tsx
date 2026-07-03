@@ -45,16 +45,11 @@ const STAT_LABELS: Record<string, string> = {
   phy: 'Physicality',
 };
 
-const TRAINING_FOCUS: Record<string, string> = {
-  pac: 'Quickplay-Flügeltests: Sprints, Tiefenläufe, Gegenpressing.',
-  sho: 'Abschlussdrills: kurze Distanz, Long Shots und Weak-Foot-Situationen.',
-  pas: 'Passdruck trainieren: Ground Pass unter Druck, Flanken und Steilpässe.',
-  dri: '1v1-Rollen: enge Drehungen, Skill-Cooldowns, Ballkontrolle.',
-  def: 'Defensivrollen: Jockeying, Interceptions, Tackling-Timing.',
-  phy: 'Duellrollen: Zweikämpfe, Kopfball, Pressing-Resistenz.',
-};
-
-// ── Hilfsfunktionen ─────────────────────────────────────────────────────────
+// GK stat keys — only shown for players with position === 'GK'
+const GK_STAT_KEYS = [
+  'div', 'reflexes', 'positioning', 'catching', 'parrying',
+  'rushing', 'command_of_area', 'penalty_saving', 'throwing', 'kicking_power',
+] as const;
 
 function getDevelopmentScore(player: PlayerWithScores) {
   const bestFit = Math.max(...Object.values(player.fit_scores));
@@ -214,13 +209,12 @@ function UpgradeModal({
 }
 
 function PlayerDevCard({ player }: { player: PlayerWithScores }) {
-  const { notesByPlayerId, setPriority, addMinutes, setNotes, resetPlayer, addUpgrade } =
+  const { notesByPlayerId, setPriority, setNotes, resetPlayer, addUpgrade } =
     useDevelopmentStore();
   const tracked = notesByPlayerId[player.id];
   const priority = tracked?.priority ?? suggestPriority(player);
   const statEntries = Object.entries(player.stats) as [string, number][];
   const bestPos = Object.entries(player.fit_scores).sort(([, a], [, b]) => b - a)[0];
-  const weakest = [...statEntries].sort(([, a], [, b]) => a - b).slice(0, 2);
   const mainFit = player.fit_scores[player.position] ?? 0;
   const fitColor =
     mainFit >= 85 ? 'text-emerald-400' : mainFit >= 70 ? 'text-amber-400' : 'text-red-400';
@@ -300,22 +294,6 @@ function PlayerDevCard({ player }: { player: PlayerWithScores }) {
             </div>
           )}
 
-          {/* Spielzeit-Buttons */}
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              onClick={() => addMinutes(player.id, 5)}
-              className="rounded-lg border border-slate-700 px-2 py-1 text-slate-300 hover:bg-slate-800"
-            >
-              +5 Min
-            </button>
-            <button
-              onClick={() => addMinutes(player.id, 45)}
-              className="rounded-lg border border-slate-700 px-2 py-1 text-slate-300 hover:bg-slate-800"
-            >
-              +Match
-            </button>
-          </div>
-
           {/* Status-Kacheln */}
           <div className="rounded-lg bg-slate-800/50 p-2 text-xs grid grid-cols-3 gap-2">
             <div>
@@ -372,26 +350,20 @@ function PlayerDevCard({ player }: { player: PlayerWithScores }) {
             )}
           </div>
 
-          {/* Stat-Bars */}
+          {/* Stat-Bars — Feldspieler zeigen 6 Gruppen, GK zeigen nur GK-Stats */}
           <div className="space-y-1.5">
-            {statEntries.map(([key, val]) => (
-              <StatBar key={key} label={STAT_LABELS[key] ?? key} value={val} />
-            ))}
-          </div>
-
-          {/* Training-Empfehlung */}
-          <div className="rounded-lg bg-slate-800/60 p-2 text-xs space-y-2">
-            <p className="text-slate-400">Training empfohlen:</p>
-            <div className="flex gap-2 flex-wrap">
-              {weakest.map(([key, val]) => (
-                <span key={key} className="px-2 py-0.5 rounded bg-red-900/50 text-red-300">
-                  {STAT_LABELS[key] ?? key} ({val})
-                </span>
-              ))}
-            </div>
-            <p className="text-slate-500 leading-relaxed">
-              {TRAINING_FOCUS[weakest[0]?.[0]] ?? 'Quickplay-Rotation mit klarer Rolle.'}
-            </p>
+            {player.position === 'GK'
+              ? GK_STAT_KEYS.map((key) => {
+                  const val = (player.stats as unknown as Record<string, number>)[key];
+                  if (typeof val !== 'number' || val === 0) return null;
+                  return <StatBar key={key} label={STAT_LABELS[key] ?? key} value={val} />;
+                })
+              : statEntries
+                  .filter(([key]) => !(GK_STAT_KEYS as readonly string[]).includes(key))
+                  .map(([key, val]) => (
+                    <StatBar key={key} label={STAT_LABELS[key] ?? key} value={val} />
+                  ))
+            }
           </div>
 
           {/* Upgrade-Tracker ─────────────────────────────────────────────── */}
