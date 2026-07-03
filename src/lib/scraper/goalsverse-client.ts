@@ -783,18 +783,22 @@ export async function getClubRoster(clubName: string): Promise<GoalsverseFetchRe
   }
 }
 
-/* ── Goals-Tracker enrichment ────────────────────────────────────────────── */
+import { fetchPlayGoalsPlayerData } from './playgoals-client';
+
+/* ── Goals-Tracker + PlayGOALS enrichment ────────────────────────────────── */
 
 /**
- * Enrich an array of players with position + roleRatings from goals-tracker.com.
+ * Enrich an array of players with position + roleRatings from authoritative sources.
  *
- * Strategy:
- *  - Bounded concurrency (TRACKER_CONCURRENCY=3, exported from tracker client)
- *  - fetchTrackerPlayerData retries once internally on transient failures
- *  - On success: overwrite position and roleRatings from Tracker
- *  - On partial success: apply what we have, warn about the missing part
- *  - On full failure: keep Goalsverse data, set sourceWarning with typed reason
- *  - Never throws — import continues even if Tracker is fully down
+ * Priority chain:
+ *   1. goals-tracker.com  — authoritative for BOTH position AND roleRatings.
+ *      Uses Tracker's own OVR formula (different from Goalsverse).
+ *   2. playgoals.com      — fallback for PRIMARY POSITION ONLY when Tracker
+ *      fails (most commonly HTTP 403 on Vercel). roleRatings stay Goalsverse.
+ *   3. Goalsverse         — last resort (already on the player object).
+ *
+ * sourceWarnings on the player explain exactly what happened and why.
+ * Never throws — import always completes even if both external sources are down.
  */
 async function enrichWithTracker(players: Player[]): Promise<Player[]> {
   // Bounded concurrency runner
@@ -824,69 +828,102 @@ async function enrichWithTracker(players: Player[]): Promise<Player[]> {
     if (!rawId || !/^[0-9a-f-]{36}$/i.test(rawId)) {
       return {
         ...player,
-        positionSource: 'goalsverse' as PositionSource,
+        positionSource:   'goalsverse' as PositionSource,
         roleRatingsSource: 'goalsverse' as RoleRatingsSource,
       };
     }
 
-    const { data: trackerData, failReason, failDetail } = await fetchTrackerPlayerData(rawId);
+    // ── Step 1: Goals-Tracker ─────────────────────────────────────────────
+    const trackerResult = await fetchTrackerPlayerData(rawId);
+    const { data: trackerData, failReason: trackerFail, failDetail: trackerDetail } = trackerResult;
 
-    // ── Full failure: nothing usable ──────────────────────────────────────
-    if (!trackerData || (trackerData.primaryPosition === null && trackerData.roleRatings.length === 0)) {
-      const reason = failReason ?? 'network_error';
-      const detail = failDetail ? ` (${failDetail})` : '';
+    const trackerFullSuccess =
+      trackerData !== null &&
+      trackerData.primaryPosition !== null &&
+      trackerData.roleRatings.length > 0;
+
+    if (trackerFullSuccess) {
+      // Both position and roleRatings from Tracker — best case
+      const td = trackerData!;
+      const warnings: string[] = [...(player.sourceWarnings ?? [])];
+      const newPosition  = td.primaryPosition!;
+      const newRoleRatings = td.roleRatings;
+      const newSecondary: Position[] = newRoleRatings
+        .filter((r) => r.overall >= player.overall - 10 && r.position !== newPosition)
+        .map((r) => r.position);
+
       return {
         ...player,
-        positionSource: 'goalsverse' as PositionSource,
-        roleRatingsSource: 'goalsverse' as RoleRatingsSource,
-        sourceWarnings: [
-          ...(player.sourceWarnings ?? []),
-          `goals-tracker: ${reason}${detail} für ${rawId}`,
-        ],
+        position:          newPosition,
+        roleRatings:       newRoleRatings,
+        secondaryPositions: newSecondary,
+        positionSource:    'goals-tracker' as PositionSource,
+        roleRatingsSource:  'goals-tracker' as RoleRatingsSource,
+        sourceWarnings:    warnings.length > 0 ? warnings : undefined,
       };
     }
 
-    // ── Partial or full success ───────────────────────────────────────────
-    // trackerData is non-null here (full-failure guard above already returned)
-    const td = trackerData!;
-    const warnings: string[] = [...(player.sourceWarnings ?? [])];
+    // Tracker failed or only partially succeeded — record what happened
+    const trackerWarnings: string[] = [];
+    const trackerFailMsg = trackerFail
+      ? `goals-tracker: ${trackerFail}${trackerDetail ? ` (${trackerDetail})` : ''} für ${rawId}`
+      : `goals-tracker: kein Ergebnis für ${rawId}`;
 
-    // Position: Tracker badge is authoritative
-    const newPosition: Position = td.primaryPosition ?? player.position;
-    const positionSource: PositionSource =
-      td.primaryPosition !== null ? 'goals-tracker' : 'goalsverse';
+    trackerWarnings.push(trackerFailMsg);
 
-    if (td.primaryPosition === null) {
-      const detail = failDetail ? ` (${failDetail})` : '';
-      warnings.push(`goals-tracker: parse_primary_missing${detail} für ${rawId}, nutze Goalsverse`);
+    // If Tracker returned partial data (position but no roleRatings, or vice versa),
+    // still use whatever it gave us — but also note what's missing
+    const trackerPos    = trackerData?.primaryPosition ?? null;
+    const trackerRatings = trackerData?.roleRatings ?? [];
+
+    if (trackerPos !== null && trackerRatings.length === 0) {
+      // Position from Tracker, ratings from Goalsverse
+      trackerWarnings.push(
+        `goals-tracker: roleRatings fehlen${trackerDetail ? ` (${trackerDetail})` : ''}, nutze Goalsverse`,
+      );
     }
 
-    // roleRatings: Tracker pitch buttons (different OVR formula)
-    let newRoleRatings = player.roleRatings;
-    let roleRatingsSource: RoleRatingsSource = 'goalsverse';
+    // ── Step 2: PlayGOALS fallback (for position, when Tracker has none) ──
+    let finalPosition:    Position      = trackerPos ?? player.position;
+    let finalPosSource:   PositionSource = trackerPos !== null ? 'goals-tracker' : 'goalsverse';
+    const finalRoleRatings               = trackerRatings.length > 0 ? trackerRatings : player.roleRatings;
+    const finalRrsSource: RoleRatingsSource = trackerRatings.length > 0 ? 'goals-tracker' : 'goalsverse';
 
-    if (td.roleRatings.length > 0) {
-      newRoleRatings = td.roleRatings;
-      roleRatingsSource = 'goals-tracker';
-    } else {
-      const detail = failDetail ? ` (${failDetail})` : '';
-      warnings.push(`goals-tracker: parse_roleRatings_missing${detail} für ${rawId}, nutze Goalsverse`);
+    if (trackerPos === null) {
+      // Tracker couldn't give us a position — try PlayGOALS
+      const pgResult = await fetchPlayGoalsPlayerData(rawId);
+      if (pgResult.data !== null) {
+        finalPosition  = pgResult.data.primaryPosition;
+        finalPosSource = 'playgoals';
+        trackerWarnings.push(
+          `playgoals: fallback position ${finalPosition} (tracker: ${trackerFail ?? 'miss'})`,
+        );
+        trackerWarnings.push(
+          `goals-tracker: roleRatings nicht verfügbar, nutze Goalsverse`,
+        );
+      } else {
+        // Both Tracker and PlayGOALS failed — Goalsverse position stays
+        const pgFail   = pgResult.failReason ?? 'network_error';
+        const pgDetail = pgResult.failDetail ? ` (${pgResult.failDetail})` : '';
+        trackerWarnings.push(`playgoals: ${pgFail}${pgDetail} für ${rawId}, nutze Goalsverse`);
+      }
     }
 
-    // Recompute secondaryPositions from new roleRatings + new primary
-    const newOverall = player.overall;
-    const newSecondary: Position[] = newRoleRatings
-      .filter((r) => r.overall >= newOverall - 10 && r.position !== newPosition)
+    // Recompute secondaryPositions
+    const newSecondary: Position[] = finalRoleRatings
+      .filter((r) => r.overall >= player.overall - 10 && r.position !== finalPosition)
       .map((r) => r.position);
+
+    const allWarnings = [...(player.sourceWarnings ?? []), ...trackerWarnings];
 
     return {
       ...player,
-      position: newPosition,
-      roleRatings: newRoleRatings,
+      position:          finalPosition,
+      roleRatings:       finalRoleRatings,
       secondaryPositions: newSecondary,
-      positionSource,
-      roleRatingsSource,
-      sourceWarnings: warnings.length > 0 ? warnings : undefined,
+      positionSource:    finalPosSource,
+      roleRatingsSource:  finalRrsSource,
+      sourceWarnings:    allWarnings.length > 0 ? allWarnings : undefined,
     };
   });
 

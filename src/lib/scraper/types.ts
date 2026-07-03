@@ -94,7 +94,7 @@ export interface PlayerStats {
 
 export type DataQuality = 'full' | 'basic';
 
-export type PositionSource = 'goals-tracker' | 'goalsverse' | 'heuristic';
+export type PositionSource = 'goals-tracker' | 'playgoals' | 'goalsverse' | 'heuristic';
 export type RoleRatingsSource = 'goals-tracker' | 'goalsverse' | 'mixed' | 'none';
 
 export function hasFullStats(player: Pick<Player, 'dataQuality' | 'stats'>): boolean {
