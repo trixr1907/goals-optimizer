@@ -4,7 +4,6 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'GOALS Squad Optimizer',
   description: 'Optimiere deinen GOALS-Kader mit Formation-Analyse, Taktik-Tipps und Entwicklungs-Tracker.',
-  manifest: '/manifest.json',
 };
 
 export const viewport: Viewport = {

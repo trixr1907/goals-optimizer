@@ -76,7 +76,14 @@ function statColor(v: number) { return v >= 85 ? 'bg-emerald-500'   : v >= 70 ? 
 
 function getBestPos(player: PlayerWithScores): [Position, number] {
   const entries = Object.entries(player.fit_scores) as [Position, number][];
-  return entries.sort(([, a], [, b]) => b - a)[0] ?? [player.position, 0];
+  const sorted = entries.sort(([, a], [, b]) => b - a);
+  const best = sorted[0];
+
+  if (!best || best[1] < 5) {
+    return [player.position, player.fit_scores[player.position] ?? 0];
+  }
+
+  return best;
 }
 
 // ── Avatar ───────────────────────────────────────────────────────────────────
@@ -371,9 +378,8 @@ export default function SquadPage() {
   const [comparePlayer,   setComparePlayer]   = useState<PlayerWithScores | null>(null);
 
   const positions = useMemo(() => {
-    const ps = new Set(players.map((p) => p.position));
-    return ['all', ...Array.from(ps).sort()];
-  }, [players]);
+    return ['all', ...ALL_POSITIONS];
+  }, []);
 
   const rarities = useMemo(() => {
     const rs = new Set(players.map((p) => p.rarity));
@@ -498,7 +504,7 @@ export default function SquadPage() {
 
           {/* Tabelle */}
           <div className="overflow-x-auto rounded-xl border border-slate-800">
-            <table className="w-full text-sm border-collapse">
+            <table className="w-full min-w-[800px] text-sm border-collapse">
               <thead className="bg-slate-900 border-b border-slate-800">
                 <tr>
                   <SortTh label="Name"            sk="name" />

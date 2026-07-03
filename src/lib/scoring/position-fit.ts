@@ -93,6 +93,27 @@ function applyContextModifiers(
 // ─────────────────────────────────────────────────────────────
 
 export function calcPositionFitScore(player: Player, position: Position): number {
+  const hasFullStats =
+    player.stats.pac > 0 ||
+    player.stats.sho > 0 ||
+    player.stats.pas > 0 ||
+    player.stats.dri > 0 ||
+    player.stats.def > 0 ||
+    player.stats.phy > 0;
+
+  // Activity players may only have base data and role ratings, not full stats.
+  // Score only explicit role/main positions so unrelated slots do not win by tie (e.g. GK).
+  if (!hasFullStats) {
+    const roleRating = player.roleRatings.find((r) => r.position === position);
+    if (roleRating) {
+      return Math.round((roleRating.overall / 99) * 100);
+    }
+    if (position === player.position) {
+      return Math.round((player.overall / 99) * 100);
+    }
+    return 1;
+  }
+
   const base = WEIGHTS[position as string];
   if (!base) return 50;
 
