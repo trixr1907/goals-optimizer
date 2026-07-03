@@ -129,12 +129,56 @@ export function calcPositionFitScore(player: Player, position: Position, slotX?:
     return 1;
   }
 
+  const positionType = getPositionType(player, position);
+
+  // ── GK special case ─────────────────────────────────────────
+  // Mock/inferred stats set GK values to 25. For actual goalkeepers,
+  // anchor the score primarily on roleRating/OVR so poor mock GK stats
+  // don't make a GK look better as a field player.
+  // Outfield players on GK are heavily capped — they're not goalkeepers.
+  if (position === 'GK') {
+    if (positionType === 'primary') {
+      // Trust the role rating as the primary signal for real GKs
+      const gkRole = player.roleRatings.find((r) => r.position === 'GK');
+      const anchorOvr = gkRole?.overall ?? player.overall;
+      // Blend: 70% from role OVR, 30% from weighted stats (so elite GK stats still matter)
+      const statScore = computeRawStatScore(player, position, slotX);
+      const roleScore = (anchorOvr / 99) * 100;
+      return Math.round(roleScore * 0.7 + statScore * 0.3);
+    }
+    // Outfield player on GK — heavy cap
+    const statScore = computeRawStatScore(player, position, slotX);
+    return Math.round(Math.min(statScore, 18));
+  }
+
+  // ── Non-GK positions ────────────────────────────────────────
+  const statScore = computeRawStatScore(player, position, slotX);
+
+  // Apply role-based penalty multiplier
+  // Primary: no penalty, Secondary: moderate, Out-of-position: significant
+  const penaltyMultiplier =
+    positionType === 'primary' ? 1.0 :
+    positionType === 'secondary' ? 0.88 :
+    0.72;
+
+  // Extra cap for GK playing outfield
+  if (player.position === 'GK') {
+    return Math.round(Math.min(statScore * penaltyMultiplier, 25));
+  }
+
+  return Math.round(Math.max(1, Math.min(statScore * penaltyMultiplier, 99)));
+}
+
+/** Raw weighted-stat score (0–100) without role penalties or GK blending. */
+function computeRawStatScore(player: Player, position: Position, slotX?: number): number {
   const base = WEIGHTS[position as string];
   if (!base) return 50;
 
   const w = applyContextModifiers(base, player, position, slotX);
 
-  const stats = player.stats as unknown as Record<string, number>;
+  // Use effective stats so secondary/out-of-position stat penalties apply
+  const effectiveStats = getEffectiveStats(player, position);
+  const stats = effectiveStats as unknown as Record<string, number>;
 
   let numerator   = 0;
   let denominator = 0;
@@ -148,8 +192,7 @@ export function calcPositionFitScore(player: Player, position: Position, slotX?:
 
   if (denominator === 0) return 50;
 
-  const raw = (numerator / denominator) * 100;
-  return Math.round(Math.max(1, Math.min(raw, 99)));
+  return (numerator / denominator) * 100;
 }
 
 export function enrichPlayerWithScores(player: Player): PlayerWithScores {

@@ -1,7 +1,7 @@
 import { PlayerWithScores, Position } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
 import formationsData from '@/config/formations.json';
-import { clonePlayersWithFitBias, OptimizationMode, solveHungarian } from './hungarian-solver';
+import { OptimizationMode, solveHungarian } from './hungarian-solver';
 import { calcPositionFitScore } from '@/lib/scoring/position-fit';
 
 export interface FormationMeta {
@@ -130,8 +130,10 @@ function toAssignments(
 }
 
 function solveOptimal(players: PlayerWithScores[], slots: LineupSlot[], mode: OptimizationMode) {
-  const optimizedPlayers = clonePlayersWithFitBias(players, slots, mode, getRoleBias);
-  const optimal = solveHungarian(optimizedPlayers, slots);
+  const biasFn = mode === 'balanced'
+    ? undefined
+    : (player: PlayerWithScores, position: Position) => getRoleBias(player, position, mode);
+  const optimal = solveHungarian(players, slots, biasFn);
   const assignments = toAssignments(optimal, players, slots);
 
   if (assignments.length === slots.length) return assignments;

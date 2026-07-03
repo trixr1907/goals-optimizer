@@ -40,6 +40,7 @@ export function clonePlayersWithFitBias(
 export function solveHungarian(
   players: PlayerWithScores[],
   slots: LineupSlot[],
+  biasFn?: (player: PlayerWithScores, position: Position) => number,
 ): HungarianAssignment[] {
   const slotCount = slots.length;
   const playerCount = players.length;
@@ -56,12 +57,16 @@ export function solveHungarian(
     for (let slotIndex = 0; slotIndex < size; slotIndex++) {
       if (player && slotIndex < slotCount) {
         const slot = slots[slotIndex];
-        // Recompute with slot.x so foot/side modifiers fire correctly (K-1 / K-3 fix).
+        // Recompute with slot.x so foot/side modifiers fire correctly.
         // Falls back to cached fit_scores when full stats are unavailable (activity players).
         const fit = player.stats.pac > 0 || player.stats.dri > 0 || player.stats.def > 0
           ? calcPositionFitScore(player, slot.position, slot.x)
           : (player.fit_scores[slot.position] ?? 0);
-        row.push(100 - fit);
+        // Apply optional bias to the cost, not the fit — bias affects optimization
+        // but the reported fit stays honest.
+        const bias = biasFn ? biasFn(player, slot.position) : 0;
+        // Lower cost = better. Bias improves (reduces) cost for preferred players.
+        row.push(100 - fit - bias);
       } else {
         row.push(0);
       }
@@ -77,6 +82,7 @@ export function solveHungarian(
     .map(([playerIndex, slotIndex]) => {
       const slot = slots[slotIndex];
       const player = players[playerIndex];
+      // Report the honest fit, not the biased one
       const fit = player.stats.pac > 0 || player.stats.dri > 0 || player.stats.def > 0
         ? calcPositionFitScore(player, slot.position, slot.x)
         : (player.fit_scores[slot.position] ?? 0);

@@ -24,7 +24,7 @@ import { Position, PlayerWithScores } from '@/lib/scraper/types';
 import formationsData from '@/config/formations.json';
 import { recommendationToLineup, recommendFormations, FormationAssignment } from '@/lib/optimizer/formation-optimizer';
 import { OptimizationMode } from '@/lib/optimizer/hungarian-solver';
-import { explainFootFit } from '@/lib/scoring/position-fit';
+import { explainFootFit, calcPositionFitScore } from '@/lib/scoring/position-fit';
 
 const FORMATIONS = formationsData as Record<string, { name: string; slots: LineupSlot[] }>;
 
@@ -191,7 +191,13 @@ function PitchSlot({
   });
 
   const [imgError, setImgError] = useState(false);
-  const fit = player ? player.fit_scores[slot.position] ?? 0 : 0;
+  // Slot-aware fit: recompute with slot.x so side-aware modifiers match the optimizer.
+  // Falls back to cached fit_scores for basic/activity players without full stats.
+  const fit = player
+    ? (player.stats.pac > 0 || player.stats.dri > 0 || player.stats.def > 0
+        ? calcPositionFitScore(player, slot.position, slot.x)
+        : (player.fit_scores[slot.position] ?? 0))
+    : 0;
   const footHint = player ? explainFootFit(player, slot.position, slot.x) : null;
   const avatarUrl = player && !imgError ? playerImageUrl(player) : undefined;
 
