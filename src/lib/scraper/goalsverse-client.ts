@@ -27,6 +27,28 @@ const ROLE_MAP: Record<number, Position> = {
   16: 'ST',
 };
 
+// Newer API format uses string role names (e.g. "ROLE_AM") instead of numbers
+const ROLE_STRING_MAP: Record<string, Position> = {
+  'ROLE_GK': 'GK',
+  'ROLE_CB': 'CB',
+  'ROLE_FB': 'FB', 'ROLE_LB': 'FB', 'ROLE_RB': 'FB',
+  'ROLE_WB': 'WB', 'ROLE_LWB': 'WB', 'ROLE_RWB': 'WB',
+  'ROLE_DM': 'DM', 'ROLE_CDM': 'DM',
+  'ROLE_CM': 'CM',
+  'ROLE_AM': 'AM', 'ROLE_CAM': 'AM',
+  'ROLE_WM': 'WM', 'ROLE_LM': 'WM', 'ROLE_RM': 'WM',
+  'ROLE_WF': 'WF', 'ROLE_LW': 'WF', 'ROLE_RW': 'WF',
+  'ROLE_CF': 'CF',
+  'ROLE_ST': 'ST',
+};
+
+// Unified resolver for both number and string role formats
+function resolveRole(role: number | string | undefined): Position {
+  if (typeof role === 'number') return (ROLE_MAP[role] ?? 'CM') as Position;
+  if (typeof role === 'string') return (ROLE_STRING_MAP[role] ?? 'CM') as Position;
+  return 'CM';
+}
+
 function mapOvrToRarity(ovr: number): Rarity {
   if (ovr >= 95) return 'Mythic';
   if (ovr >= 90) return 'Legendary';
@@ -282,7 +304,8 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
   const name = `${firstName} ${lastName}`.trim() || (raw.id as string)?.slice(0, 8) || 'Unknown';
 
   const ovr = (raw.ovr as Record<string, unknown>) || {};
-  const role    = typeof ovr.role === 'number' ? ovr.role : 8;
+  // ovr.role is the EQUIPPED card role — this IS the primary position
+  const ovrRole = ovr.role; // may be number or string depending on API version
   const overall = typeof ovr.overall_rating === 'number' ? ovr.overall_rating : 50;
 
   const height = typeof raw.height === 'number' ? raw.height : undefined;
@@ -292,15 +315,15 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
   // Raw character ID (without "goalsverse-" prefix) for CDN URL
   const rawId = raw.id as string;
 
-  // ovr_roles extrahieren
+  // ovr_roles: supports both number format [{role:10,...}] and string format [{role:"ROLE_AM",...}]
   const ovrRoles = Array.isArray(raw.ovr_roles)
-    ? (raw.ovr_roles as Array<{ role: number; overall_rating: number }>)
+    ? (raw.ovr_roles as Array<{ role: number | string; overall_rating: number }>)
     : [];
 
-  // Mappe auf GOALS-Positionen (ROLE_MAP bereits auf FB/WB/etc. umgestellt)
+  // Mappe auf GOALS-Positionen — unified resolver handles both formats
   const roleRatingsRaw: PlayerRoleRating[] = ovrRoles
     .map((r) => ({
-      position: (ROLE_MAP[r.role] ?? 'ST') as Position,
+      position: resolveRole(r.role),
       overall: r.overall_rating ?? 0,
     }))
     .filter((r) => ALL_POSITIONS.includes(r.position));
@@ -314,16 +337,15 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
   const roleRatings: PlayerRoleRating[] = Array.from(roleRatingsMap.entries())
     .map(([position, overall]) => ({ position, overall }));
 
-  // Primary = highest OVR in roleRatings (fallback: current position/overall)
-  const primaryRoleRating = roleRatings.length
-    ? [...roleRatings].sort((a, b) => b.overall - a.overall)[0]
-    : null;
-  const primaryPosition: Position = primaryRoleRating?.position ?? (ROLE_MAP[role] as Position) ?? 'ST';
-  const primaryOverall: number = primaryRoleRating?.overall ?? overall;
+  // Primary position = ovr.role (the EQUIPPED card role, not the highest in ovr_roles)
+  const equippedPosition = resolveRole(ovrRole as number | string | undefined);
 
-  // Secondary = all with OVR >= primaryOverall - 2 (except primary itself)
+  // Overall from equipped card
+  const equippedOverall = overall;
+
+  // Secondary = all ovr_roles positions with OVR >= equippedOverall - 3, excluding primary
   const secondaryPositions: Position[] = roleRatings
-    .filter((r) => r.overall >= primaryOverall - 2 && r.position !== primaryPosition)
+    .filter((r) => r.overall >= equippedOverall - 3 && r.position !== equippedPosition)
     .map((r) => r.position);
 
   // Aging data
@@ -331,22 +353,16 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
     typeof raw.current_age === 'number' || typeof raw.max_potential_rating === 'number'
       ? {
           currentAge: typeof raw.current_age === 'number' ? raw.current_age : 0,
-          targetRating: typeof raw.max_potential_rating === 'number' ? raw.max_potential_rating : primaryOverall,
+          targetRating: typeof raw.max_potential_rating === 'number' ? raw.max_potential_rating : equippedOverall,
           upgradesRemaining: typeof raw.upgrades_remaining === 'number' ? raw.upgrades_remaining : 0,
           potentialRange: [
-            Math.max(0, (typeof raw.max_potential_rating === 'number' ? raw.max_potential_rating : primaryOverall)
+            Math.max(0, (typeof raw.max_potential_rating === 'number' ? raw.max_potential_rating : equippedOverall)
               - (typeof raw.upgrades_remaining === 'number' ? raw.upgrades_remaining : 0)),
-            (typeof raw.max_potential_rating === 'number' ? raw.max_potential_rating : primaryOverall)
+            (typeof raw.max_potential_rating === 'number' ? raw.max_potential_rating : equippedOverall)
               + (typeof raw.upgrades_remaining === 'number' ? raw.upgrades_remaining : 0),
           ] as [number, number],
         }
       : undefined;
-
-  // Override position to primary (highest OVR) if role_ratings exist
-  let finalPosition = mapRoleToPosition(role);
-  if (primaryRoleRating) {
-    finalPosition = primaryPosition;
-  }
 
   const playerStats: PlayerStats = {
     // Pace
@@ -412,9 +428,8 @@ function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
     kicking_power:    extractStatValue(stats, ['goalkeeping', 'distribution', 'kicking_power', 'value']),
   };
 
-  // ── GK fallback ──────────────────────────────────────────────────────────
-  // goalsverse sometimes assigns role=12 (RM) to goalkeepers.
-  // If the player has high diving stats we override to GK.
+  // GK fallback — goalsverse sometimes assigns wrong role to goalkeepers
+  let finalPosition = equippedPosition;
   if (finalPosition !== 'GK' && playerStats.div > 80) {
     finalPosition = 'GK';
   }
