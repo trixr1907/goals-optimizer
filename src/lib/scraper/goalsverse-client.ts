@@ -104,13 +104,29 @@ async function fetchJson<T>(url: string): Promise<T> {
   }
 }
 
-async function fetchRsc(path: string): Promise<string> {
+async function fetchRsc(path: string, slug?: string): Promise<string> {
   const url = path.startsWith('http') ? path : `${GOALSVERSE_BASE}${path}`;
   const { signal, clear } = withTimeout(FETCH_TIMEOUT_MS);
   try {
+    // For profile pages (/p/{slug}), include Next.js router headers so the server
+    // returns the full data payload (including the "club" array with 60+ players).
+    // Without these headers, Next.js returns an abbreviated RSC shell (~35 lines, no player data).
+    const isProfilePage = path.startsWith('/p/') || (path.startsWith('http') && path.includes('/p/'));
+    const profileSlug = slug ?? (isProfilePage ? path.split('/p/')[1]?.split('?')[0] : undefined);
+    const extraHeaders: Record<string, string> = isProfilePage && profileSlug
+      ? {
+          'Next-Router-State-Tree': encodeURIComponent(JSON.stringify([
+            '',
+            { children: ['p', { children: [`[clubName]`, { children: ['__PAGE__', {}, `/p/${profileSlug}`, 'refresh'] }] }] },
+            null, null, true,
+          ])),
+          'Next-Url': `/p/${profileSlug}`,
+        }
+      : {};
+
     const res = await fetch(url, {
       signal,
-      headers: { 'user-agent': USER_AGENT, accept: 'text/x-component', RSC: '1' },
+      headers: { 'user-agent': USER_AGENT, accept: 'text/x-component', RSC: '1', ...extraHeaders },
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.text();
@@ -207,9 +223,19 @@ function extractJsonObject(text: string, startIndex: number): JsonResult | null 
   return null;
 }
 
-function extractSquadFromRsc(rscText: string): { squad?: unknown; clubInfo?: unknown; slug?: string } {
+function extractSquadFromRsc(rscText: string): { squad?: unknown; club?: unknown[]; clubInfo?: unknown; slug?: string } {
   const squadIdx = rscText.indexOf('"squad":');
   const squadResult = squadIdx >= 0 ? extractJsonObject(rscText, squadIdx + 7) : null;
+
+  // "club" array: full roster with 60+ players (only present on /p/{slug} with full headers)
+  const clubIdx = rscText.indexOf('"club":');
+  let club: unknown[] | undefined;
+  if (clubIdx >= 0) {
+    const clubResult = extractJsonObject(rscText, clubIdx + 6);
+    if (clubResult && Array.isArray(clubResult.value)) {
+      club = clubResult.value as unknown[];
+    }
+  }
 
   const dataIdx = rscText.indexOf('"data":');
   const clubInfoResult = dataIdx >= 0 ? extractJsonObject(rscText, dataIdx + 6) : null;
@@ -220,6 +246,7 @@ function extractSquadFromRsc(rscText: string): { squad?: unknown; clubInfo?: unk
 
   return {
     squad:    squadResult?.value,
+    club,
     clubInfo: clubInfoResult?.value,
     slug,
   };
@@ -228,9 +255,14 @@ function extractSquadFromRsc(rscText: string): { squad?: unknown; clubInfo?: unk
 /* ── Activity page player extraction ─────────────────────────────────────── */
 
 // Minimal player shape from the activity/profile RSC
+// The activity page returns: { characterId, name, role (number), ovr (number), tier, starts, startPct, linkable }
+// NOT firstName/lastName — the full squad page uses first_name/last_name but activity uses a single "name" field.
 interface ActivityPlayer {
   characterId?: string;
   id?: string;
+  // Activity page format: single "name" string
+  name?: string;
+  // Full squad page format: split first/last name
   firstName?: string;
   lastName?: string;
   first_name?: string;
@@ -242,65 +274,22 @@ interface ActivityPlayer {
   matchesPlayed?: number;
   goals?: number;
   assists?: number;
-}
-
-function looksLikeActivityPlayer(obj: Record<string, unknown>): boolean {
-  // Must have some player-identifying keys
-  return (
-    (typeof obj.characterId === 'string' || typeof obj.id === 'string') &&
-    (typeof obj.firstName === 'string' || typeof obj.first_name === 'string' ||
-     typeof obj.lastName === 'string'  || typeof obj.last_name === 'string') &&
-    typeof obj.role === 'number'
-  );
-}
-
-function extractActivityPlayersFromRsc(rscText: string): ActivityPlayer[] {
-  const results: ActivityPlayer[] = [];
-  const seen = new Set<string>();
-
-  // Linear scan: find each '[', parse it, then jump PAST the closing ']'.
-  // Without the endIndex jump we'd re-enter every nested '[' inside an
-  // already-parsed array, making the scan O(n²) on dense RSC payloads.
-  let i = 0;
-  while (i < rscText.length) {
-    const arrIdx = rscText.indexOf('[', i);
-    if (arrIdx < 0) break;
-
-    const result = extractJsonObject(rscText, arrIdx);
-
-    if (result !== null && Array.isArray(result.value)) {
-      for (const item of result.value) {
-        if (item && typeof item === 'object' && !Array.isArray(item)) {
-          const rec = item as Record<string, unknown>;
-          if (looksLikeActivityPlayer(rec)) {
-            const id = (rec.characterId ?? rec.id) as string;
-            if (!seen.has(id)) {
-              seen.add(id);
-              results.push(rec as unknown as ActivityPlayer);
-            }
-          }
-        }
-      }
-      // Jump past the end of this array — avoids re-parsing every nested '['
-      i = result.endIndex + 1;
-    } else {
-      // No valid array here (null result or non-array value) — skip past this '['
-      i = arrIdx + 1;
-    }
-  }
-
-  return results;
+  // Activity page stats
+  starts?: number;
 }
 
 function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
   const rawId = ap.characterId ?? ap.id ?? 'unknown';
+
+  // Activity page uses a single "name" field; full squad page splits first/last
   const firstName = ap.firstName ?? ap.first_name ?? '';
-  const lastName  = ap.lastName  ?? ap.last_name  ?? ''  ;
-  const name = `${firstName} ${lastName}`.trim() || rawId.slice(0, 8);
+  const lastName  = ap.lastName  ?? ap.last_name  ?? '';
+  const name =
+    ap.name?.trim() ||                          // activity page: single "name" field
+    `${firstName} ${lastName}`.trim() ||        // squad page: split name
+    rawId.slice(0, 8);
 
   const role    = typeof ap.role === 'number' ? ap.role : 8;
-  const tier    = typeof ap.tier === 'number' ? ap.tier : 0;
-  void tier; // not used downstream but kept for future use
   const overall = typeof ap.ovr === 'number'
     ? ap.ovr
     : typeof ap.ovr === 'object' && ap.ovr !== null
@@ -348,7 +337,8 @@ function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
     rarity: mapOvrToRarity(overall),
     stats: emptyStats,
     image_url: characterImageUrl(rawId),
-    matches_played: ap.matchesPlayed,
+    // Activity page has "starts" instead of "matchesPlayed" — use whichever is present
+    matches_played: ap.matchesPlayed ?? ap.starts,
     goals: ap.goals,
     assists: ap.assists,
     roleRatings: roleRatings.length > 0 ? roleRatings : [{ position: mappedPosition, overall }],
@@ -580,13 +570,12 @@ export async function getClubRoster(clubName: string): Promise<GoalsverseFetchRe
       ? (clubInfo as Record<string, unknown>).username as string | undefined
       : undefined;
 
-    // ── Step 2: Load /p/{slug} — gives ~60 players with basic stats ──
-    // Priority: RSC slug > club API username > /api/v1/users/{id} lookup > original search term
-    // We avoid using the raw clubName input as slug when it looks like a UUID or was
-    // a partial search string — that would produce a 404 and miss all non-squad players.
-    let activityPlayers: Player[] = [];
+    // ── Step 2: Load /p/{slug} with full Next.js RSC headers ──
+    // This returns the "club" array: 60+ players with basic stats (firstName, lastName, role, ovr).
+    // Without the Next-Router-State-Tree header, the server returns an abbreviated shell with no player data.
+    // Priority for slug: RSC slug > club API username > /api/v1/users/{id} lookup > original search term
+    let profilePlayers: Player[] = [];
 
-    // Best slug from RSC payload or club data (fastest, no extra request)
     let resolvedSlug = slug ?? clubUsername ?? null;
 
     // If still no slug and clubId is a UUID, do a dedicated username lookup
@@ -601,31 +590,38 @@ export async function getClubRoster(clubName: string): Promise<GoalsverseFetchRe
 
     if (resolvedSlug) {
       try {
-        const activityRsc = await fetchRsc(`/p/${encodeURIComponent(resolvedSlug)}`);
-        const rawActivity = extractActivityPlayersFromRsc(activityRsc);
-        activityPlayers = rawActivity.map(mapActivityPlayerToBasic);
+        // Pass the slug so fetchRsc can build the correct Next-Router-State-Tree header
+        const profileRsc = await fetchRsc(`/p/${encodeURIComponent(resolvedSlug)}`, resolvedSlug);
+        const { club } = extractSquadFromRsc(profileRsc);
+
+        if (club && club.length > 0) {
+          // Profile "club" array has firstName/lastName + basic stats — same ActivityPlayer shape
+          profilePlayers = (club as ActivityPlayer[])
+            .filter((p): p is ActivityPlayer => typeof p === 'object' && p !== null)
+            .map(mapActivityPlayerToBasic);
+        }
       } catch {
-        // Activity page is best-effort — don't fail the whole import if it 404s
+        // Profile page is best-effort — don't fail the whole import if it 404s
       }
     }
 
-    // ── Step 3: Merge — squad (full stats) wins over activity (basic) ──
-    // For activity players not in squad: include them as basic entries.
+    // ── Step 3: Merge — squad (full stats) wins over profile (basic) ──
+    // Players in squad keep their full stats. Non-squad players from profile are added as basic entries.
     const merged: Player[] = [...squadPlayers];
     const addedIds = new Set(squadPlayers.map((p) => p.id));
 
-    for (const ap of activityPlayers) {
-      if (!addedIds.has(ap.id) && !squadById.has(ap.id)) {
-        merged.push(ap);
-        addedIds.add(ap.id);
+    for (const pp of profilePlayers) {
+      if (!addedIds.has(pp.id) && !squadById.has(pp.id)) {
+        merged.push(pp);
+        addedIds.add(pp.id);
       } else {
         // Copy image_url + match stats onto the squad player if missing
-        const existing = squadById.get(ap.id);
+        const existing = squadById.get(pp.id);
         if (existing) {
-          if (!existing.image_url && ap.image_url) existing.image_url = ap.image_url;
-          if (ap.matches_played !== undefined) existing.matches_played = ap.matches_played;
-          if (ap.goals !== undefined)          existing.goals          = ap.goals;
-          if (ap.assists !== undefined)        existing.assists        = ap.assists;
+          if (!existing.image_url && pp.image_url) existing.image_url = pp.image_url;
+          if (pp.matches_played !== undefined) existing.matches_played = pp.matches_played;
+          if (pp.goals !== undefined)          existing.goals          = pp.goals;
+          if (pp.assists !== undefined)        existing.assists        = pp.assists;
         }
       }
     }
