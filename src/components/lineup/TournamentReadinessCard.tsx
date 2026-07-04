@@ -130,6 +130,27 @@ export function TournamentReadinessCard({
         </div>
       )}
 
+      {/* ── Knockout ──────────────────────────────────────────────────────── */}
+      <div className="pt-2 border-t border-slate-800">
+        <div className="rounded-lg border border-slate-700 bg-slate-900/30 px-3 py-2 space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-white">Knockout</p>
+            <span className="text-[11px] text-slate-400">Wochenendmodus</span>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            Offener Modus ohne OVR-Limit — nutze deine stärkste Startelf und kompakte Meta-Taktik.
+          </p>
+          <a
+            href="https://goals-tracker.com/knockout"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block text-[11px] text-sky-400 hover:text-sky-300 transition-colors"
+          >
+            Live-Leaderboard ↗
+          </a>
+        </div>
+      </div>
+
       {/* ── Empfohlene Startelfen pro Turnier ──────────────────────────────── */}
       {recommendations.length > 0 && (
         <div className="pt-2 border-t border-slate-800 space-y-2">
