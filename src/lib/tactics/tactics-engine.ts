@@ -1,3 +1,4 @@
+import { detectPlayerArchetypes, PlayerArchetype } from '@/lib/analysis/player-archetypes';
 import { PlayerWithScores, Position } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
 
@@ -29,6 +30,15 @@ function byPos(filled: FilledSlot[], ...positions: Position[]) {
   return filled.filter((f) => set.has(f.slot.position)).map((f) => f.player);
 }
 
+function hasArchetype(player: PlayerWithScores, type: PlayerArchetype) {
+  return detectPlayerArchetypes(player).some((match) => match.type === type);
+}
+
+function names(players: PlayerWithScores[], fallback = 'diese Spieler') {
+  if (players.length === 0) return fallback;
+  return players.slice(0, 2).map((p) => p.name).join(' und ');
+}
+
 // All callers use individual stats only — no more pac/sho/pas/dri/def/phy.
 function stat(player: PlayerWithScores, key: keyof typeof player.stats): number {
   return (player.stats[key] as number) ?? 0;
@@ -55,33 +65,47 @@ export function analyzeTactics(
   const gk      = gks[0];
   const allMids = [...dms, ...cms, ...ams, ...wms];
   const allDef  = [...cbs, ...fbs, ...wbs];
+  const widePlayers = [...wfs, ...wms, ...wbs, ...fbs];
 
   // Best ST by finishing (primary scoring threat)
   const bestSt = sts.slice().sort((a, b) => stat(b, 'finishing') - stat(a, 'finishing'))[0];
+  const targetSts = sts.filter((p) =>
+    hasArchetype(p, 'Target ST') ||
+    (stat(p, 'heading') > 80 && stat(p, 'jumping') > 75 && stat(p, 'strength') > 72)
+  );
+  const crossers = widePlayers.filter((p) =>
+    hasArchetype(p, 'Attacking FB/WB') || stat(p, 'crossing') > 80
+  );
+  const paceWidePlayers = widePlayers.filter((p) =>
+    hasArchetype(p, 'Pace Winger') ||
+    (stat(p, 'sprint_speed') > 84 && stat(p, 'acceleration') > 84)
+  );
+  const throughPassers = allMids.filter((p) =>
+    hasArchetype(p, 'Creative AM') || stat(p, 'through_pass') > 80
+  );
+  const ballWinners = dms.filter((p) =>
+    hasArchetype(p, 'Ball-Winning DM') ||
+    (stat(p, 'defensive_iq') > 76 && stat(p, 'stand_tackle') > 76 && stat(p, 'interceptions') > 74)
+  );
 
   // ── ANGRIFF ──────────────────────────────────────────────────────────────────
 
   // Rule: Flanken-Taktik
   // IF ST.heading > 80 AND ST.jumping > 75
   //    AND (LW.crossing > 80 OR RW.crossing > 80)
-  if (bestSt && stat(bestSt, 'heading') > 80 && stat(bestSt, 'jumping') > 75) {
-    const hasCrosser =
-      wfs.some((p) => stat(p, 'crossing') > 80) ||
-      fbs.some((p) => stat(p, 'crossing') > 80) ||
-      wbs.some((p) => stat(p, 'crossing') > 80);
-    if (hasCrosser) {
-      tips.push({
-        id: 'kopfball_flanken',
-        category: 'angriff',
-        icon: '🎯',
-        headline: 'Flanken-Taktik empfohlen',
-        detail:
-          `${bestSt.name} gewinnt Kopfballduelle (Heading ${stat(bestSt, 'heading')}, ` +
-          `Jumping ${stat(bestSt, 'jumping')}). Deine Flügelspieler können präzise flanken — ` +
-          `nutze Hereingaben konsequent und lass Außenverteidiger nachrücken.`,
-        priority: 9,
-      });
-    }
+  if (targetSts.length > 0 && crossers.length > 0) {
+    const target = targetSts[0];
+    tips.push({
+      id: 'kopfball_flanken',
+      category: 'angriff',
+      icon: '🎯',
+      headline: 'Flanken auf Target ST',
+      detail:
+        `${target.name} gibt dir Zielspieler-Präsenz im Strafraum. ` +
+        `${names(crossers, 'deine Außen')} bringen genug Flankenqualität mit — ` +
+        `spiele bewusst über außen und besetze den zweiten Pfosten.`,
+      priority: 9,
+    });
   }
 
   // Rule: Konter-Taktik
@@ -91,19 +115,47 @@ export function analyzeTactics(
     stat(bestSt, 'sprint_speed') > 85 &&
     stat(bestSt, 'acceleration') > 85
   ) {
-    const hasThreader = allMids.some((p) => stat(p, 'through_pass') > 80);
-    if (hasThreader) {
+    if (throughPassers.length > 0) {
       tips.push({
         id: 'konter_pace',
         category: 'angriff',
         icon: '⚡',
-        headline: 'Konter-Taktik empfohlen',
+        headline: 'Konter über Tiefe',
         detail:
-          `${bestSt.name} hat die Pace (Sprint ${stat(bestSt, 'sprint_speed')}, ` +
-          `Acceleration ${stat(bestSt, 'acceleration')}), um Abwehrketten zu überlaufen. ` +
-          `Ein Mittelfeldspieler mit starkem Through-Pass kann ihn mit Steilpässen in die Tiefe schicken. ` +
-          `Setze auf schnelles Umschalten nach Ballgewinn.`,
+          `${bestSt.name} hat genug Tempo für Läufe hinter die Kette. ` +
+          `${names(throughPassers, 'dein Passgeber')} kann ihn mit Steilpässen einsetzen. ` +
+          `Nach Ballgewinn schnell vertikal spielen statt lange aufzubauen.`,
         priority: 9,
+      });
+    }
+  }
+
+  if (paceWidePlayers.length >= 1) {
+    tips.push({
+      id: 'fluegel_tempo',
+      category: 'angriff',
+      icon: '🪽',
+      headline: 'Flügelspiel mit Tempo',
+      detail:
+        `${names(paceWidePlayers, 'deine Außen')} können auf außen Meter machen. ` +
+        `Zieh das Spiel breit, suche frühe Verlagerungen und attackiere isolierte Außenverteidiger.`,
+      priority: 8,
+    });
+  }
+
+  if ([...cms, ...ams].length >= 2 && throughPassers.length >= 1) {
+    const centralCreators = [...cms, ...ams]
+      .filter((p) => stat(p, 'ground_pass') > 76 || stat(p, 'through_pass') > 76 || hasArchetype(p, 'Creative AM'));
+    if (centralCreators.length >= 2) {
+      tips.push({
+        id: 'zentrumsspiel',
+        category: 'mittelfeld',
+        icon: '🎛️',
+        headline: 'Zentrum als Spielachse',
+        detail:
+          `${names(centralCreators, 'deine zentralen Spieler')} geben dir genug Passqualität im Zentrum. ` +
+          `Überlade AM/CM-Räume und spiele kurze Kombinationen statt jeden Angriff breit zu ziehen.`,
+        priority: 8,
       });
     }
   }
@@ -161,13 +213,13 @@ export function analyzeTactics(
   if (avgCbSprintSpeed < 70 && cbs.length) {
     tips.push({
       id: 'tiefes_pressing_cbpace',
-      category: 'verteidigung',
+      category: 'warnung',
       icon: '⚠️',
-      headline: 'Tiefes Pressing empfohlen',
+      headline: 'Tiefe Linie statt hoher Linie',
       detail:
         `Deine Innenverteidiger haben durchschnittlich nur ${avgCbSprintSpeed.toFixed(0)} Sprint-Speed. ` +
-        `Eine hohe Abwehrlinie wäre gefährlich — Through-Balls hinter die Kette würden regelmäßig durchkommen. ` +
-        `Spiele tief und kompakt.`,
+        `Eine hohe Abwehrlinie öffnet zu viel Raum hinter der Kette. ` +
+        `Block tiefer halten, Abstände eng machen und Gegner vor dir spielen lassen.`,
       priority: 10,
     });
   }
@@ -206,6 +258,43 @@ export function analyzeTactics(
     });
   }
 
+  if (dms.length === 0) {
+    tips.push({
+      id: 'kein_dm_absicherung',
+      category: 'warnung',
+      icon: '🧱',
+      headline: 'Absicherung vor der Abwehr fehlt',
+      detail:
+        `Ohne DM fehlt ein klarer Abräumer vor den Innenverteidigern. ` +
+        `Spiel kompakter, nutze eine Doppel-6 oder lass einen CM tiefer bleiben.`,
+      priority: 9,
+    });
+  } else if (ballWinners.length === 0) {
+    tips.push({
+      id: 'kein_ball_winner',
+      category: 'warnung',
+      icon: '🧱',
+      headline: 'DM ist kein echter Abräumer',
+      detail:
+        `Du hast zwar einen DM, aber keinen klaren Ball-Winner. ` +
+        `Nicht zu wild pressen: Zentrum enger halten und zweite Bälle absichern.`,
+      priority: 8,
+    });
+  }
+
+  if (widePlayers.length < 2) {
+    tips.push({
+      id: 'wenig_breite',
+      category: 'warnung',
+      icon: '↔️',
+      headline: 'Zu wenig Breite',
+      detail:
+        `Deine Formation hat wenige echte Außenoptionen. ` +
+        `Gegner können das Zentrum leichter zustellen — nutze breitere Rollen oder besetze die Außen vorsichtiger.`,
+      priority: 7,
+    });
+  }
+
   // ── MITTELFELD ───────────────────────────────────────────────────────────────
 
   // Rule: Vorgeschobener CM / falsche 9
@@ -226,6 +315,20 @@ export function analyzeTactics(
       });
     }
   });
+
+  const avgTeamStamina = filled.length ? avg(filled.map((f) => stat(f.player, 'stamina'))) : 0;
+  if (avgTeamStamina > 0 && avgTeamStamina < 65) {
+    tips.push({
+      id: 'team_stamina_pressing',
+      category: 'warnung',
+      icon: '🔋',
+      headline: 'Pressing dosieren',
+      detail:
+        `Die Team-Stamina liegt nur bei Ø ${avgTeamStamina.toFixed(0)}. ` +
+        `Dauerpressing kostet dich spät im Spiel Stabilität — lieber situativ pressen und nach Führung kompakter werden.`,
+      priority: 9,
+    });
+  }
 
   // Rule: Schwache Stamina
   // IF CM.stamina < 65 → Warnung
