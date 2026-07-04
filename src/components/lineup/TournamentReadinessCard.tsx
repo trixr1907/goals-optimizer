@@ -8,6 +8,7 @@ import {
   evaluateTournamentRequirements,
   TournamentEligibilityResult,
 } from '@/lib/tournaments/tournament-eligibility';
+import { recommendTournamentLineup } from '@/lib/tournaments/tournament-lineup-recommender';
 import { CURRENT_TOURNAMENTS } from '@/config/tournaments';
 
 interface TournamentReadinessCardProps {
@@ -24,6 +25,12 @@ function StatusBadge({ status }: { status: TournamentEligibilityResult['eligible
     return <span className="text-xs font-semibold text-red-400">✗ Nicht geeignet</span>;
   // null = no OVR requirement could be evaluated (e.g. only Retired/Duplicated)
   return <span className="text-xs text-slate-500">— n/a</span>;
+}
+
+function EligibleDot({ eligible }: { eligible: boolean | null }) {
+  if (eligible === true) return <span className="text-emerald-400 text-xs">✓</span>;
+  if (eligible === false) return <span className="text-red-400 text-xs">✗</span>;
+  return <span className="text-slate-500 text-xs">—</span>;
 }
 
 export function TournamentReadinessCard({
@@ -52,6 +59,12 @@ export function TournamentReadinessCard({
     if (filledCount < 11) return [];
     return CURRENT_TOURNAMENTS.map((t) => evaluateTournamentRequirements(startingEleven, t));
   }, [startingEleven, filledCount]);
+
+  // Recommendations run against the full squad pool (independent of current lineup)
+  const recommendations = useMemo(() => {
+    if (players.length < 11) return [];
+    return CURRENT_TOURNAMENTS.map((t) => recommendTournamentLineup(players, t));
+  }, [players]);
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-3">
@@ -114,6 +127,74 @@ export function TournamentReadinessCard({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── Empfohlene Startelfen pro Turnier ──────────────────────────────── */}
+      {recommendations.length > 0 && (
+        <div className="pt-2 border-t border-slate-800 space-y-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            Empfohlene Startelfen
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {recommendations.map((rec) => {
+              const ovrReq = CURRENT_TOURNAMENTS.find(
+                (t) => t.name === rec.tournamentName,
+              )?.requirements.find((r) => r.key === 'OVR Max' || r.key === 'OVR Min');
+
+              return (
+                <div
+                  key={rec.tournamentName}
+                  className={`rounded-lg border px-3 py-2 space-y-1 ${
+                    rec.eligible === true
+                      ? 'border-emerald-800 bg-emerald-950/10'
+                      : rec.eligible === false
+                      ? 'border-red-900 bg-red-950/10'
+                      : 'border-slate-700 bg-slate-900/20'
+                  }`}
+                >
+                  {/* Header row */}
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-white truncate">
+                      {rec.tournamentName}
+                    </p>
+                    <EligibleDot eligible={rec.eligible} />
+                  </div>
+
+                  {/* Formation + OVR info */}
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] text-slate-400 truncate">
+                      {rec.formationName || '—'}
+                    </p>
+                    {rec.squadOvr !== null && (
+                      <p className="text-[11px] font-mono text-slate-300 shrink-0">
+                        OVR {rec.squadOvr}
+                        {ovrReq && (
+                          <span className="text-slate-500 ml-1">
+                            /{ovrReq.key === 'OVR Max' ? '≤' : '≥'}{ovrReq.value}
+                          </span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Ø Fit */}
+                  {rec.averageFit > 0 && (
+                    <p className="text-[11px] text-slate-500">
+                      Ø Fit {rec.averageFit.toFixed(0)}
+                    </p>
+                  )}
+
+                  {/* Primary warning (first only, keep compact) */}
+                  {rec.warnings.length > 0 && (
+                    <p className="text-[11px] text-amber-500/80 line-clamp-2">
+                      {rec.warnings[0]}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
