@@ -11,5 +11,6 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     exclude: ['node_modules/**', '.next/**', 'openhands-result-*/**'],
+    setupFiles: ['./src/test-setup.ts'],
   },
 });
