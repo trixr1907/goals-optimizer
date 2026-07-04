@@ -8,6 +8,7 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { appPath } from '@/lib/app-url';
 import { Input } from '@/components/ui/input';
 import { topWeightedStats } from '@/lib/scoring/position-fit';
+import { analyzeSquad } from '@/lib/analysis/squad-analysis';
 
 const StatRadarChart = dynamic(
   () => import('@/components/charts/StatRadarChart').then((m) => m.StatRadarChart),
@@ -441,6 +442,11 @@ export default function SquadPage() {
     return { avgOvr, avgMeta, avgAge, totalUpgrades, rarityDist };
   }, [players]);
 
+  const analysis = useMemo(() => {
+    if (players.length === 0) return null;
+    return analyzeSquad(players);
+  }, [players]);
+
   function SortTh({ label, sk }: { label: string; sk: SortKey }) {
     const active = sortKey === sk;
     return (
@@ -585,6 +591,79 @@ export default function SquadPage() {
               )}
             </div>
           </div>
+
+          {/* ── Kaderanalyse ── */}
+          {analysis && (analysis.strengths.length > 0 || analysis.weaknesses.length > 0) && (
+            <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 space-y-4">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <span className="text-emerald-400">⚡</span> Kaderanalyse
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Stärken + Baustellen */}
+                <div className="space-y-3">
+                  {analysis.strengths.length > 0 && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-emerald-400 mb-1.5">Stärken</p>
+                      <ul className="space-y-1">
+                        {analysis.strengths.map((s, i) => (
+                          <li key={i} className="text-xs text-slate-300 flex items-start gap-1.5">
+                            <span className="text-emerald-500 mt-0.5 shrink-0">✓</span>
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {analysis.weaknesses.length > 0 && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-amber-400 mb-1.5">Baustellen</p>
+                      <ul className="space-y-1">
+                        {analysis.weaknesses.map((w, i) => (
+                          <li key={i} className="text-xs text-slate-300 flex items-start gap-1.5">
+                            <span className="text-amber-500 mt-0.5 shrink-0">!</span>
+                            {w}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Empfehlungen + Schlüsselspieler */}
+                <div className="space-y-3">
+                  {analysis.recommendations.length > 0 && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-sky-400 mb-1.5">Empfehlungen</p>
+                      <ul className="space-y-1">
+                        {analysis.recommendations.map((r, i) => (
+                          <li key={i} className="text-xs text-slate-300 flex items-start gap-1.5">
+                            <span className="text-sky-500 mt-0.5 shrink-0">→</span>
+                            {r}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {analysis.keyPlayers.length > 0 && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-purple-400 mb-1.5">Schlüsselspieler</p>
+                      <ul className="space-y-1">
+                        {analysis.keyPlayers.map((kp) => (
+                          <li key={kp.playerId} className="text-xs text-slate-300">
+                            <span className="text-white font-medium">{kp.name}</span>
+                            <span className="text-slate-500">
+                              {' '}— {kp.archetypes.map((a) => a.type).join(', ')}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Filter */}
           <div className="flex flex-wrap gap-2">
