@@ -75,8 +75,8 @@ export const FORMATION_TACTICAL_PROFILES: Record<string, FormationTacticalProfil
 
 const FORMATIONS = formationsData as Record<string, { name: string }>;
 
-function stat(player: PlayerWithScores, key: keyof typeof player.stats): number {
-  return (player.stats[key] as number) ?? 0;
+function stat(player: PlayerWithScores, slotPosition: Position, key: keyof typeof player.stats): number {
+  return ((player.effectiveStats[slotPosition]?.[key] ?? player.stats[key]) as number) ?? 0;
 }
 
 function avg(values: number[]) {
@@ -95,8 +95,11 @@ function slotKeyFor(item: FilledLineupSlot, index: number) {
   return item.slotKey ?? `${item.slot.position}-${index}`;
 }
 
-function defensiveScore(player: PlayerWithScores) {
-  return stat(player, 'defensive_iq') * 0.35 + stat(player, 'interceptions') * 0.25 + stat(player, 'stand_tackle') * 0.25 + stat(player, 'stamina') * 0.15;
+function defensiveScore(player: PlayerWithScores, slotPosition: Position) {
+  return stat(player, slotPosition, 'defensive_iq') * 0.35 +
+         stat(player, slotPosition, 'interceptions') * 0.25 +
+         stat(player, slotPosition, 'stand_tackle') * 0.25 +
+         stat(player, slotPosition, 'stamina') * 0.15;
 }
 
 export function recommendTacticalSettings(filledLineup: FilledLineupSlot[], formationKey?: string): TeamTacticsSettings {
@@ -110,9 +113,11 @@ export function recommendTacticalSettings(filledLineup: FilledLineupSlot[], form
   const passers = filledLineup.filter((item) => ['DM', 'CM', 'AM', 'WM'].includes(item.slot.position));
 
   let depth = 42;
-  const avgCbPace = avg(cbs.map((item) => stat(item.player, 'sprint_speed')));
-  const bestDm = dms.slice().sort((a, b) => defensiveScore(b.player) - defensiveScore(a.player))[0];
-  const bestDmScore = bestDm ? defensiveScore(bestDm.player) : 0;
+  // Use effectiveStats at each player's actual slot position for all slot-specific calculations.
+  // GOALS rule: position changes (-2 secondary / -5 out) affect stats only, never OVR.
+  const avgCbPace = avg(cbs.map((item) => stat(item.player, item.slot.position, 'sprint_speed')));
+  const bestDm = dms.slice().sort((a, b) => defensiveScore(b.player, b.slot.position) - defensiveScore(a.player, a.slot.position))[0];
+  const bestDmScore = bestDm ? defensiveScore(bestDm.player, bestDm.slot.position) : 0;
 
   if (cbs.length && avgCbPace < 70) {
     depth -= 6;
@@ -133,12 +138,12 @@ export function recommendTacticalSettings(filledLineup: FilledLineupSlot[], form
   }
 
   const centralCreators = [...cms, ...ams].filter((item) =>
-    stat(item.player, 'ground_pass') >= 78 &&
-    stat(item.player, 'through_pass') >= 76 &&
-    (stat(item.player, 'close_dribbling') >= 76 || stat(item.player, 'first_touch') >= 76)
+    stat(item.player, item.slot.position, 'ground_pass') >= 78 &&
+    stat(item.player, item.slot.position, 'through_pass') >= 76 &&
+    (stat(item.player, item.slot.position, 'close_dribbling') >= 76 || stat(item.player, item.slot.position, 'first_touch') >= 76)
   );
-  const fastRunner = runners.some((item) => stat(item.player, 'sprint_speed') >= 86 && stat(item.player, 'acceleration') >= 84);
-  const goodPasser = passers.some((item) => stat(item.player, 'through_pass') >= 80 || stat(item.player, 'lofted_pass') >= 82);
+  const fastRunner = runners.some((item) => stat(item.player, item.slot.position, 'sprint_speed') >= 86 && stat(item.player, item.slot.position, 'acceleration') >= 84);
+  const goodPasser = passers.some((item) => stat(item.player, item.slot.position, 'through_pass') >= 80 || stat(item.player, item.slot.position, 'lofted_pass') >= 82);
 
   let buildUpPlay: BuildUpPlay = profile?.recommendedBuildUp ?? 'Balanced';
   if (centralCreators.length >= 2) {
@@ -157,7 +162,7 @@ export function recommendTacticalSettings(filledLineup: FilledLineupSlot[], form
   });
 
   const holdingCandidates = (dms.length ? dms : cms).filter((item) => allows(item.slot.position, 'Defend'));
-  const holder = holdingCandidates.slice().sort((a, b) => defensiveScore(b.player) - defensiveScore(a.player))[0];
+  const holder = holdingCandidates.slice().sort((a, b) => defensiveScore(b.player, b.slot.position) - defensiveScore(a.player, a.slot.position))[0];
   if (holder) {
     const index = filledLineup.indexOf(holder);
     playerRules[slotKeyFor(holder, index)] = 'Defend';

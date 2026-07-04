@@ -35,6 +35,11 @@ export interface TournamentEligibilityResult {
  *
  * Returns null when fewer than 11 players are provided — the game requires
  * a full starting eleven; substitutes do not count.
+ *
+ * NOTE: Uses player.overall deliberately — not effectiveStats or position-adjusted OVR.
+ * GOALS rule: position changes (secondary / out-of-position) penalise individual stats
+ * only. player.overall and the resulting Team/Squad OVR are NOT affected by where a
+ * player is placed on the pitch. This is verifiziert GOALS behaviour.
  */
 export function calculateStartingElevenOvr(players: Player[]): number | null {
   if (players.length < 11) return null;

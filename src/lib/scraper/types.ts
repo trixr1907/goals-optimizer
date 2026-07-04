@@ -146,12 +146,37 @@ export interface PlayerWithScores extends Player {
   effectiveStats: Record<Position, PlayerStats>;
 }
 
+/**
+ * Returns the position classification for a player at a given slot position.
+ *
+ * GOALS position rules:
+ *   primary   — player.position matches the slot (no penalty)
+ *   secondary — slot is in player.secondaryPositions (OVR within 2 of primary → -2 on all stats)
+ *   out       — all other positions (-5 on all stats)
+ *
+ * IMPORTANT: The penalty applies to individual stats only.
+ * player.overall and Squad/Team OVR are NEVER changed by position assignment.
+ */
 export function getPositionType(player: Player, position: Position): 'primary' | 'secondary' | 'out' {
   if (player.position === position) return 'primary';
   if (player.secondaryPositions && player.secondaryPositions.includes(position)) return 'secondary';
   return 'out';
 }
 
+/**
+ * Returns a copy of player.stats with the verified GOALS position penalty applied.
+ *
+ * Penalty rules (verifiziert, GOALS):
+ *   primary position   → +0 (no change)
+ *   secondary position → -2 on ALL stats (floor: 1)
+ *   out of position    → -5 on ALL stats (floor: 1)
+ *
+ * IMPORTANT: player.overall is NOT modified. OVR and Squad/Team OVR are
+ * independent of position assignment — only individual stats are penalised.
+ * Use this function wherever a stat value feeds into a slot-specific evaluation
+ * (tactics, scoring, optimizer). For pure squad/roster analysis without a
+ * concrete slot context, raw player.stats are appropriate.
+ */
 export function getEffectiveStats(player: Player, position: Position): PlayerStats {
   const type = getPositionType(player, position);
   const penalty = type === 'primary' ? 0 : type === 'secondary' ? 2 : 5;

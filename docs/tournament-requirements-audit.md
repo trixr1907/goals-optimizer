@@ -29,6 +29,23 @@ Hinweis: Bei zukünftigen GOALS-Regeländerungen erneut prüfen.
 
 Der Parser behandelt Requirements weiterhin bewusst nur als generische Key/Value-Paare und hardcodet kein Target wie `player`.
 
+## Position Penalty vs. OVR — verifizierte GOALS-Regeln
+
+Diese Regeln gelten für alle Squad-OVR-Berechnungen und Turnier-Eligibility-Checks:
+
+| Positionstyp       | Stat-Penalty      | OVR-Änderung |
+|--------------------|-------------------|--------------|
+| Primary (Hauptpos) | keine             | keine        |
+| Secondary Position | -2 auf alle Stats | **keine**    |
+| Out-of-Position    | -5 auf alle Stats | **keine**    |
+
+- `player.overall` bleibt bei jedem Positionswechsel unverändert.
+- Squad/Team OVR (`Math.round(Σ(starters.overall) / 11)`) bleibt ebenfalls unverändert — er basiert ausschließlich auf `player.overall`.
+- Positionswechsel beeinflusst nur individuelle Stats (via `getEffectiveStats`) — nie OVR.
+- Die Tournament-Eligibility-Prüfung nutzt `calculateStartingElevenOvr`, die absichtlich `player.overall` verwendet (nicht effectiveStats).
+
+Stand: verifiziert 2026-07-04.
+
 ## Nächste Umsetzung / Tournament Builder
 
 - Eligibility darf `OVR Max` / `OVR Min` anhand der oben dokumentierten Squad-OVR-Formel prüfen.
