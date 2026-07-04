@@ -8,6 +8,10 @@ import {
   DragStartEvent,
   PointerSensor,
   TouchSensor,
+  CollisionDetection,
+  closestCenter,
+  pointerWithin,
+  rectIntersection,
   useDraggable,
   useDroppable,
   useSensor,
@@ -25,6 +29,7 @@ import formationsData from '@/config/formations.json';
 import { recommendationToLineup, recommendFormations, FormationAssignment } from '@/lib/optimizer/formation-optimizer';
 import { OptimizationMode } from '@/lib/optimizer/hungarian-solver';
 import { explainFootFit, calcPositionFitScore } from '@/lib/scoring/position-fit';
+import { shortPlayerName } from '@/lib/player-name';
 
 const FORMATIONS = formationsData as Record<string, { name: string; slots: LineupSlot[] }>;
 
@@ -130,15 +135,17 @@ function DraggablePlayerChip({
   fit,
   compact = false,
   disabled = false,
+  sourceSlotKey,
 }: {
   player: PlayerWithScores;
   fit?: number;
   compact?: boolean;
   disabled?: boolean;
+  sourceSlotKey?: string;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `player:${player.id}`,
-    data: { playerId: player.id },
+    id: sourceSlotKey ? `slot-player:${sourceSlotKey}` : `player-chip:${compact ? 'bench' : 'picker'}:${player.id}`,
+    data: { playerId: player.id, sourceSlotKey },
     disabled,
   });
 
@@ -157,10 +164,10 @@ function DraggablePlayerChip({
       className={`touch-none select-none rounded-lg border border-slate-700 bg-slate-900/70 text-slate-200 hover:bg-slate-800 transition-colors cursor-grab active:cursor-grabbing flex items-center gap-1.5 ${
         compact ? 'px-2 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'
       } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-      title="Ziehen auf einen Pitch-Slot"
+      title={player.name}
     >
       <MiniAvatar player={player} />
-      <span className="font-medium">{player.name}</span>{' '}
+      <span className="font-medium">{compact ? shortPlayerName(player.name) : player.name}</span>{' '}
       <span className="text-slate-500">{player.overall}</span>
       {fit !== undefined && (
         <span className={`ml-1 font-mono ${fitText(fit)}`}>({fit.toFixed(0)})</span>
@@ -184,11 +191,20 @@ function PitchSlot({
   locked: boolean;
   onClick: () => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({
+  const { attributes, listeners, setNodeRef: setDraggableNodeRef, transform, isDragging } = useDraggable({
+    id: `slot-player:${slotKey}`,
+    data: { playerId: player?.id, sourceSlotKey: slotKey },
+    disabled: locked || !player,
+  });
+  const { setNodeRef: setDroppableNodeRef, isOver } = useDroppable({
     id: `slot:${slotKey}`,
     data: { slotKey },
     disabled: locked,
   });
+  const setSlotNodeRef = useCallback((node: HTMLDivElement | null) => {
+    setDroppableNodeRef(node);
+    setDraggableNodeRef(node);
+  }, [setDroppableNodeRef, setDraggableNodeRef]);
 
   const [imgError, setImgError] = useState(false);
   // Slot-aware fit: recompute with slot.x so side-aware modifiers match the optimizer.
@@ -200,17 +216,27 @@ function PitchSlot({
     : 0;
   const footHint = player ? explainFootFit(player, slot.position, slot.x) : null;
   const avatarUrl = player && !imgError ? playerImageUrl(player) : undefined;
+  const dragTransform = transform
+    ? `translate(calc(-50% + ${transform.x}px), calc(-50% + ${transform.y}px))`
+    : 'translate(-50%, -50%)';
 
   return (
     <div
-      ref={setNodeRef}
+      ref={setSlotNodeRef}
       className="absolute group"
-      style={{ left: `${slot.x}%`, top: `${slot.y}%`, transform: 'translate(-50%, -50%)' }}
+      style={{
+        left: `${slot.x}%`,
+        top: `${slot.y}%`,
+        transform: dragTransform,
+        opacity: isDragging ? 0.35 : 1,
+      }}
     >
       <button
         type="button"
         onClick={onClick}
-        className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 transition-all shadow-lg overflow-hidden ${
+        {...(player && !locked ? listeners : {})}
+        {...(player && !locked ? attributes : {})}
+        className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-xs font-bold text-white border-2 transition-all shadow-lg overflow-hidden touch-none ${player && !locked ? 'cursor-grab active:cursor-grabbing' : ''} ${
           player
             ? `${avatarUrl ? 'bg-slate-900' : (POSITION_COLORS[slot.position] ?? 'bg-slate-600')} ${fitColor(fit)}`
             : 'bg-slate-800/75 border-dashed border-slate-500 text-slate-400'
@@ -228,7 +254,7 @@ function PitchSlot({
         )}
         {player ? (
           <div className="relative text-center leading-tight pointer-events-none z-10 bg-black/30 rounded-full px-0.5">
-            <div className="text-[10px] sm:text-[11px] max-w-12 truncate drop-shadow">{player.name.split(' ')[0]}</div>
+            <div className="text-[10px] sm:text-[11px] max-w-12 truncate drop-shadow" title={player.name}>{shortPlayerName(player.name)}</div>
             <div className={`text-[9px] font-mono ${fitText(fit)} drop-shadow`}>Meta {fit.toFixed(0)}</div>
             <div className="text-[8px] opacity-75 drop-shadow">OVR {player.overall}</div>
           </div>
@@ -256,6 +282,15 @@ export default function LineupPage() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 8 } }),
   );
+  const collisionDetection = useCallback<CollisionDetection>((args) => {
+    const pointerCollisions = pointerWithin(args);
+    if (pointerCollisions.length > 0) return pointerCollisions;
+
+    const intersections = rectIntersection(args);
+    if (intersections.length > 0) return intersections;
+
+    return closestCenter(args);
+  }, []);
 
   const formationRecommendations = useMemo(() => recommendFormations(players), [players]);
   const formationNames = useMemo(() => Object.keys(FORMATIONS), []);
@@ -380,7 +415,13 @@ export default function LineupPage() {
   const activePlayer = activePlayerId ? playerById.get(activePlayerId) : null;
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActivePlayerId(null)}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={collisionDetection}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActivePlayerId(null)}
+    >
       <div className="flex h-screen">
         <Sidebar />
         <main className="flex-1 p-4 md:p-6 overflow-auto">

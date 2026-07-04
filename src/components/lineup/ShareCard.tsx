@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { PlayerWithScores } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
+import { shortPlayerName } from '@/lib/player-name';
 import { FormationAssignment } from '@/lib/optimizer/formation-optimizer';
 
 // ── Canvas constants ──────────────────────────────────────────────────────────
@@ -154,17 +155,17 @@ function drawSlot(
   ctx.fillText(fit.toFixed(0), badgeX, badgeY);
 
   // Player name (below circle)
-  const lastName = player.name.split(' ').slice(-1)[0];
+  const playerShortName = shortPlayerName(player.name);
   ctx.fillStyle = '#ffffff';
   ctx.font = `600 11px ${FONT}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   // Truncate long names
-  let displayName = lastName;
+  let displayName = playerShortName;
   while (ctx.measureText(displayName).width > SLOT_R * 2.2 && displayName.length > 3) {
     displayName = displayName.slice(0, -1);
   }
-  if (displayName !== lastName) displayName += '.';
+  if (displayName !== playerShortName) displayName += '.';
   ctx.fillText(displayName, cx, cy + SLOT_R + 4);
 
   // OVR below name

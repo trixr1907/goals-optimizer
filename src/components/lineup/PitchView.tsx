@@ -3,6 +3,7 @@
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { PlayerWithScores, Position, displayPosition } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
+import { shortPlayerName } from '@/lib/player-name';
 
 const RARITY_COLORS: Record<string, string> = {
   Basic: '#64748b',
@@ -73,7 +74,7 @@ function PlayerToken({ player, slotKey, position, isLocked, onLockToggle }: Play
             {player.overall}
           </text>
           <text x={0} y={7} textAnchor="middle" fontSize={6} fill="#94a3b8">
-            {player.name.split(' ').pop()?.slice(0, 8) ?? ''}
+            {shortPlayerName(player.name).slice(0, 8)}
           </text>
         </>
       )}

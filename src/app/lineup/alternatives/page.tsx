@@ -5,6 +5,7 @@ import { useSquadStore } from '@/lib/store/squad-store';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { appPath } from '@/lib/app-url';
 import { recommendFormations, FormationRecommendation, FormationAssignment } from '@/lib/optimizer/formation-optimizer';
+import { shortPlayerName } from '@/lib/player-name';
 
 type TabKey = 'offensiv' | 'defensiv' | 'gegenMeta' | 'custom';
 
@@ -67,7 +68,7 @@ function MiniPitch({ assignments }: { assignments: FormationAssignment[] }) {
             {player.overall}
           </div>
           <span className="text-[8px] text-slate-300 mt-0.5 whitespace-nowrap max-w-14 truncate text-center">
-            {player.name.split(' ')[0]}
+            {shortPlayerName(player.name)}
           </span>
         </div>
       ))}
