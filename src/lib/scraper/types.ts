@@ -102,6 +102,26 @@ export function hasFullStats(player: Pick<Player, 'dataQuality' | 'stats'>): boo
   return Object.values(player.stats).some((value) => typeof value === 'number' && value > 0);
 }
 
+/**
+ * Type guard: returns true when a value from LocalStorage / unknown JSON is a
+ * structurally valid Player (or PlayerWithScores).  Used in onRehydrateStorage
+ * and analysis helpers to drop null/undefined/stale entries before touching any
+ * field — prevents "can't access property X of undefined" crashes.
+ */
+export function isValidPlayer(p: unknown): p is Player {
+  if (!p || typeof p !== 'object') return false;
+  const obj = p as Record<string, unknown>;
+  return (
+    typeof obj['id'] === 'string' && obj['id'].length > 0 &&
+    typeof obj['name'] === 'string' &&
+    typeof obj['position'] === 'string' &&
+    typeof obj['overall'] === 'number' &&
+    obj['stats'] !== null && typeof obj['stats'] === 'object' &&
+    Array.isArray(obj['roleRatings']) &&
+    Array.isArray(obj['secondaryPositions'])
+  );
+}
+
 export interface Player {
   id: string;
   name: string;

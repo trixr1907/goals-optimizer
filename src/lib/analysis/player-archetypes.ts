@@ -1,4 +1,4 @@
-import { Player, hasFullStats } from '@/lib/scraper/types';
+import { Player, hasFullStats, isValidPlayer } from '@/lib/scraper/types';
 
 export type PlayerArchetype =
   | 'Creative AM'
@@ -143,6 +143,9 @@ function archetypeRules(player: Player): ArchetypeRule[] {
 }
 
 export function detectPlayerArchetypes(player: Player): PlayerArchetypeMatch[] {
+  // Guard: null/undefined or missing stats must not crash the archetype engine.
+  if (!isValidPlayer(player)) return [];
+
   const fullStats = hasFullStats(player);
   const s = player.stats as unknown as Record<string, number>;
 

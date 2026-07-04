@@ -1,4 +1,4 @@
-import { Player, hasFullStats } from '@/lib/scraper/types';
+import { Player, hasFullStats, isValidPlayer } from '@/lib/scraper/types';
 import { detectPlayerArchetypes, PlayerArchetype, PlayerArchetypeMatch } from './player-archetypes';
 
 export interface SquadAnalysisReport {
@@ -19,27 +19,29 @@ function playerHasArchetype(player: Player, archetype: PlayerArchetype): boolean
 }
 
 export function analyzeSquad(players: Player[]): SquadAnalysisReport {
-  if (players.length === 0) {
+  // Drop any null/undefined/corrupt entries that could arrive from a stale store.
+  const valid = players.filter(isValidPlayer);
+  if (valid.length === 0) {
     return { strengths: [], weaknesses: [], recommendations: [], keyPlayers: [] };
   }
 
-  const fullStatsPlayers = players.filter((p) => hasFullStats(p));
-  const basicPlayers = players.filter((p) => !hasFullStats(p));
-  const basicRatio = basicPlayers.length / players.length;
+  const fullStatsPlayers = valid.filter((p) => hasFullStats(p));
+  const basicPlayers = valid.filter((p) => !hasFullStats(p));
+  const basicRatio = basicPlayers.length / valid.length;
 
   const strengths: string[] = [];
   const weaknesses: string[] = [];
   const recommendations: string[] = [];
 
-  const gkCount = players.filter((p) => p.position === 'GK').length;
-  const cbCount = players.filter((p) => p.position === 'CB').length;
-  const fbCount = players.filter((p) => p.position === 'FB').length;
-  const wbCount = players.filter((p) => p.position === 'WB').length;
+  const gkCount = valid.filter((p) => p.position === 'GK').length;
+  const cbCount = valid.filter((p) => p.position === 'CB').length;
+  const fbCount = valid.filter((p) => p.position === 'FB').length;
+  const wbCount = valid.filter((p) => p.position === 'WB').length;
   const fbWbCount = fbCount + wbCount;
-  const dmCount = players.filter((p) => p.position === 'DM').length;
-  const cmCount = players.filter((p) => p.position === 'CM').length;
-  const wmCount = players.filter((p) => p.position === 'WM').length;
-  const wfCount = players.filter((p) => p.position === 'WF').length;
+  const dmCount = valid.filter((p) => p.position === 'DM').length;
+  const cmCount = valid.filter((p) => p.position === 'CM').length;
+  const wmCount = valid.filter((p) => p.position === 'WM').length;
+  const wfCount = valid.filter((p) => p.position === 'WF').length;
   const archetypes: PlayerArchetype[] = [
     'Creative AM', 'Pace Winger', 'Target ST', 'Pressing ST',
     'Box-to-box CM', 'Ball-Winning DM', 'Recovery CB', 'Physical CB',
@@ -48,7 +50,7 @@ export function analyzeSquad(players: Player[]): SquadAnalysisReport {
 
   const counts: Record<string, number> = {};
   for (const arch of archetypes) {
-    counts[arch] = players.filter((p) => playerHasArchetype(p, arch)).length;
+    counts[arch] = valid.filter((p) => playerHasArchetype(p, arch)).length;
   }
 
   if (counts['Creative AM'] >= 2) {
@@ -72,17 +74,17 @@ export function analyzeSquad(players: Player[]): SquadAnalysisReport {
   if (counts['Attacking FB/WB'] >= 2) {
     strengths.push('Offensivstarke Außenverteidiger bringen Breite ins Spiel');
   }
-  if (fullStatsPlayers.length >= players.length * 0.8) {
+  if (fullStatsPlayers.length >= valid.length * 0.8) {
     strengths.push('Gute Datengrundlage – Analyse basiert auf detaillierten Spielerwerten');
   }
   if (strengths.length === 0) {
-    const avgOvr = Math.round(players.reduce((s, p) => s + p.overall, 0) / players.length);
+    const avgOvr = Math.round(valid.reduce((s, p) => s + p.overall, 0) / valid.length);
     if (avgOvr >= 85) {
       strengths.push('Hohes durchschnittliches Gesamtrating');
-    } else if (players.length >= 18) {
-      strengths.push('Ausreichende Kadertiefe mit ' + players.length + ' Spielern');
+    } else if (valid.length >= 18) {
+      strengths.push('Ausreichende Kadertiefe mit ' + valid.length + ' Spielern');
     } else {
-      strengths.push('Kompakter Kader mit ' + players.length + ' Spielern');
+      strengths.push('Kompakter Kader mit ' + valid.length + ' Spielern');
     }
   }
 
@@ -127,7 +129,7 @@ export function analyzeSquad(players: Player[]): SquadAnalysisReport {
     recommendations.push('Schnellen Flügelspieler (Pace Winger) für mehr Tempo verpflichten');
   }
 
-  const playerScores = players
+  const playerScores = valid
     .filter((p) => hasFullStats(p))
     .map((player) => {
       const archs = detectPlayerArchetypes(player);

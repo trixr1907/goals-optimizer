@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { analyzeSquad } from './squad-analysis';
-import { Player } from '@/lib/scraper/types';
+import { Player, isValidPlayer, hasFullStats } from '@/lib/scraper/types';
 import { inferFullStats } from '@/lib/scraper/infer-stats';
 import { MOCK_PLAYERS } from '@/lib/scraper/mock-data';
 
@@ -79,5 +79,113 @@ describe('analyzeSquad', () => {
     const all = [...report.strengths, ...report.weaknesses, ...report.recommendations,
       ...report.keyPlayers.map((k) => k.summary)].join(' ');
     expect(all).not.toMatch(/source|positionSource|roleRatingsSource|sourceWarnings|scraper/i);
+  });
+});
+
+// ── Robustness: stale LocalStorage data ──────────────────────────────────────
+
+describe('analyzeSquad — stale / corrupt LocalStorage resilience', () => {
+  it('does not crash when players array contains undefined entries', () => {
+    const mixed = [undefined, null, MOCK_PLAYERS[0], undefined] as unknown as Player[];
+    expect(() => analyzeSquad(mixed)).not.toThrow();
+    const report = analyzeSquad(mixed);
+    expect(report.keyPlayers.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it('does not crash when players array is entirely null/undefined', () => {
+    const broken = [null, undefined, null] as unknown as Player[];
+    expect(() => analyzeSquad(broken)).not.toThrow();
+    const report = analyzeSquad(broken);
+    expect(report.strengths).toEqual([]);
+    expect(report.weaknesses).toEqual([]);
+    expect(report.recommendations).toEqual([]);
+    expect(report.keyPlayers).toEqual([]);
+  });
+
+  it('handles player with missing dataQuality — falls back without crash', () => {
+    const noQuality: Player = {
+      ...mp({ id: 'nq1', name: 'NoQuality', position: 'ST', overall: 75 }),
+      dataQuality: undefined,
+    };
+    expect(() => analyzeSquad([noQuality])).not.toThrow();
+    // hasFullStats fallback: derives quality from stats content
+    const report = analyzeSquad([noQuality]);
+    expect(report.strengths.length).toBeGreaterThan(0);
+  });
+
+  it('handles player with missing stats object gracefully', () => {
+    const noStats = {
+      id: 'ns1', name: 'NoStats', position: 'CB', overall: 72,
+      rarity: 'Basic', roleRatings: [], secondaryPositions: [],
+      // stats intentionally omitted — simulates severely broken entry
+    } as unknown as Player;
+    // Should be filtered out by isValidPlayer — no crash
+    expect(() => analyzeSquad([noStats])).not.toThrow();
+  });
+});
+
+// ── isValidPlayer type guard ──────────────────────────────────────────────────
+
+describe('isValidPlayer', () => {
+  it('returns false for null', () => expect(isValidPlayer(null)).toBe(false));
+  it('returns false for undefined', () => expect(isValidPlayer(undefined)).toBe(false));
+  it('returns false for plain string', () => expect(isValidPlayer('x')).toBe(false));
+  it('returns false for empty object', () => expect(isValidPlayer({})).toBe(false));
+
+  it('returns false for object missing stats', () => {
+    expect(isValidPlayer({ id: 'x', name: 'X', position: 'ST', overall: 70, roleRatings: [], secondaryPositions: [] })).toBe(false);
+  });
+
+  it('returns true for a valid Player', () => {
+    expect(isValidPlayer(MOCK_PLAYERS[0])).toBe(true);
+  });
+
+  it('returns true for all MOCK_PLAYERS', () => {
+    for (const p of MOCK_PLAYERS) {
+      expect(isValidPlayer(p)).toBe(true);
+    }
+  });
+});
+
+// ── hasFullStats backfill logic ───────────────────────────────────────────────
+
+describe('hasFullStats — dataQuality backfill', () => {
+  it('returns true for explicit dataQuality=full', () => {
+    const p = mp({ id: 'f1', name: 'Full', position: 'CM', overall: 80, dataQuality: 'full' });
+    expect(hasFullStats(p)).toBe(true);
+  });
+
+  it('returns false for explicit dataQuality=basic', () => {
+    const p = mp({ id: 'b1', name: 'Basic', position: 'CB', overall: 68, stats: inferFullStats(0, 0, 0, 0, 0, 0), dataQuality: 'basic' });
+    expect(hasFullStats(p)).toBe(false);
+  });
+
+  it('derives full from stats content when dataQuality absent', () => {
+    const p: Player = { ...mp({ id: 'nq1', name: 'NoQ', position: 'ST', overall: 74 }), dataQuality: undefined };
+    // inferFullStats produces non-zero values → should classify as full
+    expect(hasFullStats(p)).toBe(true);
+  });
+
+  it('derives basic when all stats are truly zero and dataQuality absent', () => {
+    // Build a stats object with every single field set to 0 —
+    // inferFullStats(0,...) still produces some non-zero values so we
+    // construct the object manually to simulate a genuinely empty stats blob.
+    const zeroStats = Object.fromEntries(
+      ['pac','sho','pas','dri','def','phy',
+       'acceleration','sprint_speed','finishing','shot_power','long_shots',
+       'penalties','weak_foot','attacking_iq','ground_pass','lofted_pass',
+       'through_pass','crossing','curve','free_kick_accuracy','sprint_dribbling',
+       'close_dribbling','skills','agility','balance','first_touch',
+       'defensive_iq','stand_tackle','slide_tackle','jockeying','interceptions',
+       'blocking','strength','aggression','stamina','heading','jumping',
+       'div','kic','reflexes','positioning','catching','parrying',
+      ].map((k) => [k, 0])
+    );
+    const p: Player = {
+      ...mp({ id: 'z1', name: 'Zero', position: 'CB', overall: 65 }),
+      stats: zeroStats as Player['stats'],
+      dataQuality: undefined,
+    };
+    expect(hasFullStats(p)).toBe(false);
   });
 });

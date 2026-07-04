@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { PlayerWithScores } from '@/lib/scraper/types';
+import { PlayerWithScores, hasFullStats, isValidPlayer } from '@/lib/scraper/types';
 
 // Delta report returned by reimportPlayers
 export interface ImportDelta {
@@ -77,18 +77,28 @@ export const useSquadStore = create<SquadState>()(
       setClubId: (id) => set({ clubId: id }),
 
       importPlayers: (players, clubUrl, clubId) =>
-        set({ players, clubUrl, clubId, lastImportedAt: new Date().toISOString() }),
+        set({
+          // Drop any null/undefined/stale entries that could come from a
+          // corrupted localStorage snapshot before storing.
+          players: players.filter(isValidPlayer) as PlayerWithScores[],
+          clubUrl,
+          clubId,
+          lastImportedAt: new Date().toISOString(),
+        }),
 
       reimportPlayers: (incoming, clubUrl, clubId) => {
         const existing = get().players;
-        const existingById = new Map(existing.map((p) => [p.id, p]));
-        const incomingById = new Map(incoming.map((p) => [p.id, p]));
+        // Defensive: sanitise both arrays before diffing
+        const safeExisting = existing.filter(isValidPlayer) as PlayerWithScores[];
+        const safeIncoming = incoming.filter(isValidPlayer) as PlayerWithScores[];
+        const existingById = new Map(safeExisting.map((p) => [p.id, p]));
+        const incomingById = new Map(safeIncoming.map((p) => [p.id, p]));
 
         const newPlayers: PlayerWithScores[] = [];
         const updatedPlayers: ImportDelta['updatedPlayers'] = [];
         let unchanged = 0;
 
-        for (const next of incoming) {
+        for (const next of safeIncoming) {
           const prev = existingById.get(next.id);
           if (!prev) {
             newPlayers.push(next);
@@ -103,11 +113,11 @@ export const useSquadStore = create<SquadState>()(
         }
 
         // Players in existing but not in incoming → removed
-        const removedPlayers = existing.filter((p) => !incomingById.has(p.id));
+        const removedPlayers = safeExisting.filter((p) => !incomingById.has(p.id));
 
         // Merge: keep existing untouched, overwrite updated, add new, drop removed
         const merged = [
-          ...existing
+          ...safeExisting
             .filter((p) => incomingById.has(p.id))
             .map((p) => {
               const updated = updatedPlayers.find((u) => u.player.id === p.id);
@@ -137,7 +147,11 @@ export const useSquadStore = create<SquadState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          // Migrate old granular positions → GOALS positions
+          // 1. Drop null/undefined/structurally broken entries from old snapshots.
+          //    This is the primary defence against "can't access property X of undefined".
+          const raw = (state.players as unknown[]).filter(isValidPlayer) as PlayerWithScores[];
+
+          // 2. Migrate old granular positions → GOALS positions
           const posMap: Record<string, string> = {
             LB: 'FB', RB: 'FB',
             LWB: 'WB', RWB: 'WB',
@@ -146,10 +160,15 @@ export const useSquadStore = create<SquadState>()(
             LM: 'WM', RM: 'WM',
             LW: 'WF', RW: 'WF',
           };
-          state.players = state.players.map((p) => ({
+
+          // 3. Migrate + backfill dataQuality so hasFullStats() never crashes
+          state.players = raw.map((p) => ({
             ...p,
             position: (posMap[p.position] ?? p.position) as typeof p.position,
+            // Backfill missing dataQuality: derive from stats content
+            dataQuality: p.dataQuality ?? (hasFullStats(p) ? 'full' : 'basic'),
           }));
+
           state.setHasHydrated(true);
         }
       },
