@@ -21,6 +21,8 @@ import {
 } from '@/components/ui/select';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { appPath } from '@/lib/app-url';
+import { adviseDevelopment } from '@/lib/analysis/development-advisor';
+import { CURRENT_TOURNAMENTS } from '@/config/tournaments';
 
 // ── Konstanten ──────────────────────────────────────────────────────────────
 
@@ -208,7 +210,7 @@ function UpgradeModal({
   );
 }
 
-function PlayerDevCard({ player }: { player: PlayerWithScores }) {
+function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPlayers: PlayerWithScores[] }) {
   const { notesByPlayerId, setPriority, setNotes, resetPlayer, addUpgrade } =
     useDevelopmentStore();
   const tracked = notesByPlayerId[player.id];
@@ -232,6 +234,9 @@ function PlayerDevCard({ player }: { player: PlayerWithScores }) {
   const [showHistory, setShowHistory] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showAllStats, setShowAllStats] = useState(false);
+
+  // Compute development advice
+  const advice = useMemo(() => adviseDevelopment(player, allPlayers, CURRENT_TOURNAMENTS), [player, allPlayers]);
   const compactStatKeys = player.position === 'GK'
     ? GK_STAT_KEYS.slice(0, 5)
     : (['pac', 'sho', 'pas', 'dri', 'def', 'phy'] as const);
@@ -306,6 +311,29 @@ function PlayerDevCard({ player }: { player: PlayerWithScores }) {
                 {bestPos?.[0] ? displayPosition(bestPos[0] as Position) : "-"} ({bestPos?.[1].toFixed(0)})
               </p>
             </div>
+          </div>
+
+          {/* Development Advice Badge */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`text-[10px] px-2 py-0.5 rounded font-bold text-white ${
+              advice.label === 'Starter' ? 'bg-green-700' :
+              advice.label === 'Turnier-Spezialist' ? 'bg-sky-700' :
+              advice.label === 'Trainieren' ? 'bg-yellow-700' :
+              advice.label === 'Rotation' ? 'bg-slate-600' :
+              'bg-red-800'
+            }`}>
+              {advice.label}
+            </span>
+            {advice.tournamentValue?.hasValue && (
+              <span className="text-[10px] px-2 py-0.5 rounded bg-amber-900 text-amber-200 font-medium">
+                🏆 Turnierwert
+              </span>
+            )}
+            {advice.reasons.length > 0 && (
+              <span className="text-[11px] text-slate-400">
+                {advice.reasons[0]}
+              </span>
+            )}
           </div>
 
           {/* Retirement Warning */}
@@ -671,7 +699,7 @@ export default function DevelopmentPage() {
             {/* Spieler-Karten */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {sorted.map((p) => (
-                <PlayerDevCard key={p.id} player={p} />
+                <PlayerDevCard key={p.id} player={p} allPlayers={players} />
               ))}
             </div>
           </div>
