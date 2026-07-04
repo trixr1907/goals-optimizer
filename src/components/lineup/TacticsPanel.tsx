@@ -5,6 +5,7 @@ import { PlayerWithScores, Position } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
 import { analyzeTactics, TacticsTip, TipCategory } from '@/lib/tactics/tactics-engine';
 import { useTacticsStore } from '@/lib/store/tactics-store';
+import { PLAYER_RULES_BY_POSITION, recommendTacticalSettings } from '@/lib/tactics/tactics-settings';
 
 const CAT_LABEL: Record<TipCategory, string> = {
   angriff: 'Angriff',
@@ -36,6 +37,7 @@ interface TacticsPanelProps {
   lineup: Record<string, string | null>;
   players: PlayerWithScores[];
   benchPlayers: PlayerWithScores[];
+  formationKey?: string;
   slotKeyFor: (pos: Position, idx: number) => string;
 }
 
@@ -69,7 +71,7 @@ function TipCard({ tip }: { tip: TacticsTip }) {
   );
 }
 
-export function TacticsPanel({ slots, lineup, players, slotKeyFor }: TacticsPanelProps) {
+export function TacticsPanel({ slots, lineup, players, benchPlayers, formationKey, slotKeyFor }: TacticsPanelProps) {
   const { settings } = useTacticsStore();
   const [catFilter, setCatFilter] = useState<TipCategory | 'alle'>('alle');
 
@@ -79,13 +81,14 @@ export function TacticsPanel({ slots, lineup, players, slotKeyFor }: TacticsPane
         const key = slotKeyFor(slot.position, idx);
         const pid = lineup[key];
         const player = pid ? players.find((p) => p.id === pid) : null;
-        return { slot, player };
+        return { slotKey: key, slot, player };
       })
-      .filter((f) => f.player !== null) as { slot: LineupSlot; player: PlayerWithScores }[],
+      .filter((f) => f.player !== null) as { slotKey: string; slot: LineupSlot; player: PlayerWithScores }[],
     [slots, lineup, players, slotKeyFor]
   );
 
   const analysis = useMemo(() => analyzeTactics(filled, settings), [filled, settings]);
+  const tacticalSettings = useMemo(() => recommendTacticalSettings(filled, formationKey), [filled, formationKey]);
 
   if (filled.length < 3) return null;
 
@@ -110,6 +113,50 @@ export function TacticsPanel({ slots, lineup, players, slotKeyFor }: TacticsPane
             ))}
           </div>
         )}
+      </div>
+
+      {/* Konkrete Team-Settings */}
+      <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4 space-y-3">
+        <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Empfohlene Settings</p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+            <p className="text-[10px] uppercase tracking-wide text-slate-500">Defensive Depth</p>
+            <p className="mt-1 text-2xl font-bold text-white">{tacticalSettings.defensiveDepth}</p>
+            <p className="text-[11px] text-slate-500">Meta-kompakt: 40–45</p>
+          </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+            <p className="text-[10px] uppercase tracking-wide text-slate-500">Build Up Play</p>
+            <p className="mt-1 text-lg font-bold text-emerald-300">{tacticalSettings.buildUpPlay}</p>
+            <p className="text-[11px] text-slate-500">Short / Balanced / Long</p>
+          </div>
+          <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+            <p className="text-[10px] uppercase tracking-wide text-slate-500">Lineup-Status</p>
+            <p className="mt-1 text-lg font-bold text-white">{filled.length}/11</p>
+            <p className="text-[11px] text-slate-500">Bank: {benchPlayers.length}</p>
+          </div>
+        </div>
+        {tacticalSettings.reasons.length > 0 && (
+          <ul className="space-y-1 text-xs text-slate-400">
+            {tacticalSettings.reasons.slice(0, 3).map((reason) => <li key={reason}>• {reason}</li>)}
+          </ul>
+        )}
+        <div className="space-y-1.5">
+          <p className="text-[10px] uppercase tracking-wide text-slate-500">Player Rules</p>
+          <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+            {filled.map((item) => {
+              const rule = tacticalSettings.playerRules[item.slotKey] ?? 'Balanced';
+              const allowed = PLAYER_RULES_BY_POSITION[item.slot.position].join(' / ');
+              return (
+                <div key={item.slotKey} className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-2.5 py-2">
+                  <span className="min-w-0 truncate text-xs text-slate-300">{item.slot.position} · {item.player.name}</span>
+                  <span className={rule === 'Defend' ? 'shrink-0 rounded bg-blue-900/60 px-1.5 py-0.5 text-[10px] text-blue-200' : 'shrink-0 rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-300'} title={`Erlaubt: ${allowed}`}>
+                    {rule}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Taktik-Tipps */}

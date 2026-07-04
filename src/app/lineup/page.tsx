@@ -559,7 +559,7 @@ export default function LineupPage() {
               </div>
             </div>
 
-            <TacticsPanel slots={slots as LineupSlot[]} lineup={lineup} players={players} benchPlayers={benchPlayers} slotKeyFor={slotKeyFor} />
+            <TacticsPanel slots={slots as LineupSlot[]} lineup={lineup} players={players} benchPlayers={benchPlayers} formationKey={formation} slotKeyFor={slotKeyFor} />
           </div>
         </main>
       </div>
