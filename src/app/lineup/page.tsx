@@ -31,6 +31,7 @@ import { OptimizationMode } from '@/lib/optimizer/hungarian-solver';
 import { explainFootFit, calcPositionFitScore } from '@/lib/scoring/position-fit';
 import { shortPlayerName } from '@/lib/player-name';
 import { TournamentReadinessCard } from '@/components/lineup/TournamentReadinessCard';
+import type { TournamentLineupResult } from '@/lib/tournaments/tournament-lineup-recommender';
 
 const FORMATIONS = formationsData as Record<string, { name: string; slots: LineupSlot[] }>;
 
@@ -368,6 +369,37 @@ export default function LineupPage() {
     setFormationWithLineup(rec.formation.name, rec.formation.slots as LineupSlot[], assignments);
   }, [formationRecommendations, activeVariant, setFormationWithLineup]);
 
+  /**
+   * Applies a tournament lineup recommendation:
+   * 1. Asks for confirmation (native browser confirm — keep it simple)
+   * 2. Builds a slotKey→playerId map from the recommendation's assignments
+   * 3. Sets formation + lineup atomically via setFormationWithLineup
+   * 4. Scrolls to the pitch so the user sees the result
+   */
+  const handleApplyTournamentRecommendation = useCallback(
+    (rec: TournamentLineupResult) => {
+      if (!window.confirm(`Aktuelle Aufstellung ersetzen durch die Empfehlung für "${rec.tournamentName}"?`)) return;
+
+      // Build slotKey→playerId map — slots in the recommendation use the standard
+      // "POSITION-index" key pattern already set by buildAssignments in the recommender.
+      const assignments: Record<string, string> = {};
+      for (const a of rec.assignments) {
+        assignments[a.slotKey] = a.player.id;
+      }
+
+      // Atomic: formation + slots + assignments, locks are reset by setFormationWithLineup
+      const formation = FORMATIONS[rec.formationKey];
+      if (!formation) return;
+      setFormationWithLineup(formation.name, formation.slots as LineupSlot[], assignments);
+
+      // Scroll to pitch so the user sees the applied lineup
+      setTimeout(() => {
+        document.getElementById('pitch')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    },
+    [setFormationWithLineup],
+  );
+
   /** Switch variant tab and immediately re-apply to the currently active formation recommendation */
   const handleVariantChange = useCallback((mode: OptimizationMode) => {
     setActiveVariant(mode);
@@ -556,7 +588,10 @@ export default function LineupPage() {
               )}
             </div>
 
-            <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-3">
+            <div
+              id="pitch"
+              className="rounded-xl border border-slate-800 bg-slate-900/30 p-3"
+            >
               <p className="text-xs text-slate-500 mb-3">Ziehe Spieler aus Bank oder Startelf auf einen Slot. Auf Mobile: kurz halten und ziehen.</p>
               <div className="relative w-full aspect-[7/10] max-h-[560px] mx-auto rounded-xl border border-slate-800 bg-green-900/30 overflow-hidden touch-none">
                 <div className="absolute inset-[5%] border border-white/20 rounded-lg" />
@@ -628,7 +663,13 @@ export default function LineupPage() {
             </div>
 
             <div id="tournament">
-              <TournamentReadinessCard slots={slots as LineupSlot[]} lineup={lineup} players={players} slotKeyFor={slotKeyFor} />
+              <TournamentReadinessCard
+                slots={slots as LineupSlot[]}
+                lineup={lineup}
+                players={players}
+                slotKeyFor={slotKeyFor}
+                onApplyRecommendation={handleApplyTournamentRecommendation}
+              />
             </div>
 
             <div id="tactics" className="pb-6">

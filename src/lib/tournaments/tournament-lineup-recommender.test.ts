@@ -338,3 +338,57 @@ describe('recommendTournamentLineups (batch)', () => {
     }
   });
 });
+
+// ── 9. Apply-data correctness ─────────────────────────────────────────────────
+
+describe('Apply-data for TournamentReadinessCard', () => {
+  it('eligible=true result has formationKey, 11 assignments, unique player IDs', () => {
+    // Squad with OVR 65 → eligible for OVR Max 69
+    const players = makeSquad11(Array(11).fill(65));
+    const tournament = makeTournamentMax('Beginners Cup Apply Test', 69);
+
+    const result = recommendTournamentLineup(players, tournament);
+
+    expect(result.eligible).toBe(true);
+    expect(result.formationKey).toBeTruthy();
+    expect(result.assignments).toHaveLength(11);
+    const ids = result.assignments.map((a) => a.player.id);
+    expect(new Set(ids).size).toBe(11);
+  });
+
+  it('every assignment has a slotKey, slot with position, and a player', () => {
+    const players = makeSquad11(Array(11).fill(65));
+    const tournament = makeTournamentMax('Slot Shape Test', 69);
+
+    const result = recommendTournamentLineup(players, tournament);
+
+    for (const a of result.assignments) {
+      expect(a.slotKey).toBeTruthy();
+      expect(a.slot.position).toBeTruthy();
+      expect(a.player.id).toBeTruthy();
+    }
+  });
+
+  it('eligible=false result should NOT be applied (not eligible guard)', () => {
+    // All OVR 80 → impossible to satisfy OVR Max 69
+    const players = makeSquad11(Array(11).fill(80));
+    const tournament = makeTournamentMax('Cannot Apply Cup', 69);
+
+    const result = recommendTournamentLineup(players, tournament);
+
+    // The UI guard: only eligible===true results get an Apply button.
+    // Verify the data side: eligible must be false here.
+    expect(result.eligible).toBe(false);
+  });
+
+  it('eligible=null result is not applyable (null means unevaluated)', () => {
+    // Fewer than 11 players → eligible=null
+    const players = makeSquad11([65, 66, 67]);
+    const tournament = makeTournamentMax('Too Few Cup', 69);
+
+    const result = recommendTournamentLineup(players, tournament);
+
+    expect(result.eligible).toBeNull();
+    expect(result.assignments).toHaveLength(0);
+  });
+});

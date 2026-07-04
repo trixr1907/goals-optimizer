@@ -8,7 +8,10 @@ import {
   evaluateTournamentRequirements,
   TournamentEligibilityResult,
 } from '@/lib/tournaments/tournament-eligibility';
-import { recommendTournamentLineup } from '@/lib/tournaments/tournament-lineup-recommender';
+import {
+  recommendTournamentLineup,
+  TournamentLineupResult,
+} from '@/lib/tournaments/tournament-lineup-recommender';
 import { CURRENT_TOURNAMENTS } from '@/config/tournaments';
 
 interface TournamentReadinessCardProps {
@@ -16,6 +19,8 @@ interface TournamentReadinessCardProps {
   lineup: Record<string, string | null>;
   players: PlayerWithScores[];
   slotKeyFor: (pos: Position, idx: number) => string;
+  /** Called when user confirms applying a recommended lineup */
+  onApplyRecommendation?: (recommendation: TournamentLineupResult) => void;
 }
 
 function StatusBadge({ status }: { status: TournamentEligibilityResult['eligible'] }) {
@@ -33,11 +38,20 @@ function EligibleDot({ eligible }: { eligible: boolean | null }) {
   return <span className="text-slate-500 text-xs">—</span>;
 }
 
+/** Validates that a recommendation has exactly 11 unique players and a formation. */
+function isApplyable(rec: TournamentLineupResult): boolean {
+  if (!rec.formationKey) return false;
+  if (rec.assignments.length !== 11) return false;
+  const ids = rec.assignments.map((a) => a.player.id);
+  return new Set(ids).size === 11;
+}
+
 export function TournamentReadinessCard({
   slots,
   lineup,
   players,
   slotKeyFor,
+  onApplyRecommendation,
 }: TournamentReadinessCardProps) {
   // Resolve the starting eleven from the current lineup (first 11 slots only)
   const startingEleven = useMemo<PlayerWithScores[]>(() => {
@@ -163,6 +177,9 @@ export function TournamentReadinessCard({
                 (t) => t.name === rec.tournamentName,
               )?.requirements.find((r) => r.key === 'OVR Max' || r.key === 'OVR Min');
 
+              // "Anwenden" only for eligible recommendations with valid data
+              const canApply = rec.eligible === true && isApplyable(rec) && !!onApplyRecommendation;
+
               return (
                 <div
                   key={rec.tournamentName}
@@ -212,6 +229,21 @@ export function TournamentReadinessCard({
                       {rec.warnings[0]}
                     </p>
                   )}
+
+                  {/* Apply button — only for eligible + valid recommendations */}
+                  {canApply ? (
+                    <button
+                      type="button"
+                      onClick={() => onApplyRecommendation(rec)}
+                      className="mt-1 w-full px-2 py-1 rounded text-[11px] font-semibold bg-emerald-700 hover:bg-emerald-600 text-white transition-colors"
+                    >
+                      Anwenden
+                    </button>
+                  ) : rec.eligible === false ? (
+                    <p className="text-[11px] text-slate-600 mt-1">
+                      Nicht anwendbar — Anforderungen nicht erfüllbar
+                    </p>
+                  ) : null}
                 </div>
               );
             })}
