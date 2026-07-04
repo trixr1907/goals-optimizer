@@ -1,16 +1,18 @@
 import { defineConfig } from 'vitest/config';
-import path from 'path';
+import { resolve } from 'path';
 
 export default defineConfig({
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
   test: {
     globals: true,
     environment: 'node',
-    exclude: ['node_modules/**', '.next/**', 'openhands-result-*/**'],
     setupFiles: ['./src/test-setup.ts'],
+    // Exclude Playwright E2E tests — they use a different runner
+    // Also exclude OpenHands result folders which have their own node_modules
+    exclude: ['e2e/**', 'node_modules/**', 'openhands-result-*/**'],
+  },
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+    },
   },
 });

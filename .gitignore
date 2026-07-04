@@ -52,3 +52,8 @@ TASK-*.md
 *[Hh][Aa][Nn][Dd][Oo][Ff][Ff]*.md
 *[Pp][Rr][Oo][Mm][Pp][Tt]*.md
 research/
+
+# Playwright E2E
+/playwright-report/
+/test-results/
+/playwright/.cache/
