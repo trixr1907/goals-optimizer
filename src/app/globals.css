@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   @apply bg-slate-950 text-white antialiased;
 }
@@ -10,4 +14,12 @@ body {
   main {
     padding-bottom: max(5rem, calc(4rem + env(safe-area-inset-bottom)));
   }
+}
+
+/* Hide scrollbar for mobile quick-nav pill row */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
