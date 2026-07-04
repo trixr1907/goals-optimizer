@@ -30,6 +30,7 @@ import { recommendationToLineup, recommendFormations, FormationAssignment } from
 import { OptimizationMode } from '@/lib/optimizer/hungarian-solver';
 import { explainFootFit, calcPositionFitScore } from '@/lib/scoring/position-fit';
 import { shortPlayerName } from '@/lib/player-name';
+import { TournamentReadinessCard } from '@/components/lineup/TournamentReadinessCard';
 
 const FORMATIONS = formationsData as Record<string, { name: string; slots: LineupSlot[] }>;
 
@@ -601,6 +602,8 @@ export default function LineupPage() {
                 {benchPlayers.length === 0 && <p className="text-xs text-slate-600">Alle Spieler in der Startelf.</p>}
               </div>
             </div>
+
+            <TournamentReadinessCard slots={slots as LineupSlot[]} lineup={lineup} players={players} slotKeyFor={slotKeyFor} />
 
             <TacticsPanel slots={slots as LineupSlot[]} lineup={lineup} players={players} benchPlayers={benchPlayers} formationKey={formation} slotKeyFor={slotKeyFor} />
           </div>
