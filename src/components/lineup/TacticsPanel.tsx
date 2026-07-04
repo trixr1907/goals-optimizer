@@ -5,7 +5,7 @@ import { PlayerWithScores, Position } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
 import { analyzeTactics, TacticsTip, TipCategory } from '@/lib/tactics/tactics-engine';
 import { useTacticsStore } from '@/lib/store/tactics-store';
-import { PLAYER_RULES_BY_POSITION, recommendTacticalSettings } from '@/lib/tactics/tactics-settings';
+import { POSITION_ALLOWED_FOCUS, POSITION_TACTICAL_ROLES, recommendTacticalSettings } from '@/lib/tactics/tactics-settings';
 
 const CAT_LABEL: Record<TipCategory, string> = {
   angriff: 'Angriff',
@@ -144,13 +144,21 @@ export function TacticsPanel({ slots, lineup, players, benchPlayers, formationKe
           <p className="text-[10px] uppercase tracking-wide text-slate-500">Player Rules</p>
           <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
             {filled.map((item) => {
-              const rule = tacticalSettings.playerRules[item.slotKey] ?? 'Balanced';
-              const allowed = PLAYER_RULES_BY_POSITION[item.slot.position].join(' / ');
+              const tactical = tacticalSettings.playerTactical[item.slotKey];
+              const role = tactical?.role ?? POSITION_TACTICAL_ROLES[item.slot.position][0] ?? '—';
+              const focus = tactical?.focus ?? POSITION_ALLOWED_FOCUS[item.slot.position][0] ?? '—';
+              const isDefend = focus === 'Defend';
+              const isAttack = focus === 'Attack';
+              const focusBadgeClass = isDefend
+                ? 'shrink-0 rounded bg-blue-900/60 px-1.5 py-0.5 text-[10px] text-blue-200'
+                : isAttack
+                ? 'shrink-0 rounded bg-emerald-900/60 px-1.5 py-0.5 text-[10px] text-emerald-200'
+                : 'shrink-0 rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-300';
               return (
                 <div key={item.slotKey} className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-950/40 px-2.5 py-2">
                   <span className="min-w-0 truncate text-xs text-slate-300">{item.slot.position} · {item.player.name}</span>
-                  <span className={rule === 'Defend' ? 'shrink-0 rounded bg-blue-900/60 px-1.5 py-0.5 text-[10px] text-blue-200' : 'shrink-0 rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-300'} title={`Erlaubt: ${allowed}`}>
-                    {rule}
+                  <span className={focusBadgeClass} title={`Rolle: ${role}`}>
+                    {role} — {focus}
                   </span>
                 </div>
               );
