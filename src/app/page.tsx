@@ -182,15 +182,16 @@ export default function OnboardingPage() {
     return { players: data.players as PlayerWithScores[], clubId: data.clubId, clubUrl: data.clubUrl, resolvedName };
   }
 
-  async function handleImport() {
-    if (!inputValue.trim()) return;
-    setClubName(inputValue.trim());
+  async function handleImport(clubNameOverride?: string) {
+    const name = (clubNameOverride ?? inputValue).trim();
+    if (!name) return;
+    setClubName(name);
     setLoading(true);
     setStatus('Importiere…');
     setDelta(null);
     setImportResult(null);
     try {
-      const requestedName = inputValue.trim();
+      const requestedName = name;
       const { players: incoming, clubId: resolvedClubId, clubUrl, resolvedName } = await fetchAndEnrich(requestedName);
       if (!incoming.length) {
         setStatus('Keine Spieler gefunden.');
@@ -360,12 +361,24 @@ export default function OnboardingPage() {
               className="w-full px-4 py-3 rounded-lg border border-slate-700 bg-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
             />
             <button
-              onClick={handleImport}
+              onClick={() => handleImport()}
               disabled={loading || !inputValue.trim()}
               className="w-full py-3 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
             >
               {importButtonLabel}
             </button>
+          </div>
+
+          {/* Demo-Button */}
+          <div className="text-center space-y-1">
+            <button
+              onClick={() => handleImport('demo')}
+              disabled={loading}
+              className="w-full py-2.5 rounded-lg border border-slate-700 bg-slate-800/50 text-slate-300 text-sm font-medium hover:bg-slate-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Demo laden
+            </button>
+            <p className="text-xs text-slate-600">Zum Ausprobieren ohne echten Club.</p>
           </div>
 
           {/* Import-Bestätigung */}
