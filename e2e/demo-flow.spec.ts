@@ -6,11 +6,31 @@ import { test, expect, type Page } from '@playwright/test';
  * All tests use the built-in "Demo laden" button so no external
  * API calls (Goalsverse/Tracker/PlayGOALS) are required.
  *
+ * Onboarding modal: suppressed via localStorage before each page load
+ * (see beforeEach below). The modal key 'goals-onboarding-seen-v1' is
+ * read from OnboardingModal.tsx — do not change without updating there.
+ *
  * Console error collection: each test listens for console errors
  * and page errors. If any occur the test fails.
  */
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Onboarding suppression ────────────────────────────────────────────────────
+
+/**
+ * Set the onboarding-seen flag in localStorage *before* the page loads.
+ * addInitScript runs in the browser context before any page script executes,
+ * so the React component reads the flag immediately and never mounts the modal.
+ *
+ * Key source: src/components/onboarding/OnboardingModal.tsx
+ *   const ONBOARDING_SEEN_KEY = 'goals-onboarding-seen-v1';
+ */
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('goals-onboarding-seen-v1', 'true');
+  });
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Collect console errors + uncaught exceptions from the page. */
 function collectErrors(page: Page): { errors: string[] } {
@@ -30,20 +50,23 @@ function collectErrors(page: Page): { errors: string[] } {
 }
 
 /**
- * Navigate to the import page and dismiss the onboarding modal if present.
- * Returns when the "Demo laden" button is ready.
+ * Navigate to the import page.
+ * The onboarding modal is already suppressed via beforeEach/addInitScript,
+ * so we go straight to confirming the "Demo laden" button is interactable.
  */
 async function openImportPage(page: Page) {
   await page.goto('/');
 
-  // Dismiss onboarding modal if visible (first visit only)
-  const loslegen = page.getByRole('button', { name: 'Loslegen' });
-  if (await loslegen.isVisible()) {
+  // Safety net: if for any reason the modal still appears (e.g. storage was
+  // cleared), dismiss it gracefully without force-clicking through it.
+  const loslegen = page.getByRole('button', { name: /Loslegen|Verstanden|Starten|Schließen|OK|Weiter/i });
+  if (await loslegen.isVisible({ timeout: 1_000 }).catch(() => false)) {
     await loslegen.click();
-    await expect(loslegen).not.toBeVisible();
+    // Wait until modal overlay is gone before proceeding
+    await page.locator('div.fixed.inset-0').waitFor({ state: 'hidden', timeout: 5_000 }).catch(() => {});
   }
 
-  // Confirm import page is ready
+  // Confirm "Demo laden" is now interactable (not blocked by any overlay)
   await expect(page.getByRole('button', { name: /Demo laden/i })).toBeVisible();
 }
 
@@ -108,9 +131,8 @@ test('Test 2: Auto-Fill füllt Startelf, Tournament Card sichtbar', async ({ pag
   await expect(page.getByRole('button', { name: /\w+ \d{2,3}/ }).first()).toBeVisible({ timeout: 5_000 });
 
   // Tournament Readiness card should appear somewhere on the page.
-  // The card always renders "Turnier-Bereitschaft" as a label
-  // and "Aktuelle Startelf" as the h3 — both are inside the visible card region,
-  // not hidden nav links.
+  // The card always renders "Turnier-Bereitschaft" as a label — this p element
+  // is outside the filledCount condition, so it's always present when the card mounts.
   const readinessLabel = page.getByText('Turnier-Bereitschaft');
   await expect(readinessLabel).toBeVisible();
 

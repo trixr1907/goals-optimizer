@@ -7,8 +7,8 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./src/test-setup.ts'],
     // Exclude Playwright E2E tests — they use a different runner
-    // Also exclude OpenHands result folders which have their own node_modules
-    exclude: ['e2e/**', 'node_modules/**', 'openhands-result-*/**'],
+    // Also exclude OpenHands result folders, Next.js build output, and Playwright artifacts
+    exclude: ['e2e/**', 'node_modules/**', '.next/**', 'openhands-result-*/**', 'playwright-report/**', 'test-results/**'],
   },
   resolve: {
     alias: {

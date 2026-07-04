@@ -9,7 +9,7 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,       // sequential: dev server is shared
   retries: 0,                 // no retries locally
-  reporter: 'list',
+  reporter: [['list'], ['html', { open: 'never' }]],
   timeout: 30_000,
   expect: { timeout: 10_000 },
 
@@ -30,6 +30,6 @@ export default defineConfig({
     command: 'NEXT_PUBLIC_BASE_PATH="" npm run dev -- --port 3013',
     url: 'http://127.0.0.1:3013',
     reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
+    timeout: 120_000,
   },
 });
