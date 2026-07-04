@@ -12,11 +12,27 @@ GOALS Tracker rendert die Turnierkarten serverseitig genug, um ohne Browser-Auto
 
 `OVR Max` und `OVR Min` unter `Squad requirements` beziehen sich aktuell auf Squad OVR / Mannschaftsstärke. Sie sind nicht als Einzelspieler-OVR-Grenze zu interpretieren.
 
+### Squad OVR Formel
+
+Squad OVR wird aus dem Durchschnitt der OVR-Werte der Startelf berechnet und klassisch mathematisch auf eine ganze Zahl gerundet:
+
+```
+squadOvr = Math.round(sum(startingEleven.overall) / 11)
+```
+
+- Nur die 11 Startelfspieler zählen. Die Bank fliesst nicht ein.
+- Einzelspieler-OVR ist nicht direkt die Grenze.
+
 Stand: manuell im Spiel verifiziert am 2026-07-04.
 
 Hinweis: Bei zukünftigen GOALS-Regeländerungen erneut prüfen.
 
 Der Parser behandelt Requirements weiterhin bewusst nur als generische Key/Value-Paare und hardcodet kein Target wie `player`.
+
+## Nächste Umsetzung / Tournament Builder
+
+- Eligibility darf `OVR Max` / `OVR Min` anhand der oben dokumentierten Squad-OVR-Formel prüfen.
+- Falls weniger als 11 Spieler in der Aufstellung sind, keine gültige Squad-OVR-Bewertung durchführen.
 
 ## Gefundene Requirements
 
