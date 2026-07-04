@@ -20,6 +20,12 @@ interface LineupState {
   /** Atomically set formation + initial player assignments in one store update */
   setFormationWithLineup: (name: string, slots: LineupSlot[], assignments: Record<string, string | null>) => void;
   clearLineup: () => void;
+  /**
+   * Remove any assignment whose playerId is not in knownIds.
+   * Used after a cross-club import to drop stale orphaned player IDs
+   * without wiping the entire lineup when the same club is re-imported.
+   */
+  purgeOrphanedAssignments: (knownIds: Set<string>) => void;
 }
 
 // Set is not JSON-serializable — persist stores locked as string[] and revives it
@@ -94,6 +100,23 @@ export const useLineupStore = create<LineupState>()(
             lineup[`${s.position}-${i}`] = null;
           });
           return { lineup, locked: new Set() };
+        }),
+
+      purgeOrphanedAssignments: (knownIds) =>
+        set((state) => {
+          // Null-out any slot whose assigned player is no longer in the squad.
+          // Locks on orphaned slots are also cleared — a missing player can't be locked.
+          let changed = false;
+          const lineup = { ...state.lineup };
+          const locked = new Set(state.locked);
+          for (const [key, pid] of Object.entries(lineup)) {
+            if (pid && !knownIds.has(pid)) {
+              lineup[key] = null;
+              locked.delete(key);
+              changed = true;
+            }
+          }
+          return changed ? { lineup, locked } : state;
         }),
     }),
     {

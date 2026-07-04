@@ -2,6 +2,7 @@
 
 import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { useSquadStore, ImportDelta } from '@/lib/store/squad-store';
+import { useLineupStore } from '@/lib/store/lineup-store';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { PlayerWithScores, displayPosition } from '@/lib/scraper/types';
@@ -122,6 +123,7 @@ function importErrorMessage(errorCode?: string, fallback = 'Live-Import fehlgesc
 export default function OnboardingPage() {
   const { clubName, clubId, players, lastImportedAt, setClubName, importPlayers, reimportPlayers, _hasHydrated } =
     useSquadStore();
+  const { clearLineup, purgeOrphanedAssignments } = useLineupStore();
   const router = useRouter();
 
   // Local input state — decoupled from store to avoid hydration-timing disabled bug
@@ -200,8 +202,27 @@ export default function OnboardingPage() {
         count: incoming.length,
         clubUrl,
       });
-      if (isReimport) {
+
+      // Detect club switch: different clubId (reliable) or different resolved name.
+      // "demo" → any real club and vice versa always counts as a switch.
+      const currentIsDemo = clubName.toLowerCase() === 'demo';
+      const incomingIsDemo = requestedName.toLowerCase() === 'demo';
+      const clubIdChanged = Boolean(clubId) && Boolean(resolvedClubId) && clubId !== resolvedClubId;
+      const nameChanged =
+        clubName &&
+        resolvedName &&
+        resolvedName.toLowerCase() !== clubName.toLowerCase();
+      const isClubSwitch =
+        currentIsDemo !== incomingIsDemo || clubIdChanged || Boolean(nameChanged);
+
+      if (isReimport && !isClubSwitch) {
+        // Same club — merge and keep lineup, but purge any player that was released.
         const result = reimportPlayers(incoming, clubUrl, resolvedClubId);
+        if (result.removedPlayers.length > 0) {
+          // Players were released — their IDs may still be in the lineup.
+          const knownIds = new Set(incoming.map((p) => p.id));
+          purgeOrphanedAssignments(knownIds);
+        }
         setDelta(result);
         const total =
           result.newPlayers.length + result.updatedPlayers.length + result.removedPlayers.length;
@@ -211,6 +232,8 @@ export default function OnboardingPage() {
             : 'Kein Unterschied zum letzten Import.'
         );
       } else {
+        // Fresh import or club switch — clear lineup first so no orphaned IDs remain.
+        if (isClubSwitch) clearLineup();
         importPlayers(incoming, clubUrl, resolvedClubId);
         setStatus(`${incoming.length} Spieler importiert.`);
         router.push(appPath('/lineup'));

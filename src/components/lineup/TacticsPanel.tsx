@@ -83,7 +83,7 @@ export function TacticsPanel({ slots, lineup, players, benchPlayers, formationKe
         const player = pid ? players.find((p) => p.id === pid) : null;
         return { slotKey: key, slot, player };
       })
-      .filter((f) => f.player !== null) as { slotKey: string; slot: LineupSlot; player: PlayerWithScores }[],
+      .filter((f) => f.player != null) as { slotKey: string; slot: LineupSlot; player: PlayerWithScores }[],
     [slots, lineup, players, slotKeyFor]
   );
 
