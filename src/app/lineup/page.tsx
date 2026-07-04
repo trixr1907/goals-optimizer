@@ -461,8 +461,32 @@ export default function LineupPage() {
               </div>
             </div>
 
+            {/* ── Mobile Quick-Nav (nur auf kleinen Screens) ── */}
+            <div className="lg:hidden flex gap-2 overflow-x-auto pb-0.5 scrollbar-none">
+              <a
+                href="#meta-center"
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-slate-300 text-xs font-medium hover:border-emerald-600 hover:text-emerald-300 transition-colors"
+              >
+                🎯 Meta
+              </a>
+              <a
+                href="#tournament"
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-slate-300 text-xs font-medium hover:border-emerald-600 hover:text-emerald-300 transition-colors"
+              >
+                🏆 Turnier
+              </a>
+              {Object.values(lineup).filter(Boolean).length >= 3 && (
+                <a
+                  href="#tactics"
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-700 bg-slate-900 text-slate-300 text-xs font-medium hover:border-emerald-600 hover:text-emerald-300 transition-colors"
+                >
+                  ⚙️ Taktik
+                </a>
+              )}
+            </div>
+
             {formationRecommendations.length > 0 && (
-              <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+              <section id="meta-center" className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Formation Optimizer</p>
@@ -603,9 +627,13 @@ export default function LineupPage() {
               </div>
             </div>
 
-            <TournamentReadinessCard slots={slots as LineupSlot[]} lineup={lineup} players={players} slotKeyFor={slotKeyFor} />
+            <div id="tournament">
+              <TournamentReadinessCard slots={slots as LineupSlot[]} lineup={lineup} players={players} slotKeyFor={slotKeyFor} />
+            </div>
 
-            <TacticsPanel slots={slots as LineupSlot[]} lineup={lineup} players={players} benchPlayers={benchPlayers} formationKey={formation} slotKeyFor={slotKeyFor} />
+            <div id="tactics" className="pb-6">
+              <TacticsPanel slots={slots as LineupSlot[]} lineup={lineup} players={players} benchPlayers={benchPlayers} formationKey={formation} slotKeyFor={slotKeyFor} />
+            </div>
           </div>
         </main>
       </div>
