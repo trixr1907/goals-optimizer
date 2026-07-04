@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     if (normalizedClubName.toLowerCase() === 'demo') {
       const enriched = MOCK_PLAYERS
-        .map((player) => ({ ...player, dataQuality: 'full' as const }))
+        .map((player) => ({ ...player, dataQuality: 'full' as const, positionSource: 'heuristic' as const }))
         .map(enrichPlayerWithScores);
       return NextResponse.json({
         players: enriched,

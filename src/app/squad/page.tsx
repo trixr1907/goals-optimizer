@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useSquadStore } from '@/lib/store/squad-store';
 import { PlayerWithScores, Position, ALL_POSITIONS, displayPosition } from '@/lib/scraper/types';
@@ -701,10 +701,20 @@ export default function SquadPage() {
 
               return (
                 <div key={player.id} className="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
-                  {/* Card Header — tap to expand */}
-                  <button
-                    className="w-full text-left p-3 flex items-center gap-3"
+                  {/* Card Header — tap to expand.
+                      Uses div+role instead of <button> to avoid nested-button HTML violation
+                      (the action buttons 📊 and 🔗 inside are interactive elements themselves). */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    className="w-full text-left p-3 flex items-center gap-3 cursor-pointer"
                     onClick={() => setExpandedId(isExpanded ? null : player.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setExpandedId(isExpanded ? null : player.id);
+                      }
+                    }}
                   >
                     <PlayerAvatar player={player} size={40} />
                     <div className="flex-1 min-w-0">
@@ -737,14 +747,16 @@ export default function SquadPage() {
                         🔗
                       </a>
                       <button
+                        type="button"
                         onClick={(e) => { e.stopPropagation(); setSelectedPlayer(player); setComparePlayer(null); }}
                         className="text-slate-500 hover:text-emerald-400 text-sm"
+                        title="Radar-Chart öffnen"
                       >
                         📊
                       </button>
                       <span className="text-slate-600 text-xs">{isExpanded ? '▲' : '▼'}</span>
                     </div>
-                  </button>
+                  </div>
                   {/* Expanded Details */}
                   {isExpanded && <DetailsPanel player={player} />}
                 </div>
@@ -779,9 +791,10 @@ export default function SquadPage() {
                   const isExpanded = expandedId === player.id;
 
                   return (
-                    <>
+                    // key must sit on the Fragment, not on the inner <tr>, so React
+                    // can correctly diff sibling row-pairs (row + optional details row).
+                    <Fragment key={player.id}>
                       <tr
-                        key={player.id}
                         className={`transition-colors ${isExpanded ? 'bg-slate-800/20' : 'hover:bg-slate-800/30'}`}
                       >
                         {/* Name + Avatar */}
@@ -896,7 +909,7 @@ export default function SquadPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>
