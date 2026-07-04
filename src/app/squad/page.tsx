@@ -121,7 +121,8 @@ function PlayerAvatar({
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={imageUrl}
-      alt={player.name}
+      alt=""
+      aria-hidden="true"
       width={size}
       height={size}
       onError={() => setError(true)}

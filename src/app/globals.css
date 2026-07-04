@@ -5,3 +5,9 @@
 body {
   @apply bg-slate-950 text-white antialiased;
 }
+
+@media (max-width: 1023px) {
+  main {
+    padding-bottom: max(5rem, calc(4rem + env(safe-area-inset-bottom)));
+  }
+}

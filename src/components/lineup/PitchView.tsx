@@ -60,7 +60,8 @@ function PlayerToken({ player, slotKey, position, isLocked, onLockToggle }: Play
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={player.image_url}
-            alt={player.name}
+            alt=""
+            aria-hidden="true"
             width={30}
             height={30}
             className="rounded-full object-cover"

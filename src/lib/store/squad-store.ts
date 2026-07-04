@@ -121,7 +121,7 @@ export const useSquadStore = create<SquadState>()(
         return { newPlayers, updatedPlayers, removedPlayers, unchanged };
       },
 
-      clearSquad: () => set({ players: [], clubName: '', clubId: undefined, lastImportedAt: null }),
+      clearSquad: () => set({ players: [], clubName: '', clubId: undefined, clubUrl: undefined, lastImportedAt: null }),
 
       setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),

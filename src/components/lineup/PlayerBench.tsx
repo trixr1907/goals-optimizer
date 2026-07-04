@@ -34,7 +34,8 @@ function BenchPlayer({ player, targetPosition }: { player: PlayerWithScores; tar
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={player.image_url}
-          alt={player.name}
+          alt=""
+          aria-hidden="true"
           className="w-6 h-6 rounded-full object-cover shrink-0"
           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
         />

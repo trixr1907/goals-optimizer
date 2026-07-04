@@ -105,7 +105,8 @@ function MiniAvatar({ player }: { player: PlayerWithScores }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={url}
-      alt={player.name}
+      alt=""
+      aria-hidden="true"
       width={20}
       height={20}
       onError={() => setError(true)}
@@ -247,7 +248,8 @@ function PitchSlot({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={avatarUrl}
-            alt={player!.name}
+            alt=""
+            aria-hidden="true"
             onError={() => setImgError(true)}
             className="absolute inset-0 w-full h-full object-cover object-top opacity-80"
           />

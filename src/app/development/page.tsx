@@ -271,7 +271,8 @@ function PlayerDevCard({ player }: { player: PlayerWithScores }) {
                 // eslint-disable-next-line @next/next/no-img-element -- GOALS CDN avatars use plain <img> to keep the lightweight onError fallback without adding next/image remote config.
                 <img
                   src={player.image_url}
-                  alt={player.name}
+                  alt=""
+                  aria-hidden="true"
                   className="h-12 w-12 rounded-full object-cover bg-slate-800 shrink-0"
                   loading="lazy"
                   onError={(event) => {
