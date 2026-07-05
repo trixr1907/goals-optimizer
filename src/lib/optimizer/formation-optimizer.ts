@@ -3,6 +3,7 @@ import { LineupSlot } from '@/lib/store/lineup-store';
 import formationsData from '@/config/formations.json';
 import { OptimizationMode, solveHungarian } from './hungarian-solver';
 import { calcPositionFitScore } from '@/lib/scoring/position-fit';
+import { PRIMARY_BONUS, SECONDARY_BONUS } from './optimizer-constants';
 
 export interface FormationMeta {
   name: string;
@@ -17,6 +18,8 @@ export interface FormationAssignment {
   slot: LineupSlot;
   player: PlayerWithScores;
   fit: number;
+  /** How the player relates to this slot: primary = his main pos, secondary = nebenposition, out = fremd */
+  positionType: 'primary' | 'secondary' | 'out';
 }
 
 export interface FormationRecommendation {
@@ -52,40 +55,54 @@ function getRoleBias(player: PlayerWithScores, position: Position, mode: Optimiz
     if (position === 'CM' || position === 'DM') return stats.def * 0.08 + stats.pas * 0.04 + stats.phy * 0.05;
     return 0;
   }
-  // Gegen-Meta: prefer pace + defensive recovery because through-balls and wide counters are common pain points.
   return stats.pac * 0.07 + stats.def * 0.06 + stats.phy * 0.03;
 }
 
 function slotFit(player: PlayerWithScores, slot: LineupSlot): number {
-  // Slot-aware: recomputes with slot.x so foot/side modifiers apply correctly.
-  // Activity players (no full stats) fall back to cached fit_scores.
   const hasFullStats = player.stats.pac > 0 || player.stats.dri > 0 || player.stats.def > 0;
   return hasFullStats
     ? calcPositionFitScore(player, slot.position, slot.x)
     : (player.fit_scores[slot.position] ?? 0);
 }
 
+function getPosType(player: PlayerWithScores, pos: Position): 'primary' | 'secondary' | 'out' {
+  return player.positionType?.[pos] ?? 'out';
+}
+
+function posBonus(posType: 'primary' | 'secondary' | 'out'): number {
+  if (posType === 'primary') return PRIMARY_BONUS;
+  if (posType === 'secondary') return SECONDARY_BONUS;
+  return 0;
+}
+
 function solveGreedy(players: PlayerWithScores[], slots: LineupSlot[], mode: OptimizationMode) {
   const used = new Set<string>();
   const sortedSlots = [...slots].sort((a, b) => {
-    const bestA = Math.max(...players.map((p) => slotFit(p, a)));
-    const bestB = Math.max(...players.map((p) => slotFit(p, b)));
+    const bestA = Math.max(...players.map((p) => slotFit(p, a) + posBonus(getPosType(p, a.position))));
+    const bestB = Math.max(...players.map((p) => slotFit(p, b) + posBonus(getPosType(p, b.position))));
     return bestA - bestB;
   });
 
   const assignmentsByOriginalIndex = new Map<number, FormationAssignment>();
   sortedSlots.forEach((slot) => {
-    const originalIndex = slots.findIndex((candidate, idx) => candidate === slot || (candidate.position === slot.position && candidate.x === slot.x && candidate.y === slot.y && !assignmentsByOriginalIndex.has(idx)));
+    const originalIndex = slots.findIndex(
+      (candidate, idx) =>
+        candidate === slot ||
+        (candidate.position === slot.position &&
+          candidate.x === slot.x &&
+          candidate.y === slot.y &&
+          !assignmentsByOriginalIndex.has(idx)),
+    );
     const best = players
       .filter((player) => !used.has(player.id))
       .map((player) => {
-        const posType = player.positionType?.[slot.position] ?? 'out';
-        const primaryBonus = posType === 'primary' ? 8 : posType === 'secondary' ? 3 : 0;
+        const posType = getPosType(player, slot.position);
         const fit = slotFit(player, slot);
         return {
           player,
           fit,
-          score: fit + getRoleBias(player, slot.position, mode) + primaryBonus,
+          posType,
+          score: fit + getRoleBias(player, slot.position, mode) + posBonus(posType),
         };
       })
       .sort((a, b) => b.score - a.score)[0];
@@ -97,6 +114,7 @@ function solveGreedy(players: PlayerWithScores[], slots: LineupSlot[], mode: Opt
         slot,
         player: best.player,
         fit: best.fit,
+        positionType: best.posType,
       });
     }
   });
@@ -124,15 +142,17 @@ function toAssignments(
         slot,
         player,
         fit: assignment.fit,
+        positionType: getPosType(player, slot.position),
       } satisfies FormationAssignment;
     })
     .filter((assignment): assignment is FormationAssignment => Boolean(assignment));
 }
 
 function solveOptimal(players: PlayerWithScores[], slots: LineupSlot[], mode: OptimizationMode) {
-  const biasFn = mode === 'balanced'
-    ? undefined
-    : (player: PlayerWithScores, position: Position) => getRoleBias(player, position, mode);
+  const biasFn = (player: PlayerWithScores, position: Position) => {
+    const modeBias = mode === 'balanced' ? 0 : getRoleBias(player, position, mode);
+    return modeBias + posBonus(getPosType(player, position));
+  };
   const optimal = solveHungarian(players, slots, biasFn);
   const assignments = toAssignments(optimal, players, slots);
 
@@ -143,28 +163,66 @@ function solveOptimal(players: PlayerWithScores[], slots: LineupSlot[], mode: Op
 
 function makeWarnings(assignments: FormationAssignment[]) {
   const warnings: string[] = [];
-  const weak = assignments.filter((item) => item.fit < 62).sort((a, b) => a.fit - b.fit).slice(0, 3);
-  weak.forEach((item) => warnings.push(`${item.slot.position}: ${item.player.name} hat nur ${item.fit.toFixed(0)} Fit — Upgrade oder Positionsswap prüfen.`));
 
-  const defenders = assignments.filter((item) => DEF_POSITIONS.has(item.slot.position) && item.slot.position !== 'GK');
-  const avgDefPace = defenders.length ? defenders.reduce((sum, item) => sum + item.player.stats.pac, 0) / defenders.length : 0;
-  if (defenders.length && avgDefPace < 68) warnings.push('Abwehr-Pace ist niedrig — keine hohe Linie gegen schnelle Stürmer spielen.');
+  // Out-of-position — highest priority warning
+  const outOfPos = assignments.filter((item) => item.positionType === 'out');
+  if (outOfPos.length > 0) {
+    outOfPos.forEach((item) =>
+      warnings.push(
+        `${item.player.name} auf ${item.slot.position} — keine Primär- oder Nebenposition. Kein besserer Kandidat im Kader.`,
+      ),
+    );
+  }
 
+  // Low fit
+  const weak = assignments
+    .filter((item) => item.fit < 62 && item.positionType !== 'out') // out-of-pos already warned
+    .sort((a, b) => a.fit - b.fit)
+    .slice(0, 2);
+  weak.forEach((item) =>
+    warnings.push(`${item.slot.position}: ${item.player.name} — nur ${item.fit.toFixed(0)} Fit.`),
+  );
+
+  // Defensive pace
+  const defenders = assignments.filter(
+    (item) => DEF_POSITIONS.has(item.slot.position) && item.slot.position !== 'GK',
+  );
+  const avgDefPace = defenders.length
+    ? defenders.reduce((sum, item) => sum + item.player.stats.pac, 0) / defenders.length
+    : 0;
+  if (defenders.length && avgDefPace < 68)
+    warnings.push('Abwehr-Pace niedrig — keine hohe Linie gegen schnelle Stürmer.');
+
+  // Attack fit
   const attackers = assignments.filter((item) => ATT_POSITIONS.has(item.slot.position));
-  const avgAttackFit = attackers.length ? attackers.reduce((sum, item) => sum + item.fit, 0) / attackers.length : 0;
-  if (attackers.length && avgAttackFit < 68) warnings.push('Angriff passt noch nicht sauber zur Formation — alternative Formation testen.');
+  const avgAttackFit = attackers.length
+    ? attackers.reduce((sum, item) => sum + item.fit, 0) / attackers.length
+    : 0;
+  if (attackers.length && avgAttackFit < 68)
+    warnings.push('Angriff passt nicht gut zur Formation — Alternative testen.');
 
   return warnings;
 }
 
-function makeReasons(formation: FormationMeta, assignments: FormationAssignment[], averageFit: number, squadMatch: number) {
+function makeReasons(
+  formation: FormationMeta,
+  assignments: FormationAssignment[],
+  averageFit: number,
+  squadMatch: number,
+) {
   const reasons: string[] = [];
-  reasons.push(`${squadMatch.toFixed(0)}% Kader-Fit bei ${averageFit.toFixed(1)} durchschnittlichem Slot-Fit.`);
-  reasons.push('Ranking basiert auf deinem aktuellen Squad, nicht auf erfundenen globalen Winrates.');
+  reasons.push(`${squadMatch.toFixed(0)}% Kader-Fit · Ø ${averageFit.toFixed(1)} Slot-Fit.`);
   if (formation.playstyle) reasons.push(`Spielstil: ${formation.playstyle}.`);
 
+  const primaryCount = assignments.filter((a) => a.positionType === 'primary').length;
+  const secondaryCount = assignments.filter((a) => a.positionType === 'secondary').length;
+  reasons.push(`${primaryCount} Primär-Positionen, ${secondaryCount} Neben-Positionen.`);
+
   const bestLine = assignments.slice().sort((a, b) => b.fit - a.fit).slice(0, 2);
-  if (bestLine.length) reasons.push(`Stärkste Rollen: ${bestLine.map((item) => `${item.player.name} auf ${item.slot.position}`).join(', ')}.`);
+  if (bestLine.length)
+    reasons.push(
+      `Stärkste Rollen: ${bestLine.map((item) => `${item.player.name} (${item.slot.position})`).join(', ')}.`,
+    );
   return reasons;
 }
 

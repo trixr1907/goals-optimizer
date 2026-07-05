@@ -1,6 +1,7 @@
 import { PlayerWithScores, Position } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
 import { calcPositionFitScore } from '@/lib/scoring/position-fit';
+import { PRIMARY_BONUS, SECONDARY_BONUS } from './optimizer-constants';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const Munkres = require('munkres-js');
@@ -38,11 +39,21 @@ export function solveHungarian(
         const fit = player.stats.pac > 0 || player.stats.dri > 0 || player.stats.def > 0
           ? calcPositionFitScore(player, slot.position, slot.x)
           : (player.fit_scores[slot.position] ?? 0);
-        // Apply optional bias to the cost, not the fit — bias affects optimization
-        // but the reported fit stays honest.
-        const bias = biasFn ? biasFn(player, slot.position) : 0;
-        // Lower cost = better. Bias improves (reduces) cost for preferred players.
-        row.push(100 - fit - bias);
+
+        // Position-type bonus: primary > secondary > out-of-position.
+        // Applied here as a base so the solver always respects positional legality,
+        // even when no biasFn is provided (e.g. in unit tests or direct calls).
+        const posType = player.positionType?.[slot.position] ?? 'out';
+        const posTypeBias =
+          posType === 'primary' ? PRIMARY_BONUS :
+          posType === 'secondary' ? SECONDARY_BONUS :
+          0;
+
+        // Additional caller-supplied bias (tactic/mode preferences) on top.
+        const callerBias = biasFn ? biasFn(player, slot.position) : 0;
+
+        // Lower cost = better. Subtract bonuses to reduce cost for preferred assignments.
+        row.push(100 - fit - posTypeBias - callerBias);
       } else {
         row.push(0);
       }

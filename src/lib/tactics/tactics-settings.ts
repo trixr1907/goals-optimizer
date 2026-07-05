@@ -194,6 +194,7 @@ export const GOALS_TACTIC_FORMATION_KEYS = [
   '4-4-1-1',
   '3-5-2',
   '3-4-3',
+  '3-4-1-2',
   '5-2-1-2',
   '5-2-3',
 ] as const;
@@ -210,6 +211,7 @@ export const FORMATION_TACTICAL_PROFILES: Record<string, FormationTacticalProfil
   '4-4-1-1': { formationKey: '4-4-1-1', strengths: ['Kompakter Block', 'AM für zweite Bälle', 'Gute Breite'], weaknesses: ['ST alleine vorne', 'Offensiv weniger Druck'], styleTags: ['compact', 'balanced', 'second-ball'], recommendedBuildUp: 'Balanced', depthRangeHint: [38, 44] },
   '3-5-2': { formationKey: '3-5-2', strengths: ['Zentrale Überzahl', 'Wingbacks geben Breite', 'Zwei ST'], weaknesses: ['Außen offen bei Ballverlust', 'WB-Ausdauer kritisch'], styleTags: ['wingbacks', 'central', 'two-striker'], recommendedBuildUp: 'Balanced', depthRangeHint: [38, 48] },
   '3-4-3': { formationKey: '3-4-3', strengths: ['Maximale Breite', 'Viele Angriffsoptionen', 'Hohes Pressing möglich'], weaknesses: ['Defensiv riskant', 'Nur zwei zentrale Mittelfeldspieler'], styleTags: ['attacking', 'wide', 'high-risk'], recommendedBuildUp: 'Long', depthRangeHint: [40, 52] },
+  '3-4-1-2': { formationKey: '3-4-1-2', strengths: ['Drei-Kette gibt Stabilität', 'AM verbindet Mittelfeld und Angriff', 'Zwei Stürmer im Zentrum'], weaknesses: ['Außen offen bei Ballverlust', 'WBs tragen die gesamte Breite'], styleTags: ['wingbacks', 'central', 'two-striker'], recommendedBuildUp: 'Short', depthRangeHint: [38, 46] },
   '5-2-1-2': { formationKey: '5-2-1-2', strengths: ['Sehr stabile letzte Linie', 'AM verbindet Konter', 'Zwei ST'], weaknesses: ['Mittelfeld kann unterzählig sein', 'WB tragen die Breite'], styleTags: ['defensive', 'counter', 'two-striker'], recommendedBuildUp: 'Long', depthRangeHint: [34, 42] },
   '5-2-3': { formationKey: '5-2-3', strengths: ['Fünferkette plus drei Konterspieler', 'Breite Ausgänge', 'Gut gegen hohe Linien'], weaknesses: ['Nur zwei zentrale Mittelfeldspieler', 'Ballbesitz kann dünn werden'], styleTags: ['defensive', 'wide-counter', 'front-three'], recommendedBuildUp: 'Long', depthRangeHint: [34, 42] },
 };

@@ -75,6 +75,7 @@ function buildAssignments(
       slot,
       player,
       fit: r.fit,
+      positionType: player.positionType?.[slot.position] ?? 'out',
     });
   }
 
@@ -95,6 +96,7 @@ function buildAssignments(
           slot,
           player: best.player,
           fit: best.fit,
+          positionType: best.player.positionType?.[slot.position] ?? 'out',
         });
       }
     }

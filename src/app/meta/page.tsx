@@ -63,6 +63,20 @@ function roleLabel(role: TacticalRole): string {
   return map[role] ?? role;
 }
 
+// positionType badge — shown only for non-primary
+function posTypeBadge(posType: 'primary' | 'secondary' | 'out') {
+  if (posType === 'out') return { label: '⚠ Fremd', cls: 'bg-red-900 text-red-200' };
+  if (posType === 'secondary') return { label: 'Neben', cls: 'bg-amber-900 text-amber-200' };
+  return null; // primary — no badge needed
+}
+
+// Row background tint for out-of-position
+function rowTint(posType: 'primary' | 'secondary' | 'out') {
+  if (posType === 'out') return 'bg-red-950/40 border-red-900/50';
+  if (posType === 'secondary') return 'bg-amber-950/20 border-amber-900/30';
+  return 'bg-slate-800/50 border-slate-700/40';
+}
+
 function getBestRole(position: Position): TacticalRole {
   const roles = POSITION_TACTICAL_ROLES[position];
   return roles && roles.length > 0 ? roles[0] : 'Central Midfielder';
@@ -162,10 +176,11 @@ function BestElfCard({ rec, rank, onApply }: BestElfCardProps) {
               {items.map((a) => {
                 const role = getBestRole(a.slot.position);
                 const focus = defaultFocusForPosition(a.slot.position);
+                const badge = posTypeBadge(a.positionType);
                 return (
                   <div
                     key={a.slotKey}
-                    className="flex items-center gap-1.5 rounded-lg bg-slate-800/50 border border-slate-700/40 px-2 py-1.5"
+                    className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 ${rowTint(a.positionType)}`}
                   >
                     {/* Position pill */}
                     <span className="shrink-0 w-7 text-center text-[10px] font-bold rounded bg-slate-700 text-slate-300 px-0.5 py-0.5">
@@ -175,7 +190,13 @@ function BestElfCard({ rec, rank, onApply }: BestElfCardProps) {
                     <span className="flex-1 min-w-0 text-xs font-semibold text-white truncate">
                       {a.player.name}
                     </span>
-                    {/* Role + Focus (compact) */}
+                    {/* positionType badge — only for secondary/out */}
+                    {badge && (
+                      <span className={`shrink-0 text-[9px] font-bold rounded px-1 py-0.5 ${badge.cls}`}>
+                        {badge.label}
+                      </span>
+                    )}
+                    {/* Role + Focus (compact, hidden on very small screens) */}
                     <span className="shrink-0 text-[9px] text-slate-500 hidden sm:block">
                       {focusEmoji(focus)}&nbsp;{roleLabel(role)}
                     </span>
@@ -283,7 +304,8 @@ export default function MetaPage() {
     const assignments: Record<string, string> = {};
     for (const a of rec.assignments) assignments[a.slotKey] = a.player.id;
     setFormationWithLineup(rec.formation.name, rec.formation.slots, assignments);
-    router.push(appPath('/lineup'));
+    // Navigate directly to the tactics section so role/focus is immediately visible
+    router.push(appPath('/lineup#tactics'));
   }
 
   function applyRecommendation(index: number) {

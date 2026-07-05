@@ -300,6 +300,17 @@ export default function LineupPage() {
   const formationNames = useMemo(() => Object.keys(FORMATIONS), []);
   const playerById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
 
+  // Scroll to #tactics section when navigated here from meta page with the anchor
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#tactics') {
+      // Small delay to let the page render fully before scrolling
+      const timer = setTimeout(() => {
+        document.getElementById('tactics')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
   // Fix: initialize default formation inside useEffect, not during render.
   // Calling setFormation in the render body caused a race condition where
   // the store update was skipped or triggered an extra re-render loop.

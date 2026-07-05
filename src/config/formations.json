@@ -909,5 +909,75 @@
         "y": 24
       }
     ]
+  },
+  "3-4-1-2": {
+    "name": "3-4-1-2",
+    "playstyle": "Ausgewogen",
+    "strengths": [
+      "Drei-Kette mit Wingbacks",
+      "AM als Bindeglied",
+      "Zwei Stürmer"
+    ],
+    "weaknesses": [
+      "Außen bei Ballverlust offen",
+      "WB brauchen viel Ausdauer"
+    ],
+    "slots": [
+      {
+        "position": "GK",
+        "x": 50,
+        "y": 90
+      },
+      {
+        "position": "CB",
+        "x": 28,
+        "y": 78
+      },
+      {
+        "position": "CB",
+        "x": 50,
+        "y": 82
+      },
+      {
+        "position": "CB",
+        "x": 72,
+        "y": 78
+      },
+      {
+        "position": "WB",
+        "x": 10,
+        "y": 56
+      },
+      {
+        "position": "CM",
+        "x": 36,
+        "y": 50
+      },
+      {
+        "position": "CM",
+        "x": 64,
+        "y": 50
+      },
+      {
+        "position": "WB",
+        "x": 90,
+        "y": 56
+      },
+      {
+        "position": "AM",
+        "x": 50,
+        "y": 34
+      },
+      {
+        "position": "ST",
+        "x": 38,
+        "y": 18
+      },
+      {
+        "position": "ST",
+        "x": 62,
+        "y": 18
+      }
+    ]
   }
 }
