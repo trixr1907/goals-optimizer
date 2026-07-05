@@ -63,7 +63,7 @@ function baseLineup(overrides: Array<[string, Position, PlayerWithScores]> = [])
 // ---------------------------------------------------------------------------
 
 describe('formations.json', () => {
-  it('contains all 14 GOALS formation keys', () => {
+  it('contains all 13 GOALS formation keys', () => {
     expect(Object.keys(formationsData).sort()).toEqual([...GOALS_TACTIC_FORMATION_KEYS].sort());
   });
 
