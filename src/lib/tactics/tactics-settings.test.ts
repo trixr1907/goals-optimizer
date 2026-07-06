@@ -81,11 +81,28 @@ describe('formations.json', () => {
     expect(cfSlots).toEqual([]);
   });
 
-  it('models GOALS 4-2-3-1 with three AM slots behind one ST', () => {
-    const slots = formationsData['4-2-3-1'].slots;
-    expect(slots.map((slot) => slot.position)).toEqual([
-      'GK', 'FB', 'CB', 'CB', 'FB', 'DM', 'DM', 'AM', 'AM', 'AM', 'ST',
-    ]);
+  it('matches the user-provided GOALS screenshot positions for every formation', () => {
+    const expectedSlots: Record<string, string[]> = {
+      '4-4-2': ['GK', 'FB', 'CB', 'CB', 'FB', 'WM', 'CM', 'CM', 'WM', 'ST', 'ST'],
+      '4-3-3': ['GK', 'FB', 'CB', 'CB', 'FB', 'CM', 'DM', 'CM', 'WF', 'ST', 'WF'],
+      '3-5-2': ['GK', 'CB', 'CB', 'CB', 'WM', 'CM', 'CM', 'CM', 'WM', 'ST', 'ST'],
+      '3-4-1-2': ['GK', 'CB', 'CB', 'CB', 'WM', 'CM', 'CM', 'WM', 'AM', 'ST', 'ST'],
+      '3-4-3': ['GK', 'CB', 'CB', 'CB', 'WM', 'CM', 'CM', 'WM', 'WF', 'ST', 'WF'],
+      '4-2-3-1': ['GK', 'FB', 'CB', 'CB', 'FB', 'DM', 'DM', 'AM', 'AM', 'AM', 'ST'],
+      '4-3-1-2': ['GK', 'FB', 'CB', 'CB', 'FB', 'CM', 'CM', 'CM', 'AM', 'ST', 'ST'],
+      '4-5-1': ['GK', 'FB', 'CB', 'CB', 'FB', 'WM', 'CM', 'CM', 'CM', 'WM', 'ST'],
+      '5-2-1-2': ['GK', 'WB', 'CB', 'CB', 'CB', 'WB', 'CM', 'CM', 'AM', 'ST', 'ST'],
+      '5-2-3': ['GK', 'WB', 'CB', 'CB', 'CB', 'WB', 'CM', 'CM', 'WF', 'ST', 'WF'],
+      '4-4-1-1': ['GK', 'FB', 'CB', 'CB', 'FB', 'WM', 'CM', 'AM', 'CM', 'WM', 'ST'],
+      '4-1-2-1-2': ['GK', 'FB', 'CB', 'CB', 'FB', 'DM', 'CM', 'CM', 'AM', 'ST', 'ST'],
+      '4-2-2-2': ['GK', 'FB', 'CB', 'CB', 'FB', 'DM', 'DM', 'AM', 'AM', 'ST', 'ST'],
+      '4-3-3 Attack': ['GK', 'FB', 'CB', 'CB', 'FB', 'CM', 'CM', 'AM', 'WF', 'ST', 'WF'],
+      '4-3-3 Defense': ['GK', 'FB', 'CB', 'CB', 'FB', 'DM', 'DM', 'AM', 'WF', 'ST', 'WF'],
+    };
+
+    for (const [formation, expected] of Object.entries(expectedSlots)) {
+      expect(formationsData[formation].slots.map((slot) => slot.position)).toEqual(expected);
+    }
   });
 
   it('keeps user-confirmed 3-5-2, 3-4-1-2 and 5-2-3 while excluding unconfirmed 3-4-2-1', () => {
