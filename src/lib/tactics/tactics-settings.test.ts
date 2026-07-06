@@ -63,7 +63,7 @@ function baseLineup(overrides: Array<[string, Position, PlayerWithScores]> = [])
 // ---------------------------------------------------------------------------
 
 describe('formations.json', () => {
-  it('contains all 14 GOALS formation keys', () => {
+  it('contains all live-validated GOALS formation keys', () => {
     expect(Object.keys(formationsData).sort()).toEqual([...GOALS_TACTIC_FORMATION_KEYS].sort());
   });
 
@@ -78,6 +78,18 @@ describe('formations.json', () => {
       }
     }
     expect(cfSlots).toEqual([]);
+  });
+
+  it('models GOALS 4-2-3-1 with three AM slots behind one ST', () => {
+    const slots = formationsData['4-2-3-1'].slots;
+    expect(slots.map((slot) => slot.position)).toEqual([
+      'GK', 'FB', 'CB', 'CB', 'FB', 'DM', 'DM', 'AM', 'AM', 'AM', 'ST',
+    ]);
+  });
+
+  it('uses the live-validated 3-4-1-2 formation instead of unverified 3-4-2-1', () => {
+    expect(formationsData['3-4-1-2']).toBeDefined();
+    expect((formationsData as Record<string, unknown>)['3-4-2-1']).toBeUndefined();
   });
 });
 
@@ -180,7 +192,7 @@ describe('POSITION_TACTICAL_CONFIG', () => {
 // ---------------------------------------------------------------------------
 
 describe('FORMATION_TACTICAL_PROFILES', () => {
-  it('contains all 14 GOALS formation keys', () => {
+  it('contains all live-validated GOALS formation keys', () => {
     expect(Object.keys(FORMATION_TACTICAL_PROFILES).sort()).toEqual([...GOALS_TACTIC_FORMATION_KEYS].sort());
   });
 });

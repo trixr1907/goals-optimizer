@@ -58,15 +58,27 @@ function getBestPos(player: PlayerWithScores): [Position, number] {
 
 // ── Avatar ───────────────────────────────────────────────────────────────────
 
-function imageUrlForPlayer(player: PlayerWithScores): string | undefined {
-  if (player.image_url) return player.image_url;
-
-  // Backfill for persisted squads imported before image_url existed.
+function rawIdForPlayer(player: PlayerWithScores): string | undefined {
   const rawId = player.id.startsWith('goalsverse-')
     ? player.id.slice('goalsverse-'.length)
     : player.id;
 
+  return rawId || undefined;
+}
+
+function imageUrlForPlayer(player: PlayerWithScores): string | undefined {
+  if (player.image_url) return player.image_url;
+
+  // Backfill for persisted squads imported before image_url existed.
+  const rawId = rawIdForPlayer(player);
+
   return rawId ? `https://cdn.playgoals.com/character/prod/${rawId}.png` : undefined;
+}
+
+function playGoalsUrlForPlayer(player: PlayerWithScores): string | undefined {
+  const rawId = rawIdForPlayer(player);
+
+  return rawId ? `https://playgoals.com/en/player/${rawId}` : undefined;
 }
 
 function PlayerAvatar({
@@ -700,6 +712,18 @@ export default function SquadPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
+                      {playGoalsUrlForPlayer(player) && (
+                        <a
+                          href={playGoalsUrlForPlayer(player)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-slate-500 hover:text-sky-400 text-sm"
+                          title="Spielerprofil öffnen"
+                        >
+                          ↗
+                        </a>
+                      )}
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setSelectedPlayer(player); setComparePlayer(null); }}
@@ -732,6 +756,7 @@ export default function SquadPage() {
                   <SortTh label="Rarity"          sk="rarity" />
                   <SortTh label="Meta (Pos)"      sk="fit" />
                   <SortTh label="Beste Position"  sk="bestPos" />
+                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">Profil</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">Details</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">Chart</th>
 
@@ -810,6 +835,20 @@ export default function SquadPage() {
                           </span>
                         </td>
 
+                        {/* Player profile link */}
+                        <td className="px-3 py-2.5">
+                          {playGoalsUrlForPlayer(player) && (
+                            <a
+                              href={playGoalsUrlForPlayer(player)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] px-2 py-0.5 rounded border border-sky-800 text-sky-400 hover:bg-sky-950/40 whitespace-nowrap"
+                            >
+                              Spieler öffnen
+                            </a>
+                          )}
+                        </td>
+
                         {/* Details-Button */}
                         <td className="px-3 py-2.5">
                           <button
@@ -846,7 +885,7 @@ export default function SquadPage() {
                       {/* Inline Expand-Panel */}
                       {isExpanded && (
                         <tr key={`${player.id}-details`}>
-                          <td colSpan={8} className="p-0">
+                          <td colSpan={9} className="p-0">
                             <DetailsPanel player={player} />
                           </td>
                         </tr>
