@@ -69,6 +69,287 @@
       }
     ]
   },
+  "4-3-3": {
+    "name": "4-3-3",
+    "playstyle": "Offensiv",
+    "strengths": [
+      "Breite Flügelangriffe",
+      "Gute Pressing-Struktur",
+      "Klare Rollen im Angriff"
+    ],
+    "weaknesses": [
+      "CMs müssen viel Raum abdecken",
+      "Anfällig bei schwachen Außenverteidigern"
+    ],
+    "slots": [
+      {
+        "position": "GK",
+        "x": 50,
+        "y": 90
+      },
+      {
+        "position": "FB",
+        "x": 15,
+        "y": 72
+      },
+      {
+        "position": "CB",
+        "x": 38,
+        "y": 78
+      },
+      {
+        "position": "CB",
+        "x": 62,
+        "y": 78
+      },
+      {
+        "position": "FB",
+        "x": 85,
+        "y": 72
+      },
+      {
+        "position": "CM",
+        "x": 30,
+        "y": 48
+      },
+      {
+        "position": "CM",
+        "x": 50,
+        "y": 52
+      },
+      {
+        "position": "CM",
+        "x": 70,
+        "y": 48
+      },
+      {
+        "position": "WF",
+        "x": 18,
+        "y": 22
+      },
+      {
+        "position": "ST",
+        "x": 50,
+        "y": 22
+      },
+      {
+        "position": "WF",
+        "x": 82,
+        "y": 22
+      }
+    ]
+  },
+  "3-5-2": {
+    "name": "3-5-2",
+    "playstyle": "Defensiv",
+    "strengths": [
+      "Zentrale Überzahl",
+      "Zwei Stürmer für Pressing",
+      "Wingbacks können breit schieben"
+    ],
+    "weaknesses": [
+      "Wingbacks sind kritisch",
+      "Außen offen bei Ballverlust",
+      "Schwierig für Anfänger"
+    ],
+    "slots": [
+      {
+        "position": "GK",
+        "x": 50,
+        "y": 90
+      },
+      {
+        "position": "CB",
+        "x": 28,
+        "y": 76
+      },
+      {
+        "position": "CB",
+        "x": 50,
+        "y": 80
+      },
+      {
+        "position": "CB",
+        "x": 72,
+        "y": 76
+      },
+      {
+        "position": "WB",
+        "x": 12,
+        "y": 50
+      },
+      {
+        "position": "DM",
+        "x": 38,
+        "y": 55
+      },
+      {
+        "position": "CM",
+        "x": 50,
+        "y": 45
+      },
+      {
+        "position": "DM",
+        "x": 62,
+        "y": 55
+      },
+      {
+        "position": "WB",
+        "x": 88,
+        "y": 50
+      },
+      {
+        "position": "ST",
+        "x": 38,
+        "y": 20
+      },
+      {
+        "position": "ST",
+        "x": 62,
+        "y": 20
+      }
+    ]
+  },
+  "3-4-1-2": {
+    "name": "3-4-1-2",
+    "playstyle": "Ausgewogen",
+    "strengths": [
+      "Drei-Kette mit Wingbacks",
+      "AM verbindet Mittelfeld und Sturm",
+      "Zwei Stürmer für direkte Kombinationen"
+    ],
+    "weaknesses": [
+      "Außen bei Ballverlust offen",
+      "WB müssen komplette Breite tragen"
+    ],
+    "slots": [
+      {
+        "position": "GK",
+        "x": 50,
+        "y": 90
+      },
+      {
+        "position": "CB",
+        "x": 28,
+        "y": 78
+      },
+      {
+        "position": "CB",
+        "x": 50,
+        "y": 82
+      },
+      {
+        "position": "CB",
+        "x": 72,
+        "y": 78
+      },
+      {
+        "position": "WB",
+        "x": 10,
+        "y": 54
+      },
+      {
+        "position": "CM",
+        "x": 36,
+        "y": 50
+      },
+      {
+        "position": "CM",
+        "x": 64,
+        "y": 50
+      },
+      {
+        "position": "WB",
+        "x": 90,
+        "y": 54
+      },
+      {
+        "position": "AM",
+        "x": 50,
+        "y": 34
+      },
+      {
+        "position": "ST",
+        "x": 38,
+        "y": 18
+      },
+      {
+        "position": "ST",
+        "x": 62,
+        "y": 18
+      }
+    ]
+  },
+  "3-4-3": {
+    "name": "3-4-3",
+    "playstyle": "Offensiv",
+    "strengths": [
+      "Maximale Breite mit drei Stürmern",
+      "Hohes Pressing möglich",
+      "Viele Angriffsvarianten"
+    ],
+    "weaknesses": [
+      "Defensiv riskant bei Ballverlust",
+      "Wingbacks extrem gefordert"
+    ],
+    "slots": [
+      {
+        "position": "GK",
+        "x": 50,
+        "y": 90
+      },
+      {
+        "position": "CB",
+        "x": 28,
+        "y": 78
+      },
+      {
+        "position": "CB",
+        "x": 50,
+        "y": 82
+      },
+      {
+        "position": "CB",
+        "x": 72,
+        "y": 78
+      },
+      {
+        "position": "WB",
+        "x": 10,
+        "y": 52
+      },
+      {
+        "position": "CM",
+        "x": 36,
+        "y": 46
+      },
+      {
+        "position": "CM",
+        "x": 64,
+        "y": 46
+      },
+      {
+        "position": "WB",
+        "x": 90,
+        "y": 52
+      },
+      {
+        "position": "WF",
+        "x": 18,
+        "y": 22
+      },
+      {
+        "position": "ST",
+        "x": 50,
+        "y": 18
+      },
+      {
+        "position": "WF",
+        "x": 82,
+        "y": 22
+      }
+    ]
+  },
   "4-2-3-1": {
     "name": "4-2-3-1",
     "playstyle": "Ausgewogen",
@@ -139,17 +420,17 @@
       }
     ]
   },
-  "4-3-3": {
-    "name": "4-3-3",
-    "playstyle": "Offensiv",
+  "4-3-1-2": {
+    "name": "4-3-1-2",
+    "playstyle": "Ausgewogen",
     "strengths": [
-      "Breite Flügelangriffe",
-      "Gute Pressing-Struktur",
-      "Klare Rollen im Angriff"
+      "Zentrale Überzahl",
+      "AM verbindet Mittelfeld und Sturm",
+      "Zwei Stürmer für direkte Kombinationen"
     ],
     "weaknesses": [
-      "CMs müssen viel Raum abdecken",
-      "Anfällig bei schwachen Außenverteidigern"
+      "Kaum natürliche Breite",
+      "FB müssen Außenbahnen alleine sichern"
     ],
     "slots": [
       {
@@ -180,6 +461,81 @@
       {
         "position": "CM",
         "x": 30,
+        "y": 50
+      },
+      {
+        "position": "CM",
+        "x": 50,
+        "y": 54
+      },
+      {
+        "position": "CM",
+        "x": 70,
+        "y": 50
+      },
+      {
+        "position": "AM",
+        "x": 50,
+        "y": 34
+      },
+      {
+        "position": "ST",
+        "x": 38,
+        "y": 18
+      },
+      {
+        "position": "ST",
+        "x": 62,
+        "y": 18
+      }
+    ]
+  },
+  "4-5-1": {
+    "name": "4-5-1",
+    "playstyle": "Defensiv",
+    "strengths": [
+      "Sehr kompakter Mittelfeldblock",
+      "Breite Absicherung über WM",
+      "Gut zum Stabilisieren gegen starke Gegner"
+    ],
+    "weaknesses": [
+      "Einziger ST kann isoliert sein",
+      "Weniger Präsenz im Strafraum"
+    ],
+    "slots": [
+      {
+        "position": "GK",
+        "x": 50,
+        "y": 90
+      },
+      {
+        "position": "FB",
+        "x": 15,
+        "y": 72
+      },
+      {
+        "position": "CB",
+        "x": 38,
+        "y": 78
+      },
+      {
+        "position": "CB",
+        "x": 62,
+        "y": 78
+      },
+      {
+        "position": "FB",
+        "x": 85,
+        "y": 72
+      },
+      {
+        "position": "WM",
+        "x": 18,
+        "y": 52
+      },
+      {
+        "position": "CM",
+        "x": 34,
         "y": 48
       },
       {
@@ -189,23 +545,368 @@
       },
       {
         "position": "CM",
-        "x": 70,
+        "x": 66,
         "y": 48
       },
       {
-        "position": "WF",
-        "x": 18,
-        "y": 22
+        "position": "WM",
+        "x": 82,
+        "y": 52
       },
       {
         "position": "ST",
         "x": 50,
-        "y": 22
+        "y": 18
+      }
+    ]
+  },
+  "5-2-1-2": {
+    "name": "5-2-1-2",
+    "playstyle": "Defensiv",
+    "strengths": [
+      "Sehr stabile letzte Linie",
+      "AM kann Konter verbinden",
+      "Zwei Stürmer für Entlastung"
+    ],
+    "weaknesses": [
+      "Mittelfeld kann in Unterzahl geraten",
+      "WB müssen komplette Breite tragen"
+    ],
+    "slots": [
+      {
+        "position": "GK",
+        "x": 50,
+        "y": 90
+      },
+      {
+        "position": "WB",
+        "x": 10,
+        "y": 72
+      },
+      {
+        "position": "CB",
+        "x": 28,
+        "y": 78
+      },
+      {
+        "position": "CB",
+        "x": 50,
+        "y": 82
+      },
+      {
+        "position": "CB",
+        "x": 72,
+        "y": 78
+      },
+      {
+        "position": "WB",
+        "x": 90,
+        "y": 72
+      },
+      {
+        "position": "CM",
+        "x": 38,
+        "y": 50
+      },
+      {
+        "position": "CM",
+        "x": 62,
+        "y": 50
+      },
+      {
+        "position": "AM",
+        "x": 50,
+        "y": 34
+      },
+      {
+        "position": "ST",
+        "x": 38,
+        "y": 18
+      },
+      {
+        "position": "ST",
+        "x": 62,
+        "y": 18
+      }
+    ]
+  },
+  "5-2-3": {
+    "name": "5-2-3",
+    "playstyle": "Konter",
+    "strengths": [
+      "Fünferkette plus drei Konterspieler",
+      "Breite Angriffsausgänge",
+      "Gut gegen hohe Gegnerlinien"
+    ],
+    "weaknesses": [
+      "Nur zwei zentrale Mittelfeldspieler",
+      "Ballbesitzphasen können dünn werden"
+    ],
+    "slots": [
+      {
+        "position": "GK",
+        "x": 50,
+        "y": 90
+      },
+      {
+        "position": "WB",
+        "x": 10,
+        "y": 72
+      },
+      {
+        "position": "CB",
+        "x": 28,
+        "y": 78
+      },
+      {
+        "position": "CB",
+        "x": 50,
+        "y": 82
+      },
+      {
+        "position": "CB",
+        "x": 72,
+        "y": 78
+      },
+      {
+        "position": "WB",
+        "x": 90,
+        "y": 72
+      },
+      {
+        "position": "CM",
+        "x": 38,
+        "y": 52
+      },
+      {
+        "position": "CM",
+        "x": 62,
+        "y": 52
+      },
+      {
+        "position": "WF",
+        "x": 18,
+        "y": 24
+      },
+      {
+        "position": "ST",
+        "x": 50,
+        "y": 18
       },
       {
         "position": "WF",
         "x": 82,
-        "y": 22
+        "y": 24
+      }
+    ]
+  },
+  "4-4-1-1": {
+    "name": "4-4-1-1",
+    "playstyle": "Ausgewogen",
+    "strengths": [
+      "Kompakter Mittelfeldblock",
+      "CF/AM unterstützt den ST",
+      "Gut für zweite Bälle"
+    ],
+    "weaknesses": [
+      "Einziger ST kann isoliert sein",
+      "Nicht so aggressiv wie Zwei-ST-Systeme"
+    ],
+    "slots": [
+      {
+        "position": "GK",
+        "x": 50,
+        "y": 90
+      },
+      {
+        "position": "FB",
+        "x": 15,
+        "y": 72
+      },
+      {
+        "position": "CB",
+        "x": 38,
+        "y": 78
+      },
+      {
+        "position": "CB",
+        "x": 62,
+        "y": 78
+      },
+      {
+        "position": "FB",
+        "x": 85,
+        "y": 72
+      },
+      {
+        "position": "WM",
+        "x": 18,
+        "y": 52
+      },
+      {
+        "position": "CM",
+        "x": 38,
+        "y": 50
+      },
+      {
+        "position": "CM",
+        "x": 62,
+        "y": 50
+      },
+      {
+        "position": "WM",
+        "x": 82,
+        "y": 52
+      },
+      {
+        "position": "AM",
+        "x": 50,
+        "y": 34
+      },
+      {
+        "position": "ST",
+        "x": 50,
+        "y": 18
+      }
+    ]
+  },
+  "4-1-2-1-2": {
+    "name": "4-1-2-1-2",
+    "playstyle": "Konter",
+    "strengths": [
+      "Stark durchs Zentrum",
+      "CAM + zwei ST für schnelle Kombinationen",
+      "CDM sichert ab"
+    ],
+    "weaknesses": [
+      "Kaum natürliche Breite",
+      "Außenverteidiger müssen Qualität haben"
+    ],
+    "slots": [
+      {
+        "position": "GK",
+        "x": 50,
+        "y": 90
+      },
+      {
+        "position": "FB",
+        "x": 15,
+        "y": 72
+      },
+      {
+        "position": "CB",
+        "x": 38,
+        "y": 78
+      },
+      {
+        "position": "CB",
+        "x": 62,
+        "y": 78
+      },
+      {
+        "position": "FB",
+        "x": 85,
+        "y": 72
+      },
+      {
+        "position": "DM",
+        "x": 50,
+        "y": 58
+      },
+      {
+        "position": "CM",
+        "x": 34,
+        "y": 44
+      },
+      {
+        "position": "CM",
+        "x": 66,
+        "y": 44
+      },
+      {
+        "position": "AM",
+        "x": 50,
+        "y": 32
+      },
+      {
+        "position": "ST",
+        "x": 38,
+        "y": 18
+      },
+      {
+        "position": "ST",
+        "x": 62,
+        "y": 18
+      }
+    ]
+  },
+  "4-2-2-2": {
+    "name": "4-2-2-2",
+    "playstyle": "Konter",
+    "strengths": [
+      "Doppelsechs plus zwei zentrale Offensivspieler",
+      "Schnelle Vertikalangriffe",
+      "Zwei Stürmer halten Innenverteidiger beschäftigt"
+    ],
+    "weaknesses": [
+      "Wenig klassische Flügelbreite",
+      "AM/WM-Rollen müssen viel pendeln"
+    ],
+    "slots": [
+      {
+        "position": "GK",
+        "x": 50,
+        "y": 90
+      },
+      {
+        "position": "FB",
+        "x": 15,
+        "y": 72
+      },
+      {
+        "position": "CB",
+        "x": 38,
+        "y": 78
+      },
+      {
+        "position": "CB",
+        "x": 62,
+        "y": 78
+      },
+      {
+        "position": "FB",
+        "x": 85,
+        "y": 72
+      },
+      {
+        "position": "DM",
+        "x": 38,
+        "y": 56
+      },
+      {
+        "position": "DM",
+        "x": 62,
+        "y": 56
+      },
+      {
+        "position": "AM",
+        "x": 32,
+        "y": 36
+      },
+      {
+        "position": "AM",
+        "x": 68,
+        "y": 36
+      },
+      {
+        "position": "ST",
+        "x": 38,
+        "y": 18
+      },
+      {
+        "position": "ST",
+        "x": 62,
+        "y": 18
       }
     ]
   },
@@ -346,566 +1047,6 @@
         "position": "WF",
         "x": 82,
         "y": 24
-      }
-    ]
-  },
-  "4-1-2-1-2": {
-    "name": "4-1-2-1-2",
-    "playstyle": "Konter",
-    "strengths": [
-      "Stark durchs Zentrum",
-      "CAM + zwei ST für schnelle Kombinationen",
-      "CDM sichert ab"
-    ],
-    "weaknesses": [
-      "Kaum natürliche Breite",
-      "Außenverteidiger müssen Qualität haben"
-    ],
-    "slots": [
-      {
-        "position": "GK",
-        "x": 50,
-        "y": 90
-      },
-      {
-        "position": "FB",
-        "x": 15,
-        "y": 72
-      },
-      {
-        "position": "CB",
-        "x": 38,
-        "y": 78
-      },
-      {
-        "position": "CB",
-        "x": 62,
-        "y": 78
-      },
-      {
-        "position": "FB",
-        "x": 85,
-        "y": 72
-      },
-      {
-        "position": "DM",
-        "x": 50,
-        "y": 58
-      },
-      {
-        "position": "CM",
-        "x": 34,
-        "y": 44
-      },
-      {
-        "position": "CM",
-        "x": 66,
-        "y": 44
-      },
-      {
-        "position": "AM",
-        "x": 50,
-        "y": 32
-      },
-      {
-        "position": "ST",
-        "x": 38,
-        "y": 18
-      },
-      {
-        "position": "ST",
-        "x": 62,
-        "y": 18
-      }
-    ]
-  },
-  "4-3-1-2": {
-    "name": "4-3-1-2",
-    "playstyle": "Ausgewogen",
-    "strengths": [
-      "Zentrale Überzahl",
-      "AM verbindet Mittelfeld und Sturm",
-      "Zwei Stürmer für direkte Kombinationen"
-    ],
-    "weaknesses": [
-      "Kaum natürliche Breite",
-      "FB müssen Außenbahnen alleine sichern"
-    ],
-    "slots": [
-      {
-        "position": "GK",
-        "x": 50,
-        "y": 90
-      },
-      {
-        "position": "FB",
-        "x": 15,
-        "y": 72
-      },
-      {
-        "position": "CB",
-        "x": 38,
-        "y": 78
-      },
-      {
-        "position": "CB",
-        "x": 62,
-        "y": 78
-      },
-      {
-        "position": "FB",
-        "x": 85,
-        "y": 72
-      },
-      {
-        "position": "CM",
-        "x": 30,
-        "y": 50
-      },
-      {
-        "position": "CM",
-        "x": 50,
-        "y": 54
-      },
-      {
-        "position": "CM",
-        "x": 70,
-        "y": 50
-      },
-      {
-        "position": "AM",
-        "x": 50,
-        "y": 34
-      },
-      {
-        "position": "ST",
-        "x": 38,
-        "y": 18
-      },
-      {
-        "position": "ST",
-        "x": 62,
-        "y": 18
-      }
-    ]
-  },
-  "4-2-2-2": {
-    "name": "4-2-2-2",
-    "playstyle": "Konter",
-    "strengths": [
-      "Doppelsechs plus zwei zentrale Offensivspieler",
-      "Schnelle Vertikalangriffe",
-      "Zwei Stürmer halten Innenverteidiger beschäftigt"
-    ],
-    "weaknesses": [
-      "Wenig klassische Flügelbreite",
-      "AM/WM-Rollen müssen viel pendeln"
-    ],
-    "slots": [
-      {
-        "position": "GK",
-        "x": 50,
-        "y": 90
-      },
-      {
-        "position": "FB",
-        "x": 15,
-        "y": 72
-      },
-      {
-        "position": "CB",
-        "x": 38,
-        "y": 78
-      },
-      {
-        "position": "CB",
-        "x": 62,
-        "y": 78
-      },
-      {
-        "position": "FB",
-        "x": 85,
-        "y": 72
-      },
-      {
-        "position": "DM",
-        "x": 38,
-        "y": 56
-      },
-      {
-        "position": "DM",
-        "x": 62,
-        "y": 56
-      },
-      {
-        "position": "AM",
-        "x": 32,
-        "y": 36
-      },
-      {
-        "position": "AM",
-        "x": 68,
-        "y": 36
-      },
-      {
-        "position": "ST",
-        "x": 38,
-        "y": 18
-      },
-      {
-        "position": "ST",
-        "x": 62,
-        "y": 18
-      }
-    ]
-  },
-  "4-4-1-1": {
-    "name": "4-4-1-1",
-    "playstyle": "Ausgewogen",
-    "strengths": [
-      "Kompakter Mittelfeldblock",
-      "CF/AM unterstützt den ST",
-      "Gut für zweite Bälle"
-    ],
-    "weaknesses": [
-      "Einziger ST kann isoliert sein",
-      "Nicht so aggressiv wie Zwei-ST-Systeme"
-    ],
-    "slots": [
-      {
-        "position": "GK",
-        "x": 50,
-        "y": 90
-      },
-      {
-        "position": "FB",
-        "x": 15,
-        "y": 72
-      },
-      {
-        "position": "CB",
-        "x": 38,
-        "y": 78
-      },
-      {
-        "position": "CB",
-        "x": 62,
-        "y": 78
-      },
-      {
-        "position": "FB",
-        "x": 85,
-        "y": 72
-      },
-      {
-        "position": "WM",
-        "x": 18,
-        "y": 52
-      },
-      {
-        "position": "CM",
-        "x": 38,
-        "y": 50
-      },
-      {
-        "position": "CM",
-        "x": 62,
-        "y": 50
-      },
-      {
-        "position": "WM",
-        "x": 82,
-        "y": 52
-      },
-      {
-        "position": "AM",
-        "x": 50,
-        "y": 34
-      },
-      {
-        "position": "ST",
-        "x": 50,
-        "y": 18
-      }
-    ]
-  },
-  "4-5-1": {
-    "name": "4-5-1",
-    "playstyle": "Defensiv",
-    "strengths": [
-      "Sehr kompakter Mittelfeldblock",
-      "Breite Absicherung über WM",
-      "Gut zum Stabilisieren gegen starke Gegner"
-    ],
-    "weaknesses": [
-      "Einziger ST kann isoliert sein",
-      "Weniger Präsenz im Strafraum"
-    ],
-    "slots": [
-      {
-        "position": "GK",
-        "x": 50,
-        "y": 90
-      },
-      {
-        "position": "FB",
-        "x": 15,
-        "y": 72
-      },
-      {
-        "position": "CB",
-        "x": 38,
-        "y": 78
-      },
-      {
-        "position": "CB",
-        "x": 62,
-        "y": 78
-      },
-      {
-        "position": "FB",
-        "x": 85,
-        "y": 72
-      },
-      {
-        "position": "WM",
-        "x": 18,
-        "y": 52
-      },
-      {
-        "position": "CM",
-        "x": 34,
-        "y": 48
-      },
-      {
-        "position": "CM",
-        "x": 50,
-        "y": 52
-      },
-      {
-        "position": "CM",
-        "x": 66,
-        "y": 48
-      },
-      {
-        "position": "WM",
-        "x": 82,
-        "y": 52
-      },
-      {
-        "position": "ST",
-        "x": 50,
-        "y": 18
-      }
-    ]
-  },
-  "3-4-3": {
-    "name": "3-4-3",
-    "playstyle": "Offensiv",
-    "strengths": [
-      "Maximale Breite mit drei Stürmern",
-      "Hohes Pressing möglich",
-      "Viele Angriffsvarianten"
-    ],
-    "weaknesses": [
-      "Defensiv riskant bei Ballverlust",
-      "Wingbacks extrem gefordert"
-    ],
-    "slots": [
-      {
-        "position": "GK",
-        "x": 50,
-        "y": 90
-      },
-      {
-        "position": "CB",
-        "x": 28,
-        "y": 78
-      },
-      {
-        "position": "CB",
-        "x": 50,
-        "y": 82
-      },
-      {
-        "position": "CB",
-        "x": 72,
-        "y": 78
-      },
-      {
-        "position": "WB",
-        "x": 10,
-        "y": 52
-      },
-      {
-        "position": "CM",
-        "x": 36,
-        "y": 46
-      },
-      {
-        "position": "CM",
-        "x": 64,
-        "y": 46
-      },
-      {
-        "position": "WB",
-        "x": 90,
-        "y": 52
-      },
-      {
-        "position": "WF",
-        "x": 18,
-        "y": 22
-      },
-      {
-        "position": "ST",
-        "x": 50,
-        "y": 18
-      },
-      {
-        "position": "WF",
-        "x": 82,
-        "y": 22
-      }
-    ]
-  },
-  "3-4-1-2": {
-    "name": "3-4-1-2",
-    "playstyle": "Ausgewogen",
-    "strengths": [
-      "Drei-Kette mit Wingbacks",
-      "AM verbindet Mittelfeld und Sturm",
-      "Zwei Stürmer für direkte Kombinationen"
-    ],
-    "weaknesses": [
-      "Außen bei Ballverlust offen",
-      "WB müssen komplette Breite tragen"
-    ],
-    "slots": [
-      {
-        "position": "GK",
-        "x": 50,
-        "y": 90
-      },
-      {
-        "position": "CB",
-        "x": 28,
-        "y": 78
-      },
-      {
-        "position": "CB",
-        "x": 50,
-        "y": 82
-      },
-      {
-        "position": "CB",
-        "x": 72,
-        "y": 78
-      },
-      {
-        "position": "WB",
-        "x": 10,
-        "y": 54
-      },
-      {
-        "position": "CM",
-        "x": 36,
-        "y": 50
-      },
-      {
-        "position": "CM",
-        "x": 64,
-        "y": 50
-      },
-      {
-        "position": "WB",
-        "x": 90,
-        "y": 54
-      },
-      {
-        "position": "AM",
-        "x": 50,
-        "y": 34
-      },
-      {
-        "position": "ST",
-        "x": 38,
-        "y": 18
-      },
-      {
-        "position": "ST",
-        "x": 62,
-        "y": 18
-      }
-    ]
-  },
-  "5-2-1-2": {
-    "name": "5-2-1-2",
-    "playstyle": "Defensiv",
-    "strengths": [
-      "Sehr stabile letzte Linie",
-      "AM kann Konter verbinden",
-      "Zwei Stürmer für Entlastung"
-    ],
-    "weaknesses": [
-      "Mittelfeld kann in Unterzahl geraten",
-      "WB müssen komplette Breite tragen"
-    ],
-    "slots": [
-      {
-        "position": "GK",
-        "x": 50,
-        "y": 90
-      },
-      {
-        "position": "WB",
-        "x": 10,
-        "y": 72
-      },
-      {
-        "position": "CB",
-        "x": 28,
-        "y": 78
-      },
-      {
-        "position": "CB",
-        "x": 50,
-        "y": 82
-      },
-      {
-        "position": "CB",
-        "x": 72,
-        "y": 78
-      },
-      {
-        "position": "WB",
-        "x": 90,
-        "y": 72
-      },
-      {
-        "position": "CM",
-        "x": 38,
-        "y": 50
-      },
-      {
-        "position": "CM",
-        "x": 62,
-        "y": 50
-      },
-      {
-        "position": "AM",
-        "x": 50,
-        "y": 34
-      },
-      {
-        "position": "ST",
-        "x": 38,
-        "y": 18
-      },
-      {
-        "position": "ST",
-        "x": 62,
-        "y": 18
       }
     ]
   }

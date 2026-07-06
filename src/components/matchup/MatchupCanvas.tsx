@@ -23,9 +23,11 @@ const FORMATION_TEMPLATES: { name: string; positions: Position[] }[] = [
   { name: '4-2-3-1', positions: ['GK','FB','CB','CB','FB','DM','DM','AM','AM','AM','ST'] },
   { name: '4-1-2-1-2', positions: ['GK','FB','CB','CB','FB','DM','CM','CM','AM','ST','ST'] },
   { name: '4-5-1', positions: ['GK','FB','CB','CB','FB','WM','CM','CM','CM','WM','ST'] },
+  { name: '3-5-2', positions: ['GK','CB','CB','CB','WB','DM','CM','DM','WB','ST','ST'] },
   { name: '3-4-3', positions: ['GK','CB','CB','CB','WB','CM','CM','WB','WF','ST','WF'] },
   { name: '3-4-1-2', positions: ['GK','CB','CB','CB','WB','CM','CM','WB','AM','ST','ST'] },
   { name: '5-2-1-2', positions: ['GK','WB','CB','CB','CB','WB','CM','CM','AM','ST','ST'] },
+  { name: '5-2-3', positions: ['GK','WB','CB','CB','CB','WB','CM','CM','WF','ST','WF'] },
 ];
 
 function estimateFormation(players: PlayerWithScores[]): {
