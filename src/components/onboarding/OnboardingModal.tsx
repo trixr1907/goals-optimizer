@@ -54,7 +54,12 @@ export function OnboardingModal() {
           </div>
 
           <p className="text-xs text-slate-500">
-            Datenquelle: goalsverse.com · Keine erfundenen Zahlen — nur echte Stats.
+            Datenquellen: goalsverse.com, goals-tracker.com und playgoals.com · Keine erfundenen Zahlen — nur echte Stats.
+          </p>
+
+          <p className="rounded-lg border border-amber-900/40 bg-amber-950/20 p-2 text-[10px] leading-relaxed text-amber-200/80">
+            Inoffizielles Community-Tool — nicht verbunden mit GOALS AB. Keine offiziellen GOALS-Assets,
+            keine Partnerschaft und kein offizieller Support durch GOALS AB.
           </p>
         </div>
 

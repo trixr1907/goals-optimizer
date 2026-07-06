@@ -39,11 +39,32 @@ function summarizeImport(players: ReturnType<typeof enrichPlayerWithScores>[]) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { clubName } = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Ungültiges JSON.' }, { status: 400 });
+    }
+
+    const clubName = typeof body === 'object' && body !== null && 'clubName' in body
+      ? (body as { clubName?: unknown }).clubName
+      : undefined;
     const normalizedClubName = String(clubName ?? '').trim();
 
     if (!normalizedClubName) {
       return NextResponse.json({ error: 'clubName fehlt' }, { status: 400 });
+    }
+
+    if (normalizedClubName.length < 2) {
+      return NextResponse.json({ error: 'clubName ist zu kurz', errorCode: 'invalid_club_name' }, { status: 400 });
+    }
+
+    if (normalizedClubName.length > 100) {
+      return NextResponse.json({ error: 'clubName ist zu lang', errorCode: 'invalid_club_name' }, { status: 400 });
+    }
+
+    if (!/^[\p{L}\p{N}\s'_.-]+$/u.test(normalizedClubName)) {
+      return NextResponse.json({ error: 'clubName enthält ungültige Zeichen', errorCode: 'invalid_club_name' }, { status: 400 });
     }
 
     if (normalizedClubName.toLowerCase() === 'demo') {

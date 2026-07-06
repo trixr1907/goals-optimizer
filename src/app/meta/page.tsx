@@ -305,7 +305,7 @@ export default function MetaPage() {
     for (const a of rec.assignments) assignments[a.slotKey] = a.player.id;
     setFormationWithLineup(rec.formation.name, rec.formation.slots, assignments);
     // Navigate directly to the tactics section so role/focus is immediately visible
-    router.push(appPath('/lineup#tactics'));
+    router.push('/lineup#tactics');
   }
 
   function applyRecommendation(index: number) {
@@ -314,7 +314,7 @@ export default function MetaPage() {
     setFormation(rec.formation.name, rec.formation.slots);
     setTimeout(() => {
       autoFill(recommendationToLineup(rec));
-      router.push(appPath('/lineup'));
+      router.push('/lineup');
     }, 0);
   }
 

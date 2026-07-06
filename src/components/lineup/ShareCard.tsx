@@ -201,7 +201,8 @@ function drawHeader(
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
   ctx.font = `500 11px ${FONT}`;
-  ctx.fillText('goals-optimizer.vercel.app', W / 2, H - 8);
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : 'goals.ivo-tech.com';
+  ctx.fillText(hostname || 'goals.ivo-tech.com', W / 2, H - 8);
 }
 
 // ── Async image loader ────────────────────────────────────────────────────────

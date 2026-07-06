@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSquadStore } from '@/lib/store/squad-store';
-import { appPath } from '@/lib/app-url';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Heim', icon: '🏠', exact: true },
@@ -49,7 +48,7 @@ export function Sidebar() {
             <p className="text-[10px] text-slate-500 uppercase">Club</p>
             <p className="text-xs text-white truncate">{clubName || 'Kein Club'}</p>
             <button
-              onClick={() => { clearSquad(); router.push(appPath('/')); }}
+              onClick={() => { clearSquad(); router.push('/'); }}
               className="text-[10px] text-emerald-400 hover:underline mt-1"
             >
               Wechseln

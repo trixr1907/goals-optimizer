@@ -119,6 +119,7 @@ function relativeAge(isoString: string): string {
 
 function importErrorMessage(errorCode?: string, fallback = 'Live-Import fehlgeschlagen.'): string {
   switch (errorCode) {
+    case 'invalid_club_name': return 'Club-Name ist ungültig. Nutze 2–100 Zeichen ohne Sonderzeichen außer Leerzeichen, Punkt, Bindestrich, Unterstrich oder Apostroph.';
     case 'club_not_found': return 'Club nicht gefunden. Prüfe Schreibweise und Sonderzeichen.';
     case 'goalsverse_timeout': return 'Goalsverse antwortet zu langsam. Bitte gleich erneut versuchen.';
     case 'rsc_payload_incomplete': return 'Goalsverse hat unvollständige Kaderdaten geliefert.';
@@ -126,6 +127,24 @@ function importErrorMessage(errorCode?: string, fallback = 'Live-Import fehlgesc
     case 'network_error': return 'Netzwerk- oder Goalsverse-API-Fehler.';
     default: return fallback;
   }
+}
+
+function importDiagnosticsWarning(diagnostics?: ImportDiagnostics): string | null {
+  if (!diagnostics) return null;
+  const trackerPrimary = diagnostics.positionSources['goals-tracker'] ?? 0;
+  const playGoalsPrimary = diagnostics.positionSources.playgoals ?? 0;
+  const goalsversePrimary = diagnostics.positionSources.goalsverse ?? 0;
+
+  if (diagnostics.warnings > 0) {
+    return `⚠️ ${diagnostics.warnings} Quellen-Warnungen: Positionsdaten wurden teilweise per Fallback geladen. Prüfe Detailseiten bei engen Entscheidungen.`;
+  }
+  if (trackerPrimary === 0 && goalsversePrimary > 0 && playGoalsPrimary === 0) {
+    return '⚠️ Goals-Tracker war für diesen Import nicht nutzbar. Positionsdaten basieren auf Goalsverse und können ungenauer sein.';
+  }
+  if (playGoalsPrimary > 0) {
+    return `ℹ️ ${playGoalsPrimary} Primary-Positionen kamen über PlayGOALS-Fallback. Role-Ratings können eingeschränkt sein.`;
+  }
+  return null;
 }
 
 export default function OnboardingPage() {
@@ -147,7 +166,7 @@ export default function OnboardingPage() {
   // Auto-Redirect: Club-ID + Spieler vorhanden → direkt zur Aufstellung (nicht Squad-Liste)
   useEffect(() => {
     if (_hasHydrated && clubId && players.length > 0) {
-      router.push(appPath('/lineup'));
+      router.push('/lineup');
     }
   }, [_hasHydrated, clubId, players.length, router]);
 
@@ -249,7 +268,7 @@ export default function OnboardingPage() {
         if (isClubSwitch) clearLineup();
         importPlayers(incoming, clubUrl, resolvedClubId);
         setStatus(`${incoming.length} Spieler importiert.`);
-        router.push(appPath('/lineup'));
+        router.push('/lineup');
       }
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Fehler beim Import.');
@@ -297,7 +316,7 @@ export default function OnboardingPage() {
       setClubName(parsed.clubName || 'Importierter Club');
       importPlayers(enriched);
       setStatus(`${enriched.length} Spieler aus Backup importiert.`);
-      router.push(appPath('/squad'));
+      router.push('/squad');
     } catch {
       setStatus('Backup konnte nicht gelesen werden.');
     } finally {
@@ -411,11 +430,18 @@ export default function OnboardingPage() {
                     )}
                   </p>
                   {importResult.diagnostics && (
-                    <p className="text-xs text-slate-500 mt-1">
-                      Qualität: {importResult.diagnostics.full} Full / {importResult.diagnostics.basic} Basic · Tracker:{' '}
-                      {importResult.diagnostics.positionSources['goals-tracker'] ?? 0} Primary · Warnungen:{' '}
-                      {importResult.diagnostics.warnings}
-                    </p>
+                    <>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Qualität: {importResult.diagnostics.full} Full / {importResult.diagnostics.basic} Basic · Tracker:{' '}
+                        {importResult.diagnostics.positionSources['goals-tracker'] ?? 0} Primary · Warnungen:{' '}
+                        {importResult.diagnostics.warnings}
+                      </p>
+                      {importDiagnosticsWarning(importResult.diagnostics) && (
+                        <p className="mt-2 rounded-lg border border-amber-900/60 bg-amber-950/30 px-2 py-1.5 text-[11px] leading-relaxed text-amber-200">
+                          {importDiagnosticsWarning(importResult.diagnostics)}
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
                 {importResult.clubUrl && (

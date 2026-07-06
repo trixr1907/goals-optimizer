@@ -29,8 +29,9 @@ export default function MatchupPage() {
   // If lineup is set, use it; otherwise use full squad for analysis
   const myEffectivePlayers = lineupPlayers.length >= 7 ? lineupPlayers : myPlayers;
 
-  async function analyzeOpponent() {
-    if (!opponentId.trim()) return;
+  async function analyzeOpponent(opponentOverride?: string) {
+    const query = (opponentOverride ?? opponentId).trim();
+    if (!query) return;
     setLoading(true);
     setError('');
 
@@ -40,19 +41,20 @@ export default function MatchupPage() {
       const res = await fetch(apiPath('/api/import'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clubName: opponentId.trim() }),
+        body: JSON.stringify({ clubName: query }),
       });
       const data = await res.json();
 
       if (!res.ok || !data.players?.length) {
-        setError(data.error ?? 'Gegner nicht gefunden.');
+        setError(data.message ?? data.error ?? 'Gegner nicht gefunden.');
         setOpponentPlayers(null);
         return;
       }
 
       // Players from /api/import are already enriched with fit_scores
       setOpponentPlayers(data.players as PlayerWithScores[]);
-      setOpponentClubName(data.clubName || opponentId.trim());
+      setOpponentClubName(data.clubName || query);
+      if (opponentOverride) setOpponentId(opponentOverride);
     } catch {
       setError('Fehler beim Laden des Gegners.');
     } finally {
@@ -104,12 +106,27 @@ export default function MatchupPage() {
               className="flex-1 h-10 rounded-lg border border-slate-700 bg-slate-800 text-white text-sm px-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
             <button
-              onClick={analyzeOpponent}
+              onClick={() => analyzeOpponent()}
               disabled={loading}
               className="h-10 px-4 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-500 disabled:opacity-50 transition-colors whitespace-nowrap"
             >
               {loading ? 'Lädt...' : 'Analysieren'}
             </button>
+          </div>
+
+          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-3 text-sm text-slate-400">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p>
+                Nur testen? Lade einen Demo-Gegner und sieh sofort, wie Matchup-Vorteile und Risiken aussehen.
+              </p>
+              <button
+                onClick={() => analyzeOpponent('demo')}
+                disabled={loading}
+                className="shrink-0 rounded-lg border border-emerald-900/70 bg-emerald-950/30 px-3 py-2 text-xs font-medium text-emerald-300 hover:bg-emerald-900/40 disabled:opacity-50"
+              >
+                Demo-Gegner laden
+              </button>
+            </div>
           </div>
 
           {error && <p className="text-sm text-red-400">{error}</p>}

@@ -2,6 +2,9 @@
 
 A player-focused squad optimizer for GOALS.
 
+GOALS Optimizer is an unofficial community/fan tool by trixr1907. It is not affiliated with,
+endorsed by, sponsored by, or connected to GOALS AB or the official GOALS team.
+
 The app helps active GOALS players import their club, understand player fit, build stronger lineups, compare matchups, and track development priorities.
 
 Live app: https://goals.ivo-tech.com/
@@ -46,3 +49,6 @@ Production is deployed through Vercel from the `main` branch.
 ## Notes
 
 GOALS data availability depends on external community sources. Some players may only have basic roster data when detailed match/stat data is not exposed by the source.
+
+This project does not use official GOALS assets without permission and does not provide botting,
+account-sharing, exploit, or account-automation features.

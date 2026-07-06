@@ -4,7 +4,7 @@ import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
 
 export const metadata: Metadata = {
   title: 'GOALS Squad Optimizer',
-  description: 'Optimiere deinen GOALS-Kader mit Formation-Analyse, Taktik-Tipps und Entwicklungs-Tracker.',
+  description: 'Inoffizielles Community-Tool zur Optimierung deines GOALS-Kaders mit Formation-Analyse, Taktik-Tipps und Entwicklungs-Tracker.',
 };
 
 export const viewport: Viewport = {
@@ -21,7 +21,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         pt-11 pb-14
         lg:pt-0 lg:pb-0">
         <OnboardingModal />
-        {children}
+        <div className="min-h-screen flex flex-col">
+          <div className="flex-1">{children}</div>
+          <footer className="border-t border-slate-900/80 px-4 py-3 text-center text-[10px] leading-relaxed text-slate-600">
+            Inoffizielles Community-Tool — nicht verbunden mit GOALS AB. Datenquellen: goalsverse.com,
+            goals-tracker.com und playgoals.com.
+          </footer>
+        </div>
       </body>
     </html>
   );
