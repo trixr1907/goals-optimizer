@@ -122,10 +122,10 @@ function importErrorMessage(errorCode?: string, fallback = 'Live-Import fehlgesc
   switch (errorCode) {
     case 'invalid_club_name': return 'Club-Name ist ungültig. Nutze 2–100 Zeichen ohne Sonderzeichen außer Leerzeichen, Punkt, Bindestrich, Unterstrich oder Apostroph.';
     case 'club_not_found': return 'Club nicht gefunden. Prüfe Schreibweise und Sonderzeichen.';
-    case 'goalsverse_timeout': return 'Goalsverse antwortet zu langsam. Bitte gleich erneut versuchen.';
-    case 'rsc_payload_incomplete': return 'Goalsverse hat unvollständige Kaderdaten geliefert.';
+    case 'goalsverse_timeout': return 'Der Importdienst antwortet zu langsam. Bitte gleich erneut versuchen.';
+    case 'rsc_payload_incomplete': return 'Der Import hat unvollständige Kaderdaten geliefert.';
     case 'no_players_found': return 'Keine Spieler im importierten Kader gefunden.';
-    case 'network_error': return 'Netzwerk- oder Goalsverse-API-Fehler.';
+    case 'network_error': return 'Netzwerk- oder Importdienst-Fehler.';
     default: return fallback;
   }
 }
@@ -137,13 +137,13 @@ function importDiagnosticsWarning(diagnostics?: ImportDiagnostics): string | nul
   const goalsversePrimary = diagnostics.positionSources.goalsverse ?? 0;
 
   if (diagnostics.warnings > 0) {
-    return `⚠️ ${diagnostics.warnings} Quellen-Warnungen: Positionsdaten wurden teilweise per Fallback geladen. Prüfe Detailseiten bei engen Entscheidungen.`;
+    return `⚠️ ${diagnostics.warnings} Datenwarnungen: Positionswerte konnten teilweise nur eingeschränkt bestimmt werden. Prüfe enge Entscheidungen besonders sorgfältig.`;
   }
   if (trackerPrimary === 0 && goalsversePrimary > 0 && playGoalsPrimary === 0) {
-    return '⚠️ Goals-Tracker war für diesen Import nicht nutzbar. Positionsdaten basieren auf Goalsverse und können ungenauer sein.';
+    return '⚠️ Positionsdaten konnten nur eingeschränkt bestimmt werden und können ungenauer sein.';
   }
   if (playGoalsPrimary > 0) {
-    return `ℹ️ ${playGoalsPrimary} Primary-Positionen kamen über PlayGOALS-Fallback. Role-Ratings können eingeschränkt sein.`;
+    return `ℹ️ ${playGoalsPrimary} Primary-Positionen wurden über einen Ersatzpfad bestimmt. Rollenwerte können eingeschränkt sein.`;
   }
   return null;
 }
@@ -341,7 +341,7 @@ export default function OnboardingPage() {
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white">GOALS Squad Optimizer</h1>
             <p className="text-slate-400 mt-1 text-sm">
-              Importiere deinen Kader von goalsverse.com oder lade ein lokales Backup.
+              Importiere deinen Kader oder lade ein lokales Backup.
             </p>
           </div>
 
@@ -433,8 +433,7 @@ export default function OnboardingPage() {
                   {importResult.diagnostics && (
                     <>
                       <p className="text-xs text-slate-500 mt-1">
-                        Qualität: {importResult.diagnostics.full} Full / {importResult.diagnostics.basic} Basic · Tracker:{' '}
-                        {importResult.diagnostics.positionSources['goals-tracker'] ?? 0} Primary · Warnungen:{' '}
+                        Datenqualität: {importResult.diagnostics.full} vollständig / {importResult.diagnostics.basic} eingeschränkt · Warnungen:{' '}
                         {importResult.diagnostics.warnings}
                       </p>
                       {importDiagnosticsWarning(importResult.diagnostics) && (

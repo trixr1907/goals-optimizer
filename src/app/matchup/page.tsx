@@ -86,7 +86,7 @@ export default function MatchupPage() {
           <div>
             <h2 className="text-2xl font-bold text-white">Gegner-Analyse</h2>
             <p className="text-sm text-slate-500">
-              Gib die goalsverse-ID oder den Club-Namen deines Gegners ein.
+              Gib den Club-Namen oder die Club-ID deines Gegners ein.
               {lineupPlayers.length >= 7 && (
                 <span className="ml-2 text-emerald-600">
                   Deine Aufstellung ({formation}) wird verwendet.

@@ -24,8 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="min-h-screen flex flex-col">
           <div className="flex-1">{children}</div>
           <footer className="border-t border-slate-900/80 px-4 py-3 text-center text-[10px] leading-relaxed text-slate-600">
-            Inoffizielles Community-Tool — nicht verbunden mit GOALS AB. Datenquellen: goalsverse.com,
-            goals-tracker.com und playgoals.com.
+            Inoffizielles Community-Tool — nicht verbunden mit GOALS AB.
           </footer>
         </div>
       </body>

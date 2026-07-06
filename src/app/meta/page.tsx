@@ -340,17 +340,17 @@ export default function MetaPage() {
               <div>
                 <h2 className="text-2xl font-bold text-white">Meta Center</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Formation-Ranking aus deinem Squad-Fit — plus echte Live-Meta als Kontext.
+                  Formation-Ranking aus deinem Squad-Fit — plus aktuelle Meta-Tendenzen als Kontext.
                 </p>
                 <p className="mt-2 text-xs text-slate-600">
-                  Meta-Daten:{' '}
+                  Meta-Stand:{' '}
                   {metaStatus === 'ok'
-                    ? `Live von goalsverse · Patch ${liveMeta?.patch ?? '?'} · ${liveMeta?.matches ?? '?'} Matches`
+                    ? `Patch ${liveMeta?.patch ?? '?'} · ${liveMeta?.matches ?? '?'} Matches`
                     : metaStatus === 'fallback'
-                    ? 'Live-Meta nicht erreichbar'
+                    ? 'Aktuelle Meta nicht erreichbar'
                     : metaStatus === 'loading'
-                    ? 'Lade goalsverse…'
-                    : 'Live-Meta nicht erreichbar'}
+                    ? 'Lade Meta…'
+                    : 'Aktuelle Meta nicht erreichbar'}
                 </p>
               </div>
               {best && !topThree && (

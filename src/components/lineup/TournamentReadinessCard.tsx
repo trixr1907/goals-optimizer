@@ -154,14 +154,9 @@ export function TournamentReadinessCard({
           <p className="text-[11px] text-slate-400">
             Offener Modus ohne OVR-Limit — nutze deine stärkste Startelf und kompakte Meta-Taktik.
           </p>
-          <a
-            href="https://goals-tracker.com/knockout"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block text-[11px] text-sky-400 hover:text-sky-300 transition-colors"
-          >
-            Live-Leaderboard ↗
-          </a>
+          <p className="text-[11px] text-slate-500">
+            Leaderboard-Details findest du im Spiel oder im Debug-Bereich.
+          </p>
         </div>
       </div>
 

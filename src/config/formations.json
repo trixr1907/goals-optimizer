@@ -910,17 +910,17 @@
       }
     ]
   },
-  "3-4-1-2": {
-    "name": "3-4-1-2",
+  "3-4-2-1": {
+    "name": "3-4-2-1",
     "playstyle": "Ausgewogen",
     "strengths": [
       "Drei-Kette mit Wingbacks",
-      "AM als Bindeglied",
-      "Zwei Stürmer"
+      "Zwei AM zwischen den Linien",
+      "Ein ST als klare Zielrolle"
     ],
     "weaknesses": [
       "Außen bei Ballverlust offen",
-      "WB brauchen viel Ausdauer"
+      "ST kann isoliert sein, wenn beide AM zu tief stehen"
     ],
     "slots": [
       {
@@ -965,17 +965,17 @@
       },
       {
         "position": "AM",
-        "x": 50,
-        "y": 34
-      },
-      {
-        "position": "ST",
         "x": 38,
-        "y": 18
+        "y": 32
+      },
+      {
+        "position": "AM",
+        "x": 62,
+        "y": 32
       },
       {
         "position": "ST",
-        "x": 62,
+        "x": 50,
         "y": 18
       }
     ]

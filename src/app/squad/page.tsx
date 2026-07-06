@@ -337,7 +337,7 @@ function RadarOverlay({
 // ── Haupt-Komponente ──────────────────────────────────────────────────────────
 
 export default function SquadPage() {
-  const { players, clubName, clubUrl, _hasHydrated } = useSquadStore();
+  const { players, clubName, _hasHydrated } = useSquadStore();
 
   const [search,          setSearch]          = useState('');
   const [filterPos,       setFilterPos]       = useState('all');
@@ -467,12 +467,7 @@ export default function SquadPage() {
           <div className="flex items-start justify-between flex-wrap gap-3">
             <div>
               <h2 className="text-xl font-bold text-white">{clubName || 'Kader'}</h2>
-              {clubUrl && (
-                <a href={clubUrl} target="_blank" rel="noopener noreferrer"
-                  className="text-xs text-slate-500 hover:text-emerald-400 transition-colors">
-                  goalsverse.com ↗
-                </a>
-              )}
+
             </div>
             <p className="text-xs text-slate-600">Details → alle Einzelstats · 📊 → Radar-Chart</p>
           </div>
@@ -705,16 +700,6 @@ export default function SquadPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <a
-                        href={`https://goals-tracker.com/player/${player.id.replace('goalsverse-', '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-slate-500 hover:text-white text-sm"
-                        title="Auf goals-tracker ansehen"
-                      >
-                        🔗
-                      </a>
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setSelectedPlayer(player); setComparePlayer(null); }}
@@ -749,7 +734,7 @@ export default function SquadPage() {
                   <SortTh label="Beste Position"  sk="bestPos" />
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">Details</th>
                   <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">Chart</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-500">⚡</th>
+
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -856,24 +841,12 @@ export default function SquadPage() {
                           </button>
                         </td>
 
-                        {/* goals-tracker Link — jeder Spieler hat eine eigene Seite */}
-                        <td className="px-3 py-2.5">
-                          <a
-                            href={`https://goals-tracker.com/player/${player.id.replace('goalsverse-', '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[11px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-colors"
-                            title="Auf goals-tracker ansehen"
-                          >
-                            🔗
-                          </a>
-                        </td>
                       </tr>
 
                       {/* Inline Expand-Panel */}
                       {isExpanded && (
                         <tr key={`${player.id}-details`}>
-                          <td colSpan={9} className="p-0">
+                          <td colSpan={8} className="p-0">
                             <DetailsPanel player={player} />
                           </td>
                         </tr>

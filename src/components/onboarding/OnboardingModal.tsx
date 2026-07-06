@@ -54,7 +54,7 @@ export function OnboardingModal() {
           </div>
 
           <p className="text-xs text-slate-500">
-            Datenquellen: goalsverse.com, goals-tracker.com und playgoals.com · Keine erfundenen Zahlen — nur echte Stats.
+            Keine erfundenen Werte — die Analyse nutzt verfügbare Kader- und Spielerinformationen.
           </p>
 
           <p className="rounded-lg border border-amber-900/40 bg-amber-950/20 p-2 text-[10px] leading-relaxed text-amber-200/80">
