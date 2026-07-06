@@ -32,6 +32,7 @@ import { explainFootFit, calcPositionFitScore } from '@/lib/scoring/position-fit
 import { shortPlayerName } from '@/lib/player-name';
 import { TournamentReadinessCard } from '@/components/lineup/TournamentReadinessCard';
 import type { TournamentLineupResult } from '@/lib/tournaments/tournament-lineup-recommender';
+import { POSITION_COLORS } from '@/config/display-constants';
 
 const FORMATIONS = formationsData as Record<string, { name: string; slots: LineupSlot[] }>;
 
@@ -83,13 +84,6 @@ const VARIANT_TABS: {
 function assignmentsToLineup(assignments: FormationAssignment[]): Record<string, string> {
   return Object.fromEntries(assignments.map((a) => [a.slotKey, a.player.id]));
 }
-
-const POSITION_COLORS: Record<string, string> = {
-  GK: 'bg-yellow-600',
-  CB: 'bg-blue-700', LB: 'bg-blue-600', RB: 'bg-blue-600', LWB: 'bg-blue-500', RWB: 'bg-blue-500',
-  CDM: 'bg-green-700', CM: 'bg-green-600', CAM: 'bg-green-500', LM: 'bg-green-500', RM: 'bg-green-500',
-  ST: 'bg-red-600', LW: 'bg-red-500', RW: 'bg-red-500', CF: 'bg-red-500',
-};
 
 // ── Avatar helpers ────────────────────────────────────────────────────────────
 

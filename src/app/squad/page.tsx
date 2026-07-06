@@ -9,25 +9,12 @@ import { appPath } from '@/lib/app-url';
 import { Input } from '@/components/ui/input';
 import { topWeightedStats } from '@/lib/scoring/position-fit';
 import { analyzeSquad } from '@/lib/analysis/squad-analysis';
+import { RARITY_COLOR, RARITY_TEXT, RARITY_ORDER, STAT_LABEL } from '@/config/display-constants';
 
 const StatRadarChart = dynamic(
   () => import('@/components/charts/StatRadarChart').then((m) => m.StatRadarChart),
   { ssr: false, loading: () => <div className="h-60 flex items-center justify-center text-xs text-slate-500">Lade Chart…</div> }
 );
-
-// ── Farben / Rarity ──────────────────────────────────────────────────────────
-
-const RARITY_COLOR: Record<string, string> = {
-  Basic: 'bg-slate-600', Common: 'bg-stone-500', Uncommon: 'bg-green-700', Rare: 'bg-blue-700',
-  Epic: 'bg-purple-700', Legendary: 'bg-amber-600', Mythic: 'bg-red-700',
-};
-const RARITY_TEXT: Record<string, string> = {
-  Basic: 'text-slate-300', Common: 'text-stone-300', Uncommon: 'text-green-300', Rare: 'text-blue-300',
-  Epic: 'text-purple-300', Legendary: 'text-amber-300', Mythic: 'text-red-300',
-};
-const RARITY_ORDER: Record<string, number> = {
-  Basic: 0, Common: 1, Uncommon: 2, Rare: 3, Epic: 4, Legendary: 5, Mythic: 6,
-};
 
 // ── Stat-Gruppen ─────────────────────────────────────────────────────────────
 
@@ -46,24 +33,6 @@ const GK_STAT_GROUP: { label: string; color: string; keys: string[] } = {
   label: 'Goalkeeping',
   color: 'text-cyan-400',
   keys: ['div', 'reflexes', 'positioning', 'catching', 'parrying', 'rushing', 'command_of_area', 'penalty_saving', 'throwing', 'kicking_power'],
-};
-
-const STAT_LABEL: Record<string, string> = {
-  acceleration: 'Acceleration',   sprint_speed: 'Sprint Speed',
-  finishing: 'Finishing',         shot_power: 'Shot Power',      long_shots: 'Long Shots',
-  penalties: 'Penalties',         weak_foot: 'Weak Foot',        attacking_iq: 'Attacking IQ',
-  ground_pass: 'Ground Pass',     lofted_pass: 'Lofted Pass',    through_pass: 'Through Pass',
-  crossing: 'Crossing',           curve: 'Curve',                free_kick_accuracy: 'FK Accuracy',
-  sprint_dribbling: 'Sprint Drib.', close_dribbling: 'Close Drib.', skills: 'Skills',
-  agility: 'Agility',             balance: 'Balance',            first_touch: 'First Touch',
-  defensive_iq: 'Def. IQ',        stand_tackle: 'Stand Tackle',  slide_tackle: 'Slide Tackle',
-  jockeying: 'Jockeying',         interceptions: 'Interceptions', blocking: 'Blocking',
-  strength: 'Strength',           aggression: 'Aggression',      stamina: 'Stamina',
-  heading: 'Heading',             jumping: 'Jumping',
-  div: 'Diving',                  reflexes: 'Reflexes',          positioning: 'Positioning',
-  catching: 'Catching',           parrying: 'Parrying',
-  rushing: 'Rushing',             command_of_area: 'Command Area', penalty_saving: 'Penalty Save',
-  throwing: 'Throwing',           kicking_power: 'Kicking Power',
 };
 
 // ── Hilfs-Funktionen ─────────────────────────────────────────────────────────

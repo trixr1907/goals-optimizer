@@ -23,29 +23,9 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { appPath } from '@/lib/app-url';
 import { adviseDevelopment } from '@/lib/analysis/development-advisor';
 import { CURRENT_TOURNAMENTS } from '@/config/tournaments';
+import { RARITY_COLOR, RARITY_ORDER, STAT_LABEL } from '@/config/display-constants';
 
 // ── Konstanten ──────────────────────────────────────────────────────────────
-
-const RARITY_COLOR: Record<string, string> = {
-  Basic: 'bg-slate-600',
-  Uncommon: 'bg-green-700',
-  Rare: 'bg-blue-700',
-  Epic: 'bg-purple-700',
-  Legendary: 'bg-amber-600',
-  Mythic: 'bg-red-700',
-  Common: 'bg-stone-500',
-};
-
-const RARITY_ORDER = ['Basic', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Common'];
-
-const STAT_LABELS: Record<string, string> = {
-  pac: 'Pace',
-  sho: 'Shooting',
-  pas: 'Passing',
-  dri: 'Dribbling',
-  def: 'Defending',
-  phy: 'Physicality',
-};
 
 // GK stat keys — only shown for players with position === 'GK'
 const GK_STAT_KEYS = [
@@ -221,7 +201,7 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
   const fitColor =
     mainFit >= 85 ? 'text-emerald-400' : mainFit >= 70 ? 'text-amber-400' : 'text-red-400';
   const developmentScore = getDevelopmentScore(player);
-  const rarityIndex = RARITY_ORDER.indexOf(player.rarity);
+  const rarityIndex = RARITY_ORDER[player.rarity] ?? 0;
   const retirementWarning = getRetirementWarning(player, rarityIndex);
   const upgradeHistory = tracked?.upgradeHistory ?? [];
   const aging = player.aging;
@@ -417,7 +397,7 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
             </div>
             <div className="space-y-1.5">
               {visibleStats.map(([key, val]) => (
-                <StatBar key={key} label={STAT_LABELS[key] ?? key} value={val} />
+                <StatBar key={key} label={STAT_LABEL[key] ?? key} value={val} />
               ))}
             </div>
           </div>
@@ -568,7 +548,7 @@ export default function DevelopmentPage() {
         (notesByPlayerId[player.id]?.priority ?? suggestPriority(player)) === 'train'
     ).length;
     const retirementRisk = players.filter((player) => {
-      const ri = RARITY_ORDER.indexOf(player.rarity);
+      const ri = RARITY_ORDER[player.rarity] ?? 0;
       return getRetirementWarning(player, ri) !== null;
     }).length;
     const withAging = players.filter((player) => player.aging).length;

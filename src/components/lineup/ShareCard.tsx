@@ -5,6 +5,7 @@ import { PlayerWithScores } from '@/lib/scraper/types';
 import { LineupSlot } from '@/lib/store/lineup-store';
 import { shortPlayerName } from '@/lib/player-name';
 import { FormationAssignment } from '@/lib/optimizer/formation-optimizer';
+import { RARITY_HEX } from '@/config/display-constants';
 
 // ── Canvas constants ──────────────────────────────────────────────────────────
 
@@ -20,11 +21,6 @@ const PITCH_H      = PITCH_BOTTOM - PITCH_TOP;
 
 const SLOT_R  = 34;   // circle radius
 const FONT    = 'system-ui, -apple-system, sans-serif';
-
-const RARITY_HEX: Record<string, string> = {
-  Basic: '#64748b', Common: '#78716c', Uncommon: '#16a34a',
-  Rare: '#2563eb',  Epic: '#7c3aed',   Legendary: '#d97706', Mythic: '#dc2626',
-};
 
 const META_COLOR = (fit: number) =>
   fit >= 80 ? '#34d399' : fit >= 65 ? '#fbbf24' : '#f87171';
