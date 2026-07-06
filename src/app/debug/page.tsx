@@ -98,9 +98,9 @@ const DATA_FIELDS: DataField[] = [
   },
   {
     field: 'player.name',
-    description: 'Aus "name" (Activity) oder "firstName + lastName" (Squad). Single-name-Feld bevorzugt.',
+    description: 'Basic/Profil: "name" bevorzugt, sonst firstName/lastName. Full/Squad: first_name + last_name.',
     source: 'goalsverse',
-    fallback: 'Ersten 8 Zeichen der ID als Platzhalter',
+    fallback: 'Ersten 8 Zeichen der raw UUID als Platzhalter, danach "Unknown" bei Full-Spielern',
   },
   {
     field: 'player.image_url',
@@ -122,7 +122,7 @@ const DATA_FIELDS: DataField[] = [
   },
   {
     field: 'player.age',
-    description: 'Alter in Jahren, aus dem Squad-Payload',
+    description: 'Alter in Jahren aus raw.current_age. Nur Full/Squad-Spieler; Basic/Profil-Spieler haben aktuell kein age.',
     source: 'goalsverse',
   },
   {
@@ -137,7 +137,7 @@ const DATA_FIELDS: DataField[] = [
     field: 'player.position (Primary)',
     description: 'Die Display-/Haupt-Position. Bestimmt durch bestPositionFromRatings() via Priority-Chain.',
     source: 'tracker',
-    fallback: 'PlayGOALS Fallback → danach Goalsverse-Heuristik',
+    fallback: 'PlayGOALS Fallback → danach bleibt die initiale Goalsverse-Position aus bestPositionFromRatings()',
     editable: true,
     editKey: 'position_priority',
     warn: 'ovr.role (equipped) ≠ Primary! Niemals blind ovr.role als position nutzen.',
@@ -146,7 +146,7 @@ const DATA_FIELDS: DataField[] = [
     field: 'player.positionSource',
     description: 'Woher die Primary Position kommt: "goals-tracker" | "playgoals" | "goalsverse" | "heuristic"',
     source: 'tracker',
-    fallback: '"goalsverse" wenn Tracker keinen Position-Wert liefert (jede Fehlerart: timeout, 403, parse-miss). PlayGOALS dazwischen wenn Tracker komplett fehlschlägt.',
+    fallback: 'Wenn trackerPos null ist (egal ob timeout, 403, parse-miss oder partial result), wird PlayGOALS für die Primary Position versucht. Wenn auch das fehlschlägt, bleibt Goalsverse.',
   },
   {
     field: 'player.roleRatings[]',
@@ -167,7 +167,7 @@ const DATA_FIELDS: DataField[] = [
   },
   {
     field: 'player.roleRatingsSource',
-    description: 'Woher roleRatings kommen: "goals-tracker" | "goalsverse" | "mixed" | "none"',
+    description: 'Woher roleRatings kommen. Type erlaubt "goals-tracker" | "goalsverse" | "mixed" | "none"; aktuelle Pipeline setzt praktisch "goals-tracker" oder "goalsverse".',
     source: 'tracker',
   },
   {
@@ -234,7 +234,7 @@ const DECISIONS: DecisionParam[] = [
       'Ein Spieler gilt als "spielbar" auf einer Nebenposition wenn sein OVR dort mindestens (Primary − X) ist. Kleiner Wert = engere Auswahl.',
     currentValue: 10,
     type: 'number',
-    location: 'src/lib/scraper/goalsverse-client.ts → mapActivityPlayerToBasic() + mapPlayerFromGoalsverse()',
+    location: 'src/lib/scraper/goalsverse-client.ts → mapActivityPlayerToBasic() + mapPlayerFromGoalsverse() + enrichWithTracker()',
     impact:
       'Höher (z.B. 15): Mehr Nebenpositionen, Optimizer hat mehr Flexibilität. Niedriger (z.B. 5): Nur sehr gut passende Nebenpositionen gelten.',
   },
@@ -301,7 +301,7 @@ const DECISIONS: DecisionParam[] = [
     key: 'dev_label_thresholds',
     label: 'Development Label Schwellen',
     description: 'Wann ein Spieler "Starter" / "Trainieren" / "Turnier-Spezialist" / "Rotation" / "Ersetzen" bekommt.',
-    currentValue: 'Starter: bestFit≥75, primaryFit≥68, OVR≥65',
+    currentValue: 'Starter: bestFit≥75 & primaryFit≥68 & OVR≥65; Training: age≤23 & OVR≥55 OR bestFit≥65 & OVR<70 & score≥55; Rotation: bestFit≥58 OR OVR≥58',
     type: 'text',
     location: 'src/lib/analysis/development-advisor.ts → adviseDevelopment()',
     impact: 'Direkt auf Development-Seite Label-Vergabe. Anpassen wenn zu viele/wenige "Ersetzen" erscheinen.',
@@ -336,7 +336,7 @@ const PIPELINE_STEPS = [
   },
   {
     step: 'D',
-    title: 'Profil (60 Spieler)',
+    title: 'Profil (60+ Spieler)',
     detail: '/p/{username} + RSC:1 + Next-Router-State-Tree + Next-Url → "club"-Array',
     layer: 'goalsverse',
     file: 'goalsverse-client.ts → fetchRsc("/p/{slug}", slug)',
@@ -375,7 +375,7 @@ const PIPELINE_STEPS = [
   {
     step: 'I',
     title: 'API Response',
-    detail: '{ players[], count, source, clubId, clubUrl } → localStorage via squad-store',
+    detail: '{ players[], count, source, clubId, clubUrl, clubName } → localStorage via squad-store. Bei Fehler zusätzlich error/errorCode/message.',
     layer: 'engine',
     file: 'app/api/import/route.ts',
   },
@@ -501,7 +501,7 @@ export default function DataCanvasPage() {
                 <p className="text-blue-400 font-medium mb-1">Live (echter Club-Name)</p>
                 <ul className="space-y-1 list-disc list-inside">
                   <li>Steps A → I (alle 9 Phasen)</li>
-                  <li>18 Full-Spieler + bis zu 42 Basic-Spieler</li>
+                  <li>18 Full-Spieler + variable Anzahl Basic-Spieler aus dem Profil-Array</li>
                   <li>Tracker Enrichment für ALLE Spieler</li>
                   <li>positionSource zeigt woher Pos kommt</li>
                   <li>sourceWarnings wenn Tracker fehlschlug</li>
