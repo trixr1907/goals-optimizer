@@ -1,0 +1,744 @@
+'use client';
+
+/**
+ * Data Canvas — Datenfluss-Übersicht für den GOALS Squad Optimizer
+ *
+ * Zeigt interaktiv woher jedes Datenfeld kommt, welche Logik greift,
+ * und welche Entscheidungen du selbst ändern kannst.
+ *
+ * Aufbau: 4 Spalten (Pipeline-Stufen) + konfigurierbarer Entscheidungs-Editor.
+ */
+
+import { useState } from 'react';
+
+// ──────────────────────────────────────────────────────────────────────────
+// Datenmodell für den Canvas
+// ──────────────────────────────────────────────────────────────────────────
+
+interface DataLayer {
+  id: string;
+  label: string;
+  icon: string;
+  color: string; // tailwind bg class for header
+  borderColor: string; // tailwind border class
+  dotColor: string;
+}
+
+interface DataField {
+  field: string;
+  description: string;
+  source: string; // welche Layer-ID liefert dieses Feld
+  fallback?: string; // was passiert wenn die source leer ist
+  editable?: boolean; // ist das eine Entscheidung die du tunen kannst?
+  editKey?: string; // key für den Decision-Editor
+  warn?: string; // bekannte Stolperfalle
+}
+
+interface DecisionParam {
+  key: string;
+  label: string;
+  description: string;
+  currentValue: string | number;
+  type: 'number' | 'text' | 'select';
+  options?: string[];
+  location: string; // Datei-Pfad
+  impact: string; // Was ändert sich wenn du das änderst?
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Statische Konfiguration
+// ──────────────────────────────────────────────────────────────────────────
+
+const LAYERS: DataLayer[] = [
+  {
+    id: 'goalsverse',
+    label: '1. Goalsverse API',
+    icon: '🌐',
+    color: 'bg-blue-900/60',
+    borderColor: 'border-blue-700',
+    dotColor: 'bg-blue-400',
+  },
+  {
+    id: 'tracker',
+    label: '2. Goals-Tracker',
+    icon: '🎯',
+    color: 'bg-purple-900/60',
+    borderColor: 'border-purple-700',
+    dotColor: 'bg-purple-400',
+  },
+  {
+    id: 'playgoals',
+    label: '3. PlayGOALS Fallback',
+    icon: '🔄',
+    color: 'bg-amber-900/60',
+    borderColor: 'border-amber-700',
+    dotColor: 'bg-amber-400',
+  },
+  {
+    id: 'engine',
+    label: '4. Scoring Engine',
+    icon: '⚙️',
+    color: 'bg-emerald-900/60',
+    borderColor: 'border-emerald-700',
+    dotColor: 'bg-emerald-400',
+  },
+];
+
+const LAYER_MAP: Record<string, DataLayer> = Object.fromEntries(
+  LAYERS.map((l) => [l.id, l])
+);
+
+const DATA_FIELDS: DataField[] = [
+  // ── Spieler-Identität ──────────────────────────────────────────────────
+  {
+    field: 'player.id',
+    description: 'Eindeutige ID, immer "goalsverse-{uuid}" Format',
+    source: 'goalsverse',
+    warn: 'characterId ohne "goalsverse-" Prefix = raw UUID für Tracker-URLs',
+  },
+  {
+    field: 'player.name',
+    description: 'Aus "name" (Activity) oder "firstName + lastName" (Squad). Single-name-Feld bevorzugt.',
+    source: 'goalsverse',
+    fallback: 'Ersten 8 Zeichen der ID als Platzhalter',
+  },
+  {
+    field: 'player.image_url',
+    description: 'CDN-Avatar: cdn.playgoals.com/character/prod/{rawId}.png?w=128',
+    source: 'goalsverse',
+  },
+  {
+    field: 'player.overall',
+    description: 'OVR aus "ovr" Feld (number) oder "ovr.overall_rating" (Objekt)',
+    source: 'goalsverse',
+    fallback: 'Wert 50 wenn kein OVR gefunden',
+  },
+  {
+    field: 'player.rarity',
+    description: 'Berechnet aus OVR: ≥95 Mythic, ≥90 Legendary, ≥85 Epic, ≥80 Rare, ≥70 Uncommon, ≥60 Common',
+    source: 'engine',
+    editable: true,
+    editKey: 'rarity_thresholds',
+  },
+  {
+    field: 'player.age',
+    description: 'Alter in Jahren, aus dem Squad-Payload',
+    source: 'goalsverse',
+  },
+  {
+    field: 'player.dataQuality',
+    description: '"full" = 18 Squad-Spieler mit Einzel-Stats | "basic" = 42 Profil-Spieler mit nur OVR',
+    source: 'goalsverse',
+    warn: 'Basic-Spieler haben emptyStats (alle 0) — Fit-Scores unzuverlässig',
+  },
+
+  // ── Position-Bestimmung ────────────────────────────────────────────────
+  {
+    field: 'player.position (Primary)',
+    description: 'Die Display-/Haupt-Position. Bestimmt durch bestPositionFromRatings() via Priority-Chain.',
+    source: 'tracker',
+    fallback: 'PlayGOALS Fallback → danach Goalsverse-Heuristik',
+    editable: true,
+    editKey: 'position_priority',
+    warn: 'ovr.role (equipped) ≠ Primary! Niemals blind ovr.role als position nutzen.',
+  },
+  {
+    field: 'player.positionSource',
+    description: 'Woher die Primary Position kommt: "goals-tracker" | "playgoals" | "goalsverse" | "heuristic"',
+    source: 'tracker',
+    fallback: '"goalsverse" oder "heuristic" wenn Tracker 403/Timeout',
+  },
+  {
+    field: 'player.roleRatings[]',
+    description: 'Alle Positionen + OVR aus dem Positions-Pitch auf goals-tracker.com. ANDERE OVR-Formel als Goalsverse!',
+    source: 'tracker',
+    fallback: 'Goalsverse ovr_roles wenn Tracker-Pitch nicht parsebar (roleRatingsSource="goalsverse")',
+    editable: true,
+    editKey: 'secondary_threshold',
+    warn: 'LB+RB → beide als "FB" aggregiert (max). Goalsverse ovr_roles ≠ Tracker Pitch.',
+  },
+  {
+    field: 'player.secondaryPositions[]',
+    description: 'Positionen mit OVR ≥ primary − 10. Spielbar mit −2 Stat-Penalty.',
+    source: 'engine',
+    editable: true,
+    editKey: 'secondary_threshold',
+    warn: 'Threshold war früher −3 (zu eng). Aktuell −10 wegen GOALS-Spielrealität. Kommentar in types.ts war veraltet (OVR within 2) — bereits korrigiert.',
+  },
+  {
+    field: 'player.roleRatingsSource',
+    description: 'Woher roleRatings kommen: "goals-tracker" | "goalsverse" | "mixed" | "none"',
+    source: 'tracker',
+  },
+  {
+    field: 'player.sourceWarnings[]',
+    description: 'Nicht-fatale Warnungen: Tracker-Timeout, 403-Fallback, fehlende Pitch-Section',
+    source: 'tracker',
+  },
+
+  // ── Statistiken ────────────────────────────────────────────────────────
+  {
+    field: 'player.stats (pac/sho/pas/dri/def/phy)',
+    description: 'Kategorie-Durchschnitte aus dem Goalsverse Squad-Payload. Nur Full-Spieler.',
+    source: 'goalsverse',
+    warn: 'Basic-Spieler: emptyStats (alle 0). hasFullStats() prüfen vor Stat-Nutzung.',
+  },
+  {
+    field: 'player.stats (Einzel-Stats)',
+    description: '30+ Einzel-Attribute: acceleration, finishing, ground_pass, close_dribbling, stand_tackle, strength etc.',
+    source: 'goalsverse',
+    fallback: '0 für alle Stats bei Basic-Spielern',
+  },
+  {
+    field: 'player.stats (GK-Stats)',
+    description: 'div, reflexes, positioning, catching, parrying — nur bei GK relevant',
+    source: 'goalsverse',
+  },
+
+  // ── Fit-Scores ─────────────────────────────────────────────────────────
+  {
+    field: 'fit_scores {GK..ST}',
+    description: 'Gewichteter Score 0-100 für jede Position. Aus position-weights-detailed.json + Context-Modifier.',
+    source: 'engine',
+    editable: true,
+    editKey: 'position_weights',
+    warn: 'Context-Modifier: Körpergröße (±heading/agility), starker Fuß bei WF/FB (slotX nötig)',
+  },
+  {
+    field: 'positionType {primary/secondary/out}',
+    description: 'Klassifikation pro Slot: primary = kein Penalty | secondary = −2 | out = −5',
+    source: 'engine',
+    editable: true,
+    editKey: 'position_penalties',
+  },
+  {
+    field: 'effectiveStats (pro Position)',
+    description: 'Stats nach Position-Penalty. Basis für alle taktischen Berechnungen.',
+    source: 'engine',
+    warn: 'player.overall wird NIE durch Penalties verändert — nur Einzel-Stats.',
+  },
+
+  // ── Match-Daten ────────────────────────────────────────────────────────
+  {
+    field: 'player.matches_played / goals / assists',
+    description: 'Aus dem "club"-Array im Profil-RSC-Payload. Nur bei Spielern mit Einsätzen vorhanden.',
+    source: 'goalsverse',
+    fallback: 'undefined wenn Spieler noch nie gespielt hat',
+  },
+];
+
+const DECISIONS: DecisionParam[] = [
+  {
+    key: 'secondary_threshold',
+    label: 'Nebenposition-Schwelle (OVR-Abstand)',
+    description:
+      'Ein Spieler gilt als "spielbar" auf einer Nebenposition wenn sein OVR dort mindestens (Primary − X) ist. Kleiner Wert = engere Auswahl.',
+    currentValue: 10,
+    type: 'number',
+    location: 'src/lib/scraper/goalsverse-client.ts → mapActivityPlayerToBasic() + mapPlayerFromGoalsverse()',
+    impact:
+      'Höher (z.B. 15): Mehr Nebenpositionen, Optimizer hat mehr Flexibilität. Niedriger (z.B. 5): Nur sehr gut passende Nebenpositionen gelten.',
+  },
+  {
+    key: 'rarity_thresholds',
+    label: 'Rarity-Schwellen (OVR)',
+    description: 'OVR-Grenzen für Mythic/Legendary/Epic/Rare/Uncommon/Common/Basic.',
+    currentValue: '95/90/85/80/70/60',
+    type: 'text',
+    location: 'src/lib/scraper/goalsverse-client.ts → mapOvrToRarity()',
+    impact: 'Rein visuell — beeinflusst Kartenfärbung im Squad, keine Spiellogik.',
+  },
+  {
+    key: 'position_weights',
+    label: 'Positions-Gewichte',
+    description:
+      'JSON-Config die bestimmt wie stark jeder Einzel-Stat (z.B. finishing, ground_pass) für jede Position gewichtet wird.',
+    currentValue: 'Datei: src/config/position-weights-detailed.json',
+    type: 'text',
+    location: 'src/config/position-weights-detailed.json + src/lib/scoring/position-fit.ts',
+    impact:
+      'Direkt auf Fit-Scores und Optimizer-Entscheidungen. Wer die beste Elf ist ändert sich wenn Gewichte verschoben werden.',
+  },
+  {
+    key: 'position_penalties',
+    label: 'Position-Penalties (Stat-Abzug)',
+    description: 'Wie viele Punkte von allen Stats abgezogen werden wenn ein Spieler nicht auf seiner Hauptposition spielt.',
+    currentValue: 'primary: 0 | secondary: -2 | out: -5',
+    type: 'text',
+    location: 'src/lib/scraper/types.ts → getEffectiveStats()',
+    impact: 'Beeinflusst Taktik-Panel, Matchup-Analyse und alle Stat-basierten Empfehlungen.',
+  },
+  {
+    key: 'position_priority',
+    label: 'Positions-Bestimmungs-Reihenfolge',
+    description:
+      'Bei Gleich-OVR auf mehreren Positionen: 1) Nur ein Top-OVR → direkt nehmen. 2) raw.role zeigt auf Top-Pos → bevorzugen. 3) Stat-Tie-Break (kreativ vs. haltend). 4) ovr.role als letzter Ausweg.',
+    currentValue: 'bestPositionFromRatings()',
+    type: 'text',
+    location: 'src/lib/scraper/goalsverse-client.ts → bestPositionFromRatings()',
+    impact:
+      'Welche Position als Primary gilt. Falsch = falscher Fit-Score = falscher Optimizer-Vorschlag.',
+  },
+  {
+    key: 'tracker_timeout',
+    label: 'Goals-Tracker Timeout (ms)',
+    description: 'Wie lange auf goals-tracker.com gewartet wird bevor auf PlayGOALS-Fallback umgeschaltet wird.',
+    currentValue: 15000,
+    type: 'number',
+    location: 'src/lib/scraper/goals-tracker-client.ts → TRACKER_TIMEOUT_MS = 15_000',
+    impact:
+      'Zu kurz: Mehr Fallbacks auf Goalsverse-Positionen (ungenauer). Zu lang: Import dauert länger. Goalsverse selbst hat separaten Timeout: FETCH_TIMEOUT_MS = 12_000 (goalsverse-client.ts).',
+  },
+  {
+    key: 'tracker_concurrency',
+    label: 'Tracker Concurrent Requests',
+    description: 'Wie viele Spieler gleichzeitig bei goals-tracker.com abgerufen werden.',
+    currentValue: 3,
+    type: 'number',
+    location: 'src/lib/scraper/goals-tracker-client.ts → TRACKER_CONCURRENCY',
+    impact: 'Höher = schnellerer Import, aber mehr Risiko für Rate-Limiting auf Vercel.',
+  },
+  {
+    key: 'dev_label_thresholds',
+    label: 'Development Label Schwellen',
+    description: 'Wann ein Spieler "Starter" / "Trainieren" / "Turnier-Spezialist" / "Rotation" / "Ersetzen" bekommt.',
+    currentValue: 'Starter: bestFit≥75, primaryFit≥68, OVR≥65',
+    type: 'text',
+    location: 'src/lib/analysis/development-advisor.ts → adviseDevelopment()',
+    impact: 'Direkt auf Development-Seite Label-Vergabe. Anpassen wenn zu viele/wenige "Ersetzen" erscheinen.',
+  },
+];
+
+// ──────────────────────────────────────────────────────────────────────────
+// Import-Pipeline Phasen (für den Flow-Diagram-Block)
+// ──────────────────────────────────────────────────────────────────────────
+
+const PIPELINE_STEPS = [
+  {
+    step: 'A',
+    title: 'Club-Suche',
+    detail: '/api/v1/search?query={name} → userId',
+    layer: 'goalsverse',
+    file: 'goalsverse-client.ts → resolveClubId()',
+  },
+  {
+    step: 'B',
+    title: 'Squad (18 Spieler)',
+    detail: '/v1/club/{userId} + RSC:1 → startingEleven + bench',
+    layer: 'goalsverse',
+    file: 'goalsverse-client.ts → fetchRsc("/v1/club/{id}")',
+  },
+  {
+    step: 'C',
+    title: 'Username-Auflösung',
+    detail: '/api/v1/users/{userId} → username (für Profil-URL)',
+    layer: 'goalsverse',
+    file: 'goalsverse-client.ts → resolveUsernameForClub()',
+  },
+  {
+    step: 'D',
+    title: 'Profil (60 Spieler)',
+    detail: '/p/{username} + RSC:1 + Next-Router-State-Tree + Next-Url → "club"-Array',
+    layer: 'goalsverse',
+    file: 'goalsverse-client.ts → fetchRsc("/p/{slug}", slug)',
+    warn: '3 Header nötig! Nur RSC:1 = leere Shell ohne Spieler.',
+  },
+  {
+    step: 'E',
+    title: 'Merge & Dedup',
+    detail: 'Squad-Spieler haben Priorität (volle Stats). Profil ergänzt bis 60.',
+    layer: 'goalsverse',
+    file: 'goalsverse-client.ts → getClubRoster()',
+  },
+  {
+    step: 'F',
+    title: 'Tracker Enrichment',
+    detail: 'goals-tracker.com/player/{uuid} → Primary Position + Pitch roleRatings',
+    layer: 'tracker',
+    file: 'goals-tracker-client.ts → fetchTrackerPlayerData()',
+    warn: 'Concurrency=3, Timeout=15s, 1 Retry. Pitch-Buttons parsen (cursor:pointer), nicht ovr_roles!',
+  },
+  {
+    step: 'G',
+    title: 'PlayGOALS Fallback',
+    detail: 'Nur wenn Tracker HTTP 403. playgoals.com/en/player/{uuid} → ROLE_XX aus __next_f.push',
+    layer: 'playgoals',
+    file: 'playgoals-client.ts → fetchPlaygoalsPosition()',
+    warn: 'Nur Primary Position übernehmen — ovr_roles von PlayGOALS = Goalsverse-äquivalent.',
+  },
+  {
+    step: 'H',
+    title: 'Fit-Score Enrichment',
+    detail: 'enrichPlayerWithScores() → fit_scores, positionType, effectiveStats für alle 11 Positionen',
+    layer: 'engine',
+    file: 'scoring/position-fit.ts → enrichPlayerWithScores()',
+  },
+  {
+    step: 'I',
+    title: 'API Response',
+    detail: '{ players[], count, source, clubId, clubUrl } → localStorage via squad-store',
+    layer: 'engine',
+    file: 'app/api/import/route.ts',
+  },
+];
+
+// ──────────────────────────────────────────────────────────────────────────
+// Component
+// ──────────────────────────────────────────────────────────────────────────
+
+export default function DataCanvasPage() {
+  const [activeField, setActiveField] = useState<DataField | null>(null);
+  const [activeDecision, setActiveDecision] = useState<DecisionParam | null>(null);
+  const [filterLayer, setFilterLayer] = useState<string>('all');
+  const [tab, setTab] = useState<'fields' | 'pipeline' | 'decisions'>('pipeline');
+
+  const filteredFields =
+    filterLayer === 'all' ? DATA_FIELDS : DATA_FIELDS.filter((f) => f.source === filterLayer);
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-6">
+      {/* ── Header ────────────────────────────────────────────────────────── */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">🗺️ Data Canvas</h1>
+        <p className="text-slate-400 text-sm mt-1">
+          Woher kommen die Daten? Was kann angepasst werden? Wo greift welche Logik?
+        </p>
+      </div>
+
+      {/* ── Tabs ──────────────────────────────────────────────────────────── */}
+      <div className="flex gap-2 mb-6">
+        {(
+          [
+            { key: 'pipeline', label: '🔀 Import-Pipeline' },
+            { key: 'fields', label: '📋 Datenfelder' },
+            { key: 'decisions', label: '🎛️ Entscheidungen' },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              tab === t.key
+                ? 'bg-emerald-600 text-white'
+                : 'bg-slate-800 text-slate-400 hover:text-white'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          TAB: PIPELINE
+         ════════════════════════════════════════════════════════════════════ */}
+      {tab === 'pipeline' && (
+        <div className="space-y-4">
+          {/* Legende */}
+          <div className="flex flex-wrap gap-3 mb-4">
+            {LAYERS.map((l) => (
+              <div key={l.id} className="flex items-center gap-2">
+                <span className={`w-3 h-3 rounded-full ${l.dotColor}`} />
+                <span className="text-xs text-slate-400">{l.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Steps */}
+          <div className="space-y-3">
+            {PIPELINE_STEPS.map((step, idx) => {
+              const layer = LAYER_MAP[step.layer];
+              return (
+                <div
+                  key={step.step}
+                  className={`relative flex gap-4 p-4 rounded-xl border ${layer.borderColor} bg-slate-900/80`}
+                >
+                  {/* Connector line */}
+                  {idx < PIPELINE_STEPS.length - 1 && (
+                    <div className="absolute left-7 top-full w-0.5 h-3 bg-slate-700 z-10" />
+                  )}
+
+                  {/* Step circle */}
+                  <div
+                    className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white ${layer.dotColor}`}
+                  >
+                    {step.step}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-white">{step.title}</span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full text-white ${layer.color}`}>
+                        {layer.icon} {layer.label.split('. ')[1]}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-1">{step.detail}</p>
+                    <p className="text-[10px] text-slate-500 mt-1 font-mono">{step.file}</p>
+                    {step.warn && (
+                      <p className="text-[11px] text-amber-400 mt-1.5">
+                        ⚠️ {step.warn}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Demo vs Live Unterschied */}
+          <div className="mt-6 p-4 rounded-xl border border-slate-700 bg-slate-900/50">
+            <h3 className="text-sm font-semibold text-white mb-2">Demo vs. Live Import</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-400">
+              <div>
+                <p className="text-emerald-400 font-medium mb-1">Demo (clubName = &quot;demo&quot;)</p>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>MOCK_PLAYERS aus mock-data.ts</li>
+                  <li>Alle als dataQuality: &quot;full&quot; markiert</li>
+                  <li>positionSource: &quot;heuristic&quot;</li>
+                  <li>Kein Netzwerk-Call</li>
+                  <li>Kein Tracker/PlayGOALS Enrichment</li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-blue-400 font-medium mb-1">Live (echter Club-Name)</p>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>Steps A → I (alle 9 Phasen)</li>
+                  <li>18 Full-Spieler + bis zu 42 Basic-Spieler</li>
+                  <li>Tracker Enrichment für ALLE Spieler</li>
+                  <li>positionSource zeigt woher Pos kommt</li>
+                  <li>sourceWarnings wenn Tracker fehlschlug</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════
+          TAB: DATENFELDER
+         ════════════════════════════════════════════════════════════════════ */}
+      {tab === 'fields' && (
+        <div className="flex gap-4 flex-col lg:flex-row">
+          {/* Linke Spalte: Filter + Liste */}
+          <div className="flex-1 min-w-0">
+            {/* Layer-Filter */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              <button
+                onClick={() => setFilterLayer('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  filterLayer === 'all'
+                    ? 'bg-slate-600 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+              >
+                Alle
+              </button>
+              {LAYERS.map((l) => (
+                <button
+                  key={l.id}
+                  onClick={() => setFilterLayer(l.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    filterLayer === l.id
+                      ? `text-white ${l.color}`
+                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {l.icon} {l.label.split('. ')[1]}
+                </button>
+              ))}
+            </div>
+
+            {/* Feld-Liste */}
+            <div className="space-y-2">
+              {filteredFields.map((field) => {
+                const layer = LAYER_MAP[field.source];
+                const isActive = activeField?.field === field.field;
+                return (
+                  <button
+                    key={field.field}
+                    onClick={() => setActiveField(isActive ? null : field)}
+                    className={`w-full text-left p-3 rounded-xl border transition-all ${
+                      isActive
+                        ? `${layer.borderColor} bg-slate-800`
+                        : 'border-slate-700 bg-slate-900/50 hover:border-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${layer.dotColor}`} />
+                      <span className="font-mono text-xs text-white">{field.field}</span>
+                      {field.editable && (
+                        <span className="text-[10px] bg-emerald-800 text-emerald-300 px-1.5 py-0.5 rounded ml-auto">
+                          anpassbar
+                        </span>
+                      )}
+                      {field.warn && (
+                        <span className="text-[10px] text-amber-400">⚠️</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1 ml-4">{field.description}</p>
+
+                    {/* Expanded details */}
+                    {isActive && (
+                      <div className="mt-3 ml-4 space-y-2 border-t border-slate-700 pt-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full text-white ${layer.color}`}>
+                            Quelle: {layer.icon} {layer.label}
+                          </span>
+                        </div>
+                        {field.fallback && (
+                          <p className="text-xs text-slate-500">
+                            <span className="text-slate-400">Fallback:</span> {field.fallback}
+                          </p>
+                        )}
+                        {field.warn && (
+                          <p className="text-xs text-amber-400">⚠️ {field.warn}</p>
+                        )}
+                        {field.editable && field.editKey && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const dec = DECISIONS.find((d) => d.key === field.editKey);
+                              if (dec) { setActiveDecision(dec); setTab('decisions'); }
+                            }}
+                            className="text-[11px] text-emerald-400 hover:underline"
+                          >
+                            → Entscheidung anzeigen
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Rechte Spalte: Layer-Legende */}
+          <div className="w-full lg:w-64 space-y-3">
+            <h3 className="text-sm font-semibold text-slate-300">Datenquellen</h3>
+            {LAYERS.map((l) => {
+              const count = DATA_FIELDS.filter((f) => f.source === l.id).length;
+              return (
+                <div
+                  key={l.id}
+                  className={`p-3 rounded-xl border ${l.borderColor} ${l.color}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span>{l.icon}</span>
+                    <span className="text-sm font-medium text-white">{l.label}</span>
+                    <span className="ml-auto text-xs text-slate-400">{count} Felder</span>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="mt-4 p-3 rounded-xl border border-slate-700 bg-slate-900/50 text-xs text-slate-400 space-y-2">
+              <p className="font-medium text-slate-300">Farb-Bedeutung</p>
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-400" /><span>Goalsverse (primäre Quelle)</span></div>
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-purple-400" /><span>Goals-Tracker (Position-Autorität)</span></div>
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-amber-400" /><span>PlayGOALS (Fallback bei 403)</span></div>
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-400" /><span>Scoring Engine (berechnet)</span></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════
+          TAB: ENTSCHEIDUNGEN
+         ════════════════════════════════════════════════════════════════════ */}
+      {tab === 'decisions' && (
+        <div className="flex gap-4 flex-col lg:flex-row">
+          {/* Liste */}
+          <div className="flex-1 min-w-0 space-y-3">
+            {DECISIONS.map((dec) => {
+              const isActive = activeDecision?.key === dec.key;
+              return (
+                <button
+                  key={dec.key}
+                  onClick={() => setActiveDecision(isActive ? null : dec)}
+                  className={`w-full text-left p-4 rounded-xl border transition-all ${
+                    isActive
+                      ? 'border-emerald-600 bg-slate-800'
+                      : 'border-slate-700 bg-slate-900/50 hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl">🎛️</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white">{dec.label}</p>
+                      <p className="text-xs text-slate-400 mt-1">{dec.description}</p>
+
+                      {/* Current value pill */}
+                      <div className="mt-2 flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] bg-slate-700 px-2 py-1 rounded font-mono text-slate-300">
+                          Aktuell: {String(dec.currentValue)}
+                        </span>
+                      </div>
+
+                      {/* Expanded */}
+                      {isActive && (
+                        <div className="mt-4 space-y-3 border-t border-slate-700 pt-4">
+                          <div>
+                            <p className="text-[11px] text-slate-500 uppercase tracking-wide mb-1">Datei</p>
+                            <p className="text-xs font-mono text-slate-300 break-all">{dec.location}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] text-slate-500 uppercase tracking-wide mb-1">Auswirkung</p>
+                            <p className="text-xs text-slate-300">{dec.impact}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-slate-950 border border-slate-700">
+                            <p className="text-[11px] text-emerald-400 font-medium mb-1">
+                              💡 So änderst du es
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              Öffne <span className="font-mono text-slate-300">{dec.location.split(' ')[0]}</span> und
+                              passe den markierten Wert an. Danach{' '}
+                              <span className="font-mono text-slate-300">npm run test && npm run build</span> ausführen.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Seitenleiste: Refactor-Hinweise */}
+          <div className="w-full lg:w-72 space-y-4">
+            <div className="p-4 rounded-xl border border-slate-700 bg-slate-900/50">
+              <h3 className="text-sm font-semibold text-white mb-3">🔧 Für den nächsten Refactor</h3>
+              <div className="space-y-3 text-xs text-slate-400">
+                <div className="p-2 rounded-lg bg-slate-800">
+                  <p className="text-amber-300 font-medium">Nebenposition-Schwelle</p>
+                  <p className="mt-1">Aktuell hardcoded an 2 Stellen. Besser: eine Konstante in types.ts extrahieren.</p>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-800">
+                  <p className="text-amber-300 font-medium">Position-Penalties</p>
+                  <p className="mt-1">−2/−5 hardcoded in getEffectiveStats(). Für Test-Varianten aus Config ziehbar machen.</p>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-800">
+                  <p className="text-amber-300 font-medium">Tracker Enrichment</p>
+                  <p className="mt-1">Concurrency + Timeout als env-Variablen wäre besser als Konstanten im Code.</p>
+                </div>
+                <div className="p-2 rounded-lg bg-slate-800">
+                  <p className="text-slate-300 font-medium">Gut so ✅</p>
+                  <p className="mt-1">Rarity, Rollen-Mapping, Mock-Data Demo-Pfad — stable, kein Refactor-Bedarf.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl border border-emerald-800 bg-emerald-950/40">
+              <h3 className="text-sm font-semibold text-emerald-300 mb-2">✅ Verifikations-Commands</h3>
+              <div className="space-y-1 font-mono text-xs text-slate-400">
+                <p>npm run test</p>
+                <p>npm run lint</p>
+                <p>npm run build</p>
+                <p className="text-slate-500 text-[10px] mt-2">Nach jeder Änderung alle 3 ausführen.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

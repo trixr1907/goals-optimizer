@@ -146,7 +146,7 @@ export interface Player {
 
   // GOALS position system
   roleRatings: PlayerRoleRating[];       // All positions with OVR from ovr_roles
-  secondaryPositions: Position[];        // Positions with OVR >= primary - 2
+  secondaryPositions: Position[];        // Positions with OVR >= primary - 10
   aging?: PlayerAging;
 
   /** Data quality indicator: 'full' = has individual stats, 'basic' = only role/OVR */
@@ -171,7 +171,7 @@ export interface PlayerWithScores extends Player {
  *
  * GOALS position rules:
  *   primary   — player.position matches the slot (no penalty)
- *   secondary — slot is in player.secondaryPositions (OVR within 2 of primary → -2 on all stats)
+ *   secondary — slot is in player.secondaryPositions (OVR within 10 of primary → -2 on all stats)
  *   out       — all other positions (-5 on all stats)
  *
  * IMPORTANT: The penalty applies to individual stats only.

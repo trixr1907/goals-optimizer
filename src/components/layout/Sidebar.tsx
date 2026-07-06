@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/development', label: 'Entwicklung', icon: '📈' },
   { href: '/meta', label: 'Meta Center', icon: '🎯' },
   { href: '/matchup', label: 'Gegner-Analyse', icon: '⚔️' },
+  { href: '/debug', label: 'Debug Canvas', icon: '🗺️' },
 ];
 
 // Items shown in the mobile bottom bar (max 5 to fit)
