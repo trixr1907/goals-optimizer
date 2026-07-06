@@ -5,6 +5,7 @@ import { useSquadStore, ImportDelta } from '@/lib/store/squad-store';
 import { useLineupStore } from '@/lib/store/lineup-store';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { RotationPlanGenerator } from '@/components/onboarding/RotationPlanGenerator';
 import { PlayerWithScores, displayPosition } from '@/lib/scraper/types';
 import { enrichPlayerWithScores } from '@/lib/scoring/position-fit';
 import { apiPath, appPath } from '@/lib/app-url';
@@ -505,15 +506,18 @@ export default function OnboardingPage() {
 
           {/* Info-Box nur wenn noch kein Kader */}
           {!hasSquad && (
-            <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4 text-xs text-slate-500 space-y-2">
-              <p className="font-medium text-slate-400">So funktioniert&apos;s:</p>
-              <p>1. Club-Name aus GOALS eingeben und importieren.</p>
-              <p>
-                2. Spieler müssen mindestens 1× in einem <strong className="text-slate-400">Online-Match</strong> gespielt
-                haben (Quickplay empfohlen — kein Ranking-Risiko, kein Bot-Match).
-              </p>
-              <p>3. Bei ca. 50 Spielern: ~5 Quickplay-Matches (~20 Min) reichen.</p>
-              <p className="text-slate-600">Bonus: Du verdienst dabei Match Points & XP!</p>
+            <div className="space-y-4">
+              <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-4 text-xs text-slate-500 space-y-2">
+                <p className="font-medium text-slate-400">So funktioniert&apos;s:</p>
+                <p>1. Club-Name aus GOALS eingeben und importieren.</p>
+                <p>
+                  2. Spieler müssen mindestens 1× in einem <strong className="text-slate-400">Online-Match</strong> gespielt
+                  haben (Quickplay empfohlen — kein Ranking-Risiko, kein Bot-Match).
+                </p>
+                <p>3. Bei ca. 50 Spielern: ~5 Quickplay-Matches (~20 Min) reichen.</p>
+                <p className="text-slate-600">Bonus: Du verdienst dabei Match Points & XP!</p>
+              </div>
+              <RotationPlanGenerator />
             </div>
           )}
         </div>
