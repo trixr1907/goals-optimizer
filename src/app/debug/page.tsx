@@ -116,7 +116,7 @@ const DATA_FIELDS: DataField[] = [
   {
     field: 'player.rarity',
     description: 'Berechnet aus OVR: ≥95 Mythic, ≥90 Legendary, ≥85 Epic, ≥80 Rare, ≥70 Uncommon, ≥60 Common',
-    source: 'engine',
+    source: 'goalsverse',
     editable: true,
     editKey: 'rarity_thresholds',
   },
@@ -127,7 +127,7 @@ const DATA_FIELDS: DataField[] = [
   },
   {
     field: 'player.dataQuality',
-    description: '"full" = 18 Squad-Spieler mit Einzel-Stats | "basic" = 42 Profil-Spieler mit nur OVR',
+    description: '"full" = 18 Squad-Spieler mit Einzel-Stats | "basic" = Profil-Spieler (variabel, typisch 40-60+) mit nur OVR',
     source: 'goalsverse',
     warn: 'Basic-Spieler haben emptyStats (alle 0) — Fit-Scores unzuverlässig',
   },
@@ -146,7 +146,7 @@ const DATA_FIELDS: DataField[] = [
     field: 'player.positionSource',
     description: 'Woher die Primary Position kommt: "goals-tracker" | "playgoals" | "goalsverse" | "heuristic"',
     source: 'tracker',
-    fallback: '"goalsverse" oder "heuristic" wenn Tracker 403/Timeout',
+    fallback: '"goalsverse" wenn Tracker keinen Position-Wert liefert (jede Fehlerart: timeout, 403, parse-miss). PlayGOALS dazwischen wenn Tracker komplett fehlschlägt.',
   },
   {
     field: 'player.roleRatings[]',
@@ -160,7 +160,7 @@ const DATA_FIELDS: DataField[] = [
   {
     field: 'player.secondaryPositions[]',
     description: 'Positionen mit OVR ≥ primary − 10. Spielbar mit −2 Stat-Penalty.',
-    source: 'engine',
+    source: 'goalsverse',
     editable: true,
     editKey: 'secondary_threshold',
     warn: 'Threshold war früher −3 (zu eng). Aktuell −10 wegen GOALS-Spielrealität. Kommentar in types.ts war veraltet (OVR within 2) — bereits korrigiert.',
@@ -172,7 +172,7 @@ const DATA_FIELDS: DataField[] = [
   },
   {
     field: 'player.sourceWarnings[]',
-    description: 'Nicht-fatale Warnungen: Tracker-Timeout, 403-Fallback, fehlende Pitch-Section',
+    description: 'Nicht-fatale Warnungen: Jede Art von Tracker-Fehler (timeout, http_status, network_error, parse-miss) + PlayGOALS-Fallback-Info',
     source: 'tracker',
   },
 
@@ -191,14 +191,14 @@ const DATA_FIELDS: DataField[] = [
   },
   {
     field: 'player.stats (GK-Stats)',
-    description: 'div, reflexes, positioning, catching, parrying — nur bei GK relevant',
+    description: 'div, kic, reflexes, positioning, catching, parrying (required) + rushing, command_of_area, penalty_saving, throwing, kicking_power (optional) — nur bei GK relevant',
     source: 'goalsverse',
   },
 
   // ── Fit-Scores ─────────────────────────────────────────────────────────
   {
     field: 'fit_scores {GK..ST}',
-    description: 'Gewichteter Score 0-100 für jede Position. Aus position-weights-detailed.json + Context-Modifier.',
+    description: 'Gewichteter Score 1-99 pro Position. Full-Spieler: Σ(stat × weight) / Σ(99 × weight) × 100, clamped [1,99]. Basic-Spieler: OVR/99×100 (kein Stat-Zugriff möglich).',
     source: 'engine',
     editable: true,
     editKey: 'position_weights',
@@ -221,9 +221,8 @@ const DATA_FIELDS: DataField[] = [
   // ── Match-Daten ────────────────────────────────────────────────────────
   {
     field: 'player.matches_played / goals / assists',
-    description: 'Aus dem "club"-Array im Profil-RSC-Payload. Nur bei Spielern mit Einsätzen vorhanden.',
+    description: 'Primär aus dem Profil-RSC "club"-Array. Bei Squad-Spielern (18 full) werden Match-Daten vom Profil per Merge nachträglich kopiert. undefined wenn Spieler noch nie gespielt hat.',
     source: 'goalsverse',
-    fallback: 'undefined wenn Spieler noch nie gespielt hat',
   },
 ];
 
@@ -317,7 +316,7 @@ const PIPELINE_STEPS = [
   {
     step: 'A',
     title: 'Club-Suche',
-    detail: '/api/v1/search?query={name} → userId',
+    detail: 'UUID-Input → direkt weiter (kein API-Call). Name-Input → /api/v1/search?query={name} → userId',
     layer: 'goalsverse',
     file: 'goalsverse-client.ts → resolveClubId()',
   },
@@ -346,7 +345,7 @@ const PIPELINE_STEPS = [
   {
     step: 'E',
     title: 'Merge & Dedup',
-    detail: 'Squad-Spieler haben Priorität (volle Stats). Profil ergänzt bis 60.',
+    detail: 'Squad-Spieler haben Priorität (volle Stats). Profil-Spieler werden hinzugefügt wenn noch nicht in Squad (keine harte Grenze). Match-Daten vom Profil werden auf Squad-Spieler kopiert.',
     layer: 'goalsverse',
     file: 'goalsverse-client.ts → getClubRoster()',
   },
@@ -361,9 +360,9 @@ const PIPELINE_STEPS = [
   {
     step: 'G',
     title: 'PlayGOALS Fallback',
-    detail: 'Nur wenn Tracker HTTP 403. playgoals.com/en/player/{uuid} → ROLE_XX aus __next_f.push',
+    detail: 'Wenn Tracker keine Primary Position liefert (bei JEDER Fehlerart). playgoals.com/en/player/{uuid} → ROLE_XX aus __next_f.push',
     layer: 'playgoals',
-    file: 'playgoals-client.ts → fetchPlaygoalsPosition()',
+    file: 'playgoals-client.ts → fetchPlayGoalsPlayerData()',
     warn: 'Nur Primary Position übernehmen — ovr_roles von PlayGOALS = Goalsverse-äquivalent.',
   },
   {
