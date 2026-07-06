@@ -17,6 +17,14 @@ interface SquadBackupFile {
   players: PlayerWithScores[];
 }
 
+interface ImportDiagnostics {
+  full: number;
+  basic: number;
+  warnings: number;
+  positionSources: Record<string, number>;
+  roleRatingSources: Record<string, number>;
+}
+
 // ── Delta-Bericht nach Re-Import ────────────────────────────────────────────
 
 function DeltaReport({ delta, onDismiss }: { delta: ImportDelta; onDismiss: () => void }) {
@@ -152,6 +160,7 @@ export default function OnboardingPage() {
     resolvedName: string;
     count: number;
     clubUrl?: string;
+    diagnostics?: ImportDiagnostics;
   } | null>(null);
 
   const hasSquad = players.length > 0;
@@ -162,6 +171,7 @@ export default function OnboardingPage() {
     clubId?: string;
     clubUrl?: string;
     resolvedName?: string;
+    diagnostics?: ImportDiagnostics;
   }> {
     const res = await fetch(apiPath('/api/import'), {
       method: 'POST',
@@ -178,8 +188,9 @@ export default function OnboardingPage() {
     if (data.clubName && data.source === 'goalsverse') {
       setClubName(data.clubName);
     }
-    if (!data.players?.length) return { players: [], clubId: data.clubId, resolvedName, clubUrl: data.clubUrl };
-    return { players: data.players as PlayerWithScores[], clubId: data.clubId, clubUrl: data.clubUrl, resolvedName };
+    const diagnostics = data.diagnostics as ImportDiagnostics | undefined;
+    if (!data.players?.length) return { players: [], clubId: data.clubId, resolvedName, clubUrl: data.clubUrl, diagnostics };
+    return { players: data.players as PlayerWithScores[], clubId: data.clubId, clubUrl: data.clubUrl, resolvedName, diagnostics };
   }
 
   async function handleImport(clubNameOverride?: string) {
@@ -192,7 +203,7 @@ export default function OnboardingPage() {
     setImportResult(null);
     try {
       const requestedName = name;
-      const { players: incoming, clubId: resolvedClubId, clubUrl, resolvedName } = await fetchAndEnrich(requestedName);
+      const { players: incoming, clubId: resolvedClubId, clubUrl, resolvedName, diagnostics } = await fetchAndEnrich(requestedName);
       if (!incoming.length) {
         setStatus('Keine Spieler gefunden.');
         return;
@@ -202,6 +213,7 @@ export default function OnboardingPage() {
         resolvedName: resolvedName ?? requestedName,
         count: incoming.length,
         clubUrl,
+        diagnostics,
       });
 
       // Detect club switch: different clubId (reliable) or different resolved name.
@@ -398,6 +410,13 @@ export default function OnboardingPage() {
                       <> · gesucht: “{importResult.requestedName}”</>
                     )}
                   </p>
+                  {importResult.diagnostics && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      Qualität: {importResult.diagnostics.full} Full / {importResult.diagnostics.basic} Basic · Tracker:{' '}
+                      {importResult.diagnostics.positionSources['goals-tracker'] ?? 0} Primary · Warnungen:{' '}
+                      {importResult.diagnostics.warnings}
+                    </p>
+                  )}
                 </div>
                 {importResult.clubUrl && (
                   <a

@@ -9,7 +9,8 @@
  * Aufbau: 4 Spalten (Pipeline-Stufen) + konfigurierbarer Entscheidungs-Editor.
  */
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { PlayerWithScores, PositionSource, RoleRatingsSource } from '@/lib/scraper/types';
 
 // ──────────────────────────────────────────────────────────────────────────
 // Datenmodell für den Canvas
@@ -43,6 +44,76 @@ interface DecisionParam {
   options?: string[];
   location: string; // Datei-Pfad
   impact: string; // Was ändert sich wenn du das änderst?
+}
+
+interface DiagnosticRule {
+  symptom: string;
+  check: string;
+  likelyCause: string;
+  userAdvantage: string;
+  nextRefactor: string;
+  severity: 'hoch' | 'mittel' | 'niedrig';
+}
+
+interface SquadDebugSnapshot {
+  clubName: string;
+  clubId?: string;
+  lastImportedAt: string | null;
+  total: number;
+  full: number;
+  basic: number;
+  warnings: number;
+  positionSources: Partial<Record<PositionSource | 'unknown', number>>;
+  roleRatingSources: Partial<Record<RoleRatingsSource | 'unknown', number>>;
+}
+
+function emptySnapshot(): SquadDebugSnapshot {
+  return {
+    clubName: '',
+    lastImportedAt: null,
+    total: 0,
+    full: 0,
+    basic: 0,
+    warnings: 0,
+    positionSources: {},
+    roleRatingSources: {},
+  };
+}
+
+function readSquadSnapshot(): SquadDebugSnapshot {
+  if (typeof window === 'undefined') return emptySnapshot();
+
+  try {
+    const raw = window.localStorage.getItem('goals-squad-store');
+    if (!raw) return emptySnapshot();
+
+    const parsed = JSON.parse(raw) as { state?: { clubName?: string; clubId?: string; lastImportedAt?: string | null; players?: PlayerWithScores[] } };
+    const state = parsed.state;
+    const players = Array.isArray(state?.players) ? state.players.filter(Boolean) : [];
+    const snapshot = emptySnapshot();
+
+    snapshot.clubName = state?.clubName ?? '';
+    snapshot.clubId = state?.clubId;
+    snapshot.lastImportedAt = state?.lastImportedAt ?? null;
+    snapshot.total = players.length;
+
+    for (const player of players) {
+      if (player.dataQuality === 'full') snapshot.full += 1;
+      else snapshot.basic += 1;
+
+      const posSource = player.positionSource ?? 'unknown';
+      snapshot.positionSources[posSource] = (snapshot.positionSources[posSource] ?? 0) + 1;
+
+      const roleSource = player.roleRatingsSource ?? 'unknown';
+      snapshot.roleRatingSources[roleSource] = (snapshot.roleRatingSources[roleSource] ?? 0) + 1;
+
+      snapshot.warnings += player.sourceWarnings?.length ?? 0;
+    }
+
+    return snapshot;
+  } catch {
+    return emptySnapshot();
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -312,6 +383,49 @@ const DECISIONS: DecisionParam[] = [
 // Import-Pipeline Phasen (für den Flow-Diagram-Block)
 // ──────────────────────────────────────────────────────────────────────────
 
+const DIAGNOSTIC_RULES: DiagnosticRule[] = [
+  {
+    symptom: 'Viele Spieler zeigen positionSource=goalsverse oder playgoals statt goals-tracker.',
+    check: 'Nach Live-Import in /squad einzelne Karten öffnen und sourceWarnings prüfen. Häufen sich timeout/http_status/parse_roleRatings_missing?',
+    likelyCause: 'Tracker-Enrichment ist langsam, geblockt oder Pitch-HTML wurde nicht erkannt. Primary kann dann stimmen, aber Nebenpositions-OVR bleibt oft Goalsverse-näher.',
+    userAdvantage: 'Wenn Tracker grün ist, erkennt das Tool versteckte bessere Rollen wie WF/ST/AM genauer. Das bringt direktere Vorteile bei Beste-Elf, Turnieren und Matchup.',
+    nextRefactor: 'Import-Diagnose in API-Response aggregieren: counts pro positionSource, roleRatingsSource und failReason sichtbar machen.',
+    severity: 'hoch',
+  },
+  {
+    symptom: 'Viele Basic-Spieler landen überraschend in der besten Elf oder wirken auf falschen Positionen stark.',
+    check: 'dataQuality prüfen: basic hat emptyStats. Fit kommt dann nur aus roleRatings/OVR, nicht aus Einzelwerten wie Pace, Passing oder Stamina.',
+    likelyCause: 'Profil-Spieler haben keine Detailstats. Der Optimizer kann bei Basic-Spielern nur grob schätzen.',
+    userAdvantage: 'Für echte Vorteile sollten Full-Spieler bevorzugt werden, wenn Pace/Stamina/Weak-Foot wichtig sind. Basic-Spieler sind eher Kandidatenliste, nicht endgültige Wahrheit.',
+    nextRefactor: 'Im Optimizer einen Data-Quality-Malus oder Confidence-Badge einbauen, damit Basic-Spieler nicht unbemerkt Full-Spieler verdrängen.',
+    severity: 'hoch',
+  },
+  {
+    symptom: 'Turnier-Empfehlung erfüllt OVR-Limit, fühlt sich aber spielerisch schwach an.',
+    check: 'Nicht nur Squad OVR anschauen: averageFit, PositionType-Badges und schwache Linien im Matchup vergleichen.',
+    likelyCause: 'OVR-Max-Turniere belohnen niedrige Mannschaftsstärke, aber das Tool darf dabei nicht zu viele Spieler out-of-position stellen.',
+    userAdvantage: 'Der Vorteil entsteht durch Spieler knapp unter dem OVR-Limit mit hohem Fit, nicht durch zufällig niedrige OVR-Spieler.',
+    nextRefactor: 'Tournament-Recommender stärker auf Fit-pro-OVR-Effizienz und Mindest-Fit je Linie optimieren.',
+    severity: 'mittel',
+  },
+  {
+    symptom: 'Ein Spieler wirkt auf einer Nebenposition im Spiel gut, wird vom Tool aber abgestraft.',
+    check: 'roleRatings und secondaryPositions vergleichen: liegt die Position außerhalb Primary − 10 oder fehlt sie komplett im Tracker-Pitch?',
+    likelyCause: 'Threshold zu eng für diesen Spezialfall oder Tracker/Goalsverse kennt die Rolle nicht vollständig.',
+    userAdvantage: 'Spezialisten mit ungewöhnlichen Nebenrollen sind Meta-Vorteile. Das Tool sollte sie sichtbar machen statt verstecken.',
+    nextRefactor: 'Manuelle Player-Overrides pro Position erlauben, mit Kommentar und Ablaufdatum, statt globale Thresholds blind zu erhöhen.',
+    severity: 'mittel',
+  },
+  {
+    symptom: 'Matchup sagt Risiko, aber Lineup-Empfehlung reagiert nicht darauf.',
+    check: 'Vergleiche Matchup-Risiken (Tempo, Flanken, zentrale Achse) mit Formation/Tactics-Empfehlung auf /lineup.',
+    likelyCause: 'Matchup-Analyse und Formation-Optimizer sind noch getrennte Engines.',
+    userAdvantage: 'Gegen bestimmte Gegner bringt eine leicht schlechtere Overall-Elf mit passender Taktik mehr als die reine Best-Fit-Elf.',
+    nextRefactor: 'Gegner-spezifischen Optimizer-Modus bauen: Risiken als Gewichtung in Formation- und Spielerwahl einspeisen.',
+    severity: 'niedrig',
+  },
+];
+
 const PIPELINE_STEPS = [
   {
     step: 'A',
@@ -389,10 +503,26 @@ export default function DataCanvasPage() {
   const [activeField, setActiveField] = useState<DataField | null>(null);
   const [activeDecision, setActiveDecision] = useState<DecisionParam | null>(null);
   const [filterLayer, setFilterLayer] = useState<string>('all');
-  const [tab, setTab] = useState<'fields' | 'pipeline' | 'decisions'>('pipeline');
+  const [tab, setTab] = useState<'fields' | 'pipeline' | 'decisions' | 'diagnostics'>('pipeline');
+  const [snapshot, setSnapshot] = useState<SquadDebugSnapshot>(() => emptySnapshot());
+
+  useEffect(() => {
+    setSnapshot(readSquadSnapshot());
+  }, []);
 
   const filteredFields =
     filterLayer === 'all' ? DATA_FIELDS : DATA_FIELDS.filter((f) => f.source === filterLayer);
+
+  const trackerPrimaryCount = snapshot.positionSources['goals-tracker'] ?? 0;
+  const trackerRoleCount = snapshot.roleRatingSources['goals-tracker'] ?? 0;
+  const trackerPrimaryShare = snapshot.total > 0 ? Math.round((trackerPrimaryCount / snapshot.total) * 100) : 0;
+  const trackerRoleShare = snapshot.total > 0 ? Math.round((trackerRoleCount / snapshot.total) * 100) : 0;
+  const snapshotVerdict = useMemo(() => {
+    if (snapshot.total === 0) return 'Noch kein Kader importiert — erst Live- oder Demo-Import ausführen.';
+    if (trackerPrimaryShare >= 85 && trackerRoleShare >= 70 && snapshot.warnings === 0) return 'Sehr vertrauenswürdig: Tracker liefert die meisten Positionsdaten ohne Warnungen.';
+    if (trackerPrimaryShare >= 60) return 'Brauchbar, aber prüfen: Einige Spieler nutzen Fallbacks oder Basic-Daten.';
+    return 'Vorsicht: Viele Positionsdaten kommen aus Fallbacks. Optimizer-Ergebnisse manuell gegenprüfen.';
+  }, [snapshot.total, snapshot.warnings, trackerPrimaryShare, trackerRoleShare]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 lg:p-6">
@@ -411,6 +541,7 @@ export default function DataCanvasPage() {
             { key: 'pipeline', label: '🔀 Import-Pipeline' },
             { key: 'fields', label: '📋 Datenfelder' },
             { key: 'decisions', label: '🎛️ Entscheidungen' },
+            { key: 'diagnostics', label: '🧭 Diagnose' },
           ] as const
         ).map((t) => (
           <button
@@ -633,7 +764,7 @@ export default function DataCanvasPage() {
               <p className="font-medium text-slate-300">Farb-Bedeutung</p>
               <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-blue-400" /><span>Goalsverse (primäre Quelle)</span></div>
               <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-purple-400" /><span>Goals-Tracker (Position-Autorität)</span></div>
-              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-amber-400" /><span>PlayGOALS (Fallback bei 403)</span></div>
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-amber-400" /><span>PlayGOALS (Fallback wenn Tracker keine Primary liefert)</span></div>
               <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-400" /><span>Scoring Engine (berechnet)</span></div>
             </div>
           </div>
@@ -709,7 +840,7 @@ export default function DataCanvasPage() {
               <div className="space-y-3 text-xs text-slate-400">
                 <div className="p-2 rounded-lg bg-slate-800">
                   <p className="text-amber-300 font-medium">Nebenposition-Schwelle</p>
-                  <p className="mt-1">Aktuell hardcoded an 2 Stellen. Besser: eine Konstante in types.ts extrahieren.</p>
+                  <p className="mt-1">Aktuell hardcoded an 4 relevanten Stellen in goalsverse-client.ts plus Kommentar in types.ts. Besser: eine gemeinsame Konstante extrahieren.</p>
                 </div>
                 <div className="p-2 rounded-lg bg-slate-800">
                   <p className="text-amber-300 font-medium">Position-Penalties</p>
@@ -735,6 +866,101 @@ export default function DataCanvasPage() {
                 <p className="text-slate-500 text-[10px] mt-2">Nach jeder Änderung alle 3 ausführen.</p>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════
+          TAB: DIAGNOSE
+         ════════════════════════════════════════════════════════════════════ */}
+      {tab === 'diagnostics' && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl border border-cyan-800 bg-cyan-950/30">
+            <h2 className="text-lg font-semibold text-cyan-200">🧭 Diagnose-Entscheider</h2>
+            <p className="text-sm text-slate-300 mt-1">
+              Lies das wie ein Entscheidungsprogramm: Symptom finden, Check durchführen, Ursache verstehen,
+              dann gezielt verbessern. Ziel ist nicht schöne Doku, sondern bessere Vorteile im Spiel.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-slate-500">Kader</p>
+              <p className="mt-1 text-xl font-bold text-white">{snapshot.total}</p>
+              <p className="text-xs text-slate-400">{snapshot.clubName || 'kein Import'}</p>
+            </div>
+            <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-slate-500">Full / Basic</p>
+              <p className="mt-1 text-xl font-bold text-white">{snapshot.full} / {snapshot.basic}</p>
+              <p className="text-xs text-slate-400">Detailstats vs. OVR-only</p>
+            </div>
+            <div className="rounded-xl border border-purple-800 bg-purple-950/30 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-purple-300">Tracker Primary</p>
+              <p className="mt-1 text-xl font-bold text-white">{trackerPrimaryShare}%</p>
+              <p className="text-xs text-slate-400">{trackerPrimaryCount} von {snapshot.total}</p>
+            </div>
+            <div className="rounded-xl border border-amber-800 bg-amber-950/30 p-3">
+              <p className="text-[10px] uppercase tracking-wide text-amber-300">Warnungen</p>
+              <p className="mt-1 text-xl font-bold text-white">{snapshot.warnings}</p>
+              <p className="text-xs text-slate-400">Fallback-/Source-Hinweise</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold text-white">Aktueller Import-Status:</span>
+              <span className="text-sm text-slate-300">{snapshotVerdict}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSnapshot(readSquadSnapshot())}
+              className="mt-3 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
+            >
+              Snapshot neu laden
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {DIAGNOSTIC_RULES.map((rule) => {
+              const severityClass =
+                rule.severity === 'hoch'
+                  ? 'border-red-700 bg-red-950/20 text-red-300'
+                  : rule.severity === 'mittel'
+                  ? 'border-amber-700 bg-amber-950/20 text-amber-300'
+                  : 'border-slate-700 bg-slate-900/50 text-slate-300';
+
+              return (
+                <div key={rule.symptom} className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">
+                  <div className="flex items-start gap-3">
+                    <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${severityClass}`}>
+                      {rule.severity}
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-white">Wenn: {rule.symptom}</h3>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-3 text-xs">
+                    <div className="rounded-lg bg-slate-950/70 border border-slate-800 p-3">
+                      <p className="text-slate-500 uppercase tracking-wide text-[10px] mb-1">Dann prüfen</p>
+                      <p className="text-slate-300">{rule.check}</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-950/70 border border-slate-800 p-3">
+                      <p className="text-slate-500 uppercase tracking-wide text-[10px] mb-1">Wahrscheinliche Ursache</p>
+                      <p className="text-slate-300">{rule.likelyCause}</p>
+                    </div>
+                    <div className="rounded-lg bg-emerald-950/30 border border-emerald-900 p-3">
+                      <p className="text-emerald-400 uppercase tracking-wide text-[10px] mb-1">Spielvorteil</p>
+                      <p className="text-emerald-100/90">{rule.userAdvantage}</p>
+                    </div>
+                    <div className="rounded-lg bg-violet-950/30 border border-violet-900 p-3">
+                      <p className="text-violet-300 uppercase tracking-wide text-[10px] mb-1">Nächster Refactor</p>
+                      <p className="text-slate-300">{rule.nextRefactor}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

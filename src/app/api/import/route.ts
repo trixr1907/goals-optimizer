@@ -14,6 +14,29 @@ function importErrorMessage(code?: string, fallback = 'Live-Import fehlgeschlage
   }
 }
 
+function summarizeImport(players: ReturnType<typeof enrichPlayerWithScores>[]) {
+  const diagnostics = {
+    full: 0,
+    basic: 0,
+    warnings: 0,
+    positionSources: {} as Record<string, number>,
+    roleRatingSources: {} as Record<string, number>,
+  };
+
+  for (const player of players) {
+    if (player.dataQuality === 'full') diagnostics.full += 1;
+    else diagnostics.basic += 1;
+
+    const positionSource = player.positionSource ?? 'unknown';
+    const roleRatingsSource = player.roleRatingsSource ?? 'unknown';
+    diagnostics.positionSources[positionSource] = (diagnostics.positionSources[positionSource] ?? 0) + 1;
+    diagnostics.roleRatingSources[roleRatingsSource] = (diagnostics.roleRatingSources[roleRatingsSource] ?? 0) + 1;
+    diagnostics.warnings += player.sourceWarnings?.length ?? 0;
+  }
+
+  return diagnostics;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { clubName } = await req.json();
@@ -32,6 +55,7 @@ export async function POST(req: NextRequest) {
         count: enriched.length,
         source: 'demo',
         message: 'Demo-Kader geladen.',
+        diagnostics: summarizeImport(enriched),
       });
     }
 
@@ -62,6 +86,7 @@ export async function POST(req: NextRequest) {
       clubId: live.clubId,
       clubUrl: live.clubUrl,
       clubName: live.clubName,
+      diagnostics: summarizeImport(enriched),
     });
   } catch (err) {
     return NextResponse.json({ error: String(err), source: 'goalsverse' }, { status: 500 });
