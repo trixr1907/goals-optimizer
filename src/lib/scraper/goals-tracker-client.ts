@@ -76,6 +76,18 @@ export interface TrackerPlayerData {
     goals?: number;
     assists?: number;
   };
+  /**
+   * Bolt/Training value 1–8 (GOALS-exclusive development indicator).
+   * Tracker-only — not present in Goalsverse payload.
+   * undefined = field not found in HTML (section absent or not yet parsed).
+   */
+  training_value?: number;
+  /**
+   * XP cost for the player's next upgrade.
+   * Tracker-only — not present in Goalsverse payload.
+   * undefined = field not found in HTML.
+   */
+  xp_next_upgrade?: number;
 }
 
 // ── Timeout helper ─────────────────────────────────────────────────────────
@@ -188,6 +200,71 @@ export function extractMatchStatsFromHtml(html: string): TrackerPlayerData['matc
   return stats;
 }
 
+/**
+ * Extract the training_value (Bolt 1–8) from Tracker HTML.
+ *
+ * TODO(html-audit): Pattern needs verification against a real Tracker 200 response.
+ * The Tracker page renders a "Bolt" or lightning icon next to the training value.
+ * Known candidate patterns (to verify with /debug or a saved HTML fixture):
+ *
+ *   <span ...>Bolt</span> ... <span ...>5</span>
+ *   data-training-value="5"
+ *   >Training Value<!-- --> 5</
+ *
+ * Returns undefined when the pattern is absent (Tracker page may not show it for all players).
+ */
+export function extractTrainingValueFromHtml(html: string): number | undefined {
+  // Pattern A: explicit "Training Value" label followed by a digit 1–8
+  // Covers: "Training Value<!-- --> 5" or ">Training Value 5<"
+  const labelMatch = html.match(
+    /Training\s+Value\s*(?:<!--[^>]*-->\s*)?(\d)/i,
+  );
+  if (labelMatch) {
+    const v = parseInt(labelMatch[1], 10);
+    if (v >= 1 && v <= 8) return v;
+  }
+
+  // Pattern B: data attribute (future-proof if Tracker adds it)
+  const dataMatch = html.match(/data-training-value="(\d)"/i);
+  if (dataMatch) {
+    const v = parseInt(dataMatch[1], 10);
+    if (v >= 1 && v <= 8) return v;
+  }
+
+  return undefined;
+}
+
+/**
+ * Extract xp_next_upgrade from Tracker HTML.
+ *
+ * TODO(html-audit): Pattern needs verification against a real Tracker 200 response.
+ * Known candidate patterns:
+ *
+ *   "Next Upgrade" ... "12,500 XP"
+ *   data-xp-next="12500"
+ *
+ * Returns undefined when not found.
+ */
+export function extractXpNextUpgradeFromHtml(html: string): number | undefined {
+  // Pattern A: "Next Upgrade" label followed by a number (with optional commas) + XP
+  const labelMatch = html.match(
+    /Next\s+Upgrade[^<]{0,80}?([\d,]+)\s*XP/i,
+  );
+  if (labelMatch) {
+    const v = parseInt(labelMatch[1].replace(/,/g, ''), 10);
+    if (!isNaN(v) && v > 0) return v;
+  }
+
+  // Pattern B: data attribute
+  const dataMatch = html.match(/data-xp-next="([\d]+)"/i);
+  if (dataMatch) {
+    const v = parseInt(dataMatch[1], 10);
+    if (!isNaN(v) && v > 0) return v;
+  }
+
+  return undefined;
+}
+
 // ── Single attempt ─────────────────────────────────────────────────────────
 
 /**
@@ -227,9 +304,11 @@ async function fetchOnce(rawId: string): Promise<TrackerFetchResult> {
       };
     }
 
-    const primaryPosition = extractPrimaryPositionFromHtml(html);
-    const roleRatings     = extractRoleRatingsFromHtml(html);
-    const matchStats      = extractMatchStatsFromHtml(html);
+    const primaryPosition  = extractPrimaryPositionFromHtml(html);
+    const roleRatings      = extractRoleRatingsFromHtml(html);
+    const matchStats       = extractMatchStatsFromHtml(html);
+    const training_value   = extractTrainingValueFromHtml(html);
+    const xp_next_upgrade  = extractXpNextUpgradeFromHtml(html);
 
     // Both missing → nothing useful extracted
     if (primaryPosition === null && roleRatings.length === 0) {
@@ -243,20 +322,20 @@ async function fetchOnce(rawId: string): Promise<TrackerFetchResult> {
     // Partial parse — still return data with warnings encoded in failReason
     if (primaryPosition === null) {
       return {
-        data:       { characterId: rawId, primaryPosition: null, roleRatings, matchStats },
+        data:       { characterId: rawId, primaryPosition: null, roleRatings, matchStats, training_value, xp_next_upgrade },
         failReason: 'parse_primary_missing',
         failDetail: `html ${html.length}b, badge absent`,
       };
     }
     if (roleRatings.length === 0) {
       return {
-        data:       { characterId: rawId, primaryPosition, roleRatings: [], matchStats },
+        data:       { characterId: rawId, primaryPosition, roleRatings: [], matchStats, training_value, xp_next_upgrade },
         failReason: 'parse_roleRatings_missing',
         failDetail: `html ${html.length}b, pitch absent`,
       };
     }
 
-    return { data: { characterId: rawId, primaryPosition, roleRatings, matchStats } };
+    return { data: { characterId: rawId, primaryPosition, roleRatings, matchStats, training_value, xp_next_upgrade } };
 
   } catch (err) {
     const isAbort =

@@ -9,6 +9,7 @@ import { RotationPlanGenerator } from '@/components/onboarding/RotationPlanGener
 import { PlayerWithScores, displayPosition } from '@/lib/scraper/types';
 import { enrichPlayerWithScores } from '@/lib/scoring/position-fit';
 import { apiPath, appPath } from '@/lib/app-url';
+import { mergeWithTrackerCache, hydrateCache, pruneExpiredEntries } from '@/lib/tracker-cache';
 
 interface SquadBackupFile {
   app: 'goals-squad-optimizer';
@@ -193,6 +194,9 @@ export default function OnboardingPage() {
     resolvedName?: string;
     diagnostics?: ImportDiagnostics;
   }> {
+    // Prune expired cache entries once per import call
+    pruneExpiredEntries();
+
     const res = await fetch(apiPath('/api/import'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -211,7 +215,19 @@ export default function OnboardingPage() {
     }
     const diagnostics = data.diagnostics as ImportDiagnostics | undefined;
     if (!data.players?.length) return { players: [], clubId: data.clubId, resolvedName, clubUrl: data.clubUrl, diagnostics };
-    return { players: data.players as PlayerWithScores[], clubId: data.clubId, clubUrl: data.clubUrl, resolvedName, diagnostics };
+
+    const freshPlayers = data.players as PlayerWithScores[];
+
+    // 1. Hydrate cache with any Tracker-exclusive fields the server already
+    //    filled in (training_value, xp_next_upgrade). Over time this cache
+    //    fills as Tracker returns HTTP 200 intermittently.
+    hydrateCache(freshPlayers);
+
+    // 2. Merge cached Tracker fields into players that arrived without them
+    //    (Tracker was 403 this time, but we have a cached value from before).
+    const merged = mergeWithTrackerCache(freshPlayers);
+
+    return { players: merged, clubId: data.clubId, clubUrl: data.clubUrl, resolvedName, diagnostics };
   }
 
   async function handleImport(clubNameOverride?: string) {

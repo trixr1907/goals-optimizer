@@ -845,7 +845,7 @@ async function enrichWithTracker(players: Player[]): Promise<Player[]> {
       // Both position and roleRatings from Tracker — best case
       const td = trackerData!;
       const warnings: string[] = [...(player.sourceWarnings ?? [])];
-      const newPosition  = td.primaryPosition!;
+      const newPosition    = td.primaryPosition!;
       const newRoleRatings = td.roleRatings;
       const newSecondary: Position[] = newRoleRatings
         .filter((r) => r.overall >= player.overall - SECONDARY_OVR_THRESHOLD && r.position !== newPosition)
@@ -859,6 +859,9 @@ async function enrichWithTracker(players: Player[]): Promise<Player[]> {
         positionSource:    'goals-tracker' as PositionSource,
         roleRatingsSource:  'goals-tracker' as RoleRatingsSource,
         sourceWarnings:    warnings.length > 0 ? warnings : undefined,
+        // Tracker-exclusive dev fields — merge only if not already set
+        ...(td.training_value  !== undefined && player.training_value  == null ? { training_value:  td.training_value  } : {}),
+        ...(td.xp_next_upgrade !== undefined && player.xp_next_upgrade == null ? { xp_next_upgrade: td.xp_next_upgrade } : {}),
       };
     }
 
@@ -923,6 +926,9 @@ async function enrichWithTracker(players: Player[]): Promise<Player[]> {
       positionSource:    finalPosSource,
       roleRatingsSource:  finalRrsSource,
       sourceWarnings:    allWarnings.length > 0 ? allWarnings : undefined,
+      // Tracker-exclusive dev fields — merge only when Tracker had partial data
+      ...(trackerData?.training_value  !== undefined && player.training_value  == null ? { training_value:  trackerData.training_value  } : {}),
+      ...(trackerData?.xp_next_upgrade !== undefined && player.xp_next_upgrade == null ? { xp_next_upgrade: trackerData.xp_next_upgrade } : {}),
     };
   });
 
