@@ -25,10 +25,10 @@ import { adviseDevelopment } from '@/lib/analysis/development-advisor';
 import { trueValue, currentRating, lifecycleFactor } from '@/lib/analysis/true-value';
 import { upgradeRoiV1 } from '@/lib/analysis/upgrade-roi';
 import { CalculationDetails } from '@/components/ui/CalculationDetails';
+import { WeightsPanel } from '@/components/development/WeightsPanel';
+import { useWeightsStore, toTrueValueTuple } from '@/lib/store/weights-store';
 import { CURRENT_TOURNAMENTS } from '@/config/tournaments';
 import { RARITY_COLOR, RARITY_ORDER, STAT_LABEL } from '@/config/display-constants';
-
-const TRUE_VALUE_WEIGHTS = [0.40, 0.20, 0.25, 0.15] as const;
 
 // ── Konstanten ──────────────────────────────────────────────────────────────
 
@@ -198,6 +198,8 @@ function UpgradeModal({
 function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPlayers: PlayerWithScores[] }) {
   const { notesByPlayerId, setPriority, setNotes, resetPlayer, addUpgrade } =
     useDevelopmentStore();
+  const { weights } = useWeightsStore();
+  const tvWeights = toTrueValueTuple(weights.trueValue);
   const tracked = notesByPlayerId[player.id];
   const priority = tracked?.priority ?? suggestPriority(player);
   const statEntries = Object.entries(player.stats) as [string, number][];
@@ -206,8 +208,21 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
   const fitColor =
     mainFit >= 85 ? 'text-emerald-400' : mainFit >= 70 ? 'text-amber-400' : 'text-red-400';
   const developmentScore = getDevelopmentScore(player);
-  const trueValueResult = trueValue(player);
-  const upgradeRoi = upgradeRoiV1(player);
+  const trueValueResult = trueValue(player, tvWeights);
+  const upgradeRoiRaw = upgradeRoiV1(player);
+  // Apply ROI toggles from weights store
+  const upgradeRoi = (() => {
+    const roi = { ...upgradeRoiRaw };
+    // ignoreLateAge: skip SELL_OR_LEGEND override for age >= 34
+    if (weights.roiToggles.ignoreLateAge && roi.action === 'SELL_OR_LEGEND') {
+      roi.action = roi.crosses_rarity_tier ? 'INVEST_NOW' : roi.total_headroom >= 8 ? 'INVEST' : 'HOLD';
+    }
+    // tierCrossOnly: downgrade INVEST to HOLD if no tier-cross
+    if (weights.roiToggles.tierCrossOnly && roi.action === 'INVEST') {
+      roi.action = 'HOLD';
+    }
+    return roi;
+  })();
   const current = currentRating(player);
   const ceiling = player.aging?.potentialRange[1] ?? current;
   const headroom = Math.max(0, ceiling - current);
@@ -333,11 +348,11 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
               title="True-Value"
               formula="score = (current·w0 + ceiling·w1 + headroom·TV·life·w2 + life·w3) · 100"
               rows={[
-                { label: 'current', value: `${current}/99`, note: `(w ${TRUE_VALUE_WEIGHTS[0]})` },
-                { label: 'ceiling', value: `${ceiling}/99`, note: `(w ${TRUE_VALUE_WEIGHTS[1]})` },
-                { label: 'headroom', value: `${headroom}`, note: `(w ${TRUE_VALUE_WEIGHTS[2]})` },
+                { label: 'current', value: `${current}/99`, note: `(w ${tvWeights[0]})` },
+                { label: 'ceiling', value: `${ceiling}/99`, note: `(w ${tvWeights[1]})` },
+                { label: 'headroom', value: `${headroom}`, note: `(w ${tvWeights[2]})` },
                 { label: 'training_value', value: player.training_value && player.training_value > 0 ? `${player.training_value}/8` : '—', note: player.training_value && player.training_value > 0 ? '' : '(MISSING → neutral 4/8)' },
-                { label: 'lifecycle', value: lifecycle.toFixed(2), note: `(w ${TRUE_VALUE_WEIGHTS[3]})` },
+                { label: 'lifecycle', value: lifecycle.toFixed(2), note: `(w ${tvWeights[3]})` },
                 { label: 'confidence', value: `${trueValueResult.confidence}`, note: trueValueResult.basis },
                 { label: 'missing', value: trueValueResult.missing.length ? trueValueResult.missing.join(', ') : '—' },
               ]}
@@ -649,6 +664,9 @@ export default function DevelopmentPage() {
               </div>
               <span className="text-sm text-slate-500">{sorted.length} Spieler</span>
             </div>
+
+            {/* Eigene Gewichtung — Phase F, opt-in, collapsed */}
+            <WeightsPanel />
 
             {/* Summary-Kacheln */}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
