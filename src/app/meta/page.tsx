@@ -19,6 +19,7 @@ import {
   type TacticalFocus,
 } from '@/lib/tactics/tactics-settings';
 import type { Position } from '@/lib/scraper/types';
+import { FormationExplorer } from '@/components/meta/FormationExplorer';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -243,7 +244,7 @@ function BestElfCard({ rec, rank, onApply }: BestElfCardProps) {
 export default function MetaPage() {
   const router = useRouter();
   const { players, _hasHydrated } = useSquadStore();
-  const { setFormation, autoFill, setFormationWithLineup } = useLineupStore();
+  const { setFormation, autoFill, setFormationWithLineup, lineup } = useLineupStore();
   const [liveMeta, setLiveMeta] = useState<LiveMetaSnapshot | null>(null);
   const [metaStatus, setMetaStatus] = useState<'loading' | 'ok' | 'fallback' | 'error'>('loading');
   // null = not yet computed, [] = computed but empty (< 11 players)
@@ -544,47 +545,19 @@ export default function MetaPage() {
               </div>
             </div>
 
-            {/* ── ALL FORMATIONS TABLE ── */}
-            <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-4">
-              <h3 className="text-lg font-bold text-white">Alle Formationen</h3>
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[760px] text-sm">
-                  <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
-                    <tr>
-                      <th className="py-2">Formation</th>
-                      <th>Squad-Fit</th>
-                      <th>Ø Fit</th>
-                      <th>Live-Kontext</th>
-                      <th>Matches</th>
-                      <th>Größtes Risiko</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {recommendations.map((rec) => {
-                      const live =
-                        findLive(liveMeta, rec.formation.name) ??
-                        findLive(liveMeta, rec.formationKey);
-                      return (
-                        <tr key={rec.formationKey} className="text-slate-300">
-                          <td className="py-3 font-semibold text-white">{rec.formation.name}</td>
-                          <td>{rec.squadMatch.toFixed(0)}%</td>
-                          <td>{rec.averageFit.toFixed(1)}</td>
-                          <td>
-                            {live
-                              ? `${(live.winRate * 100).toFixed(1)}% WR / ${(live.matchShare * 100).toFixed(1)}% Usage`
-                              : 'keine Live-Daten'}
-                          </td>
-                          <td>{live?.matches ?? '-'}</td>
-                          <td className="max-w-md text-xs text-slate-500">
-                            {rec.warnings[0] ?? 'Keine harte Warnung.'}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+            {/* ── FORMATION EXPLORER: alle 15 Formationen ── */}
+            <FormationExplorer
+              players={players}
+              currentLineup={{ lineup }}
+              onApply={(rec) => {
+                const hasLineup = Object.values(lineup).some(Boolean);
+                if (hasLineup && !window.confirm(`Aktuelle Aufstellung ersetzen durch ${rec.formation.name}?`)) return;
+                const assignments: Record<string, string> = {};
+                for (const a of rec.assignments) assignments[a.slotKey] = a.player.id;
+                setFormationWithLineup(rec.formation.name, rec.formation.slots, assignments);
+                router.push('/lineup');
+              }}
+            />
           </div>
         )}
       </main>
