@@ -523,14 +523,40 @@ export default function LineupPage() {
             </div>
 
             {formationRecommendations.length > 0 && (
-              <section id="meta-center" className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
+              <section id="meta-center" className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 space-y-4">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div>
                     <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Formation Optimizer</p>
                     <h3 className="text-lg font-bold text-white">Top-Empfehlungen für deinen Kader</h3>
                   </div>
-                  <a href={appPath('/meta')} className="text-xs text-emerald-400 underline">Meta Center öffnen</a>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* ── Variant toggle (inline, war ein separater Block) ── */}
+                    {VARIANT_TABS.map((tab) => {
+                      const isActive = activeVariant === tab.mode;
+                      return (
+                        <button
+                          key={tab.mode}
+                          onClick={() => handleVariantChange(tab.mode)}
+                          title={tab.hint}
+                          className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-all ${
+                            isActive
+                              ? tab.activeClass
+                              : 'border-slate-700 text-slate-500 hover:text-slate-300 hover:border-slate-600'
+                          }`}
+                        >
+                          {tab.emoji} {tab.label}
+                        </button>
+                      );
+                    })}
+                    <a href={appPath('/meta')} className="text-xs text-emerald-400 underline ml-1">Meta →</a>
+                  </div>
                 </div>
+                {/* Active variant hint */}
+                {VARIANT_TABS.find((t) => t.mode === activeVariant) && (
+                  <p className={`text-xs ${VARIANT_TABS.find((t) => t.mode === activeVariant)!.color}`}>
+                    {VARIANT_TABS.find((t) => t.mode === activeVariant)!.hint}
+                  </p>
+                )}
                 <div className="grid gap-3 md:grid-cols-3">
                   {formationRecommendations.slice(0, 3).map((rec, index) => {
                     const variantAssignments = activeVariant === 'balanced'
@@ -561,37 +587,6 @@ export default function LineupPage() {
                 </div>
               </section>
             )}
-
-            {/* ── Variant tabs ── */}
-            <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-3 space-y-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-slate-500 uppercase tracking-wide font-medium shrink-0">Variante:</span>
-                {VARIANT_TABS.map((tab) => {
-                  const isActive = activeVariant === tab.mode;
-                  return (
-                    <button
-                      key={tab.mode}
-                      onClick={() => handleVariantChange(tab.mode)}
-                      className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
-                        isActive
-                          ? tab.activeClass
-                          : 'border-slate-700 text-slate-500 hover:text-slate-300 hover:border-slate-600'
-                      }`}
-                    >
-                      {tab.emoji} {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
-              {/* Hint line for active variant */}
-              {VARIANT_TABS.map((tab) =>
-                tab.mode === activeVariant ? (
-                  <p key={tab.mode} className={`text-xs ${tab.color}`}>
-                    {tab.hint}
-                  </p>
-                ) : null
-              )}
-            </div>
 
             <div
               id="pitch"
@@ -627,29 +622,85 @@ export default function LineupPage() {
 
             {selectedSlotKey && (() => {
               const [pos] = selectedSlotKey.split('-');
+              const position = pos as Position;
               const currentPlayerId = lineup[selectedSlotKey];
               const currentPlayer = currentPlayerId ? playerById.get(currentPlayerId) : null;
               const isLocked = locked.has(selectedSlotKey);
+
+              // Build sorted alternative list with diff vs current player
+              const alternatives = players
+                .sort((a, b) => (b.fit_scores[position] ?? 0) - (a.fit_scores[position] ?? 0))
+                .slice(0, 12)
+                .map((p) => {
+                  const fit = p.fit_scores[position] ?? 0;
+                  const fitDiff = currentPlayer ? fit - (currentPlayer.fit_scores[position] ?? 0) : 0;
+                  const ovrDiff = currentPlayer ? p.overall - currentPlayer.overall : 0;
+                  return { player: p, fit, fitDiff, ovrDiff };
+                });
+
               return (
-                <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4 space-y-3">
+                <div className="rounded-xl border border-yellow-800/60 bg-slate-900/60 p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <p className="text-sm font-bold text-white">{pos} Slot</p>
+                    <div>
+                      <p className="text-xs text-slate-500 uppercase tracking-wide">Slot-Alternativen</p>
+                      <p className="text-sm font-bold text-white">
+                        {position}
+                        {currentPlayer && (
+                          <span className="ml-2 text-slate-400 font-normal text-xs">
+                            aktuell: {currentPlayer.name} · OVR {currentPlayer.overall} · Meta {currentPlayer.fit_scores[position]?.toFixed(0) ?? '-'}
+                          </span>
+                        )}
+                      </p>
+                    </div>
                     <div className="flex items-center gap-2">
-                      {currentPlayer && <span className="text-xs text-slate-400">{currentPlayer.name} — Meta {currentPlayer.fit_scores[pos as Position]?.toFixed(0) ?? '-'}</span>}
-                      <button onClick={() => toggleLock(selectedSlotKey)} className={`text-xs px-2 py-1 rounded ${isLocked ? 'bg-amber-600 text-white' : 'bg-slate-700 text-slate-400'}`}>
+                      <button
+                        onClick={() => toggleLock(selectedSlotKey)}
+                        className={`text-xs px-2 py-1 rounded border transition-colors ${isLocked ? 'bg-amber-600 border-amber-500 text-white' : 'border-slate-700 bg-slate-800 text-slate-400 hover:text-white'}`}
+                      >
                         {isLocked ? '🔒 Fixiert' : 'Fixieren'}
+                      </button>
+                      <button
+                        onClick={() => setSelectedSlotKey(null)}
+                        className="text-xs text-slate-500 hover:text-white px-2 py-1 rounded border border-slate-700"
+                      >
+                        ✕
                       </button>
                     </div>
                   </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {players
-                      .sort((a, b) => (b.fit_scores[pos as Position] ?? 0) - (a.fit_scores[pos as Position] ?? 0))
-                      .slice(0, 12)
-                      .map((p) => (
-                        <div key={p.id} onClick={() => handlePlayerAssign(p.id)}>
-                          <DraggablePlayerChip player={p} fit={p.fit_scores[pos as Position]} disabled={isLocked} />
-                        </div>
-                      ))}
+
+                  <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+                    {alternatives.map(({ player: p, fit, fitDiff, ovrDiff }) => {
+                      const isCurrent = p.id === currentPlayerId;
+                      return (
+                        <button
+                          key={p.id}
+                          disabled={isLocked}
+                          onClick={() => { handlePlayerAssign(p.id); }}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-left transition-colors ${
+                            isCurrent
+                              ? 'border-yellow-600 bg-yellow-950/40 text-white cursor-default'
+                              : 'border-slate-700 bg-slate-900/50 hover:border-emerald-600 hover:bg-slate-800 text-slate-300'
+                          } ${isLocked ? 'opacity-40 cursor-not-allowed' : ''}`}
+                        >
+                          <MiniAvatar player={p} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium truncate">{p.name}</p>
+                            <p className="text-[10px] text-slate-500">{p.rarity} · OVR {p.overall}</p>
+                          </div>
+                          <div className="shrink-0 text-right space-y-0.5">
+                            <p className={`text-[11px] font-mono font-bold ${fit >= 80 ? 'text-emerald-400' : fit >= 65 ? 'text-amber-400' : 'text-red-400'}`}>
+                              {fit.toFixed(0)}
+                            </p>
+                            {currentPlayer && !isCurrent && (
+                              <p className={`text-[10px] font-mono ${fitDiff > 0 ? 'text-emerald-400' : fitDiff < 0 ? 'text-red-400' : 'text-slate-600'}`}>
+                                {fitDiff > 0 ? '+' : ''}{fitDiff.toFixed(0)} · OVR{ovrDiff > 0 ? '+' : ''}{ovrDiff}
+                              </p>
+                            )}
+                            {isCurrent && <p className="text-[10px] text-yellow-500">aktiv</p>}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               );
