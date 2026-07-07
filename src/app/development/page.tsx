@@ -22,8 +22,13 @@ import {
 import { Sidebar } from '@/components/layout/Sidebar';
 import { appPath } from '@/lib/app-url';
 import { adviseDevelopment } from '@/lib/analysis/development-advisor';
+import { trueValue, currentRating, lifecycleFactor } from '@/lib/analysis/true-value';
+import { upgradeRoiV1 } from '@/lib/analysis/upgrade-roi';
+import { CalculationDetails } from '@/components/ui/CalculationDetails';
 import { CURRENT_TOURNAMENTS } from '@/config/tournaments';
 import { RARITY_COLOR, RARITY_ORDER, STAT_LABEL } from '@/config/display-constants';
+
+const TRUE_VALUE_WEIGHTS = [0.40, 0.20, 0.25, 0.15] as const;
 
 // ── Konstanten ──────────────────────────────────────────────────────────────
 
@@ -201,6 +206,12 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
   const fitColor =
     mainFit >= 85 ? 'text-emerald-400' : mainFit >= 70 ? 'text-amber-400' : 'text-red-400';
   const developmentScore = getDevelopmentScore(player);
+  const trueValueResult = trueValue(player);
+  const upgradeRoi = upgradeRoiV1(player);
+  const current = currentRating(player);
+  const ceiling = player.aging?.potentialRange[1] ?? current;
+  const headroom = Math.max(0, ceiling - current);
+  const lifecycle = typeof player.age === 'number' ? lifecycleFactor(player.age) : 0.5;
   const rarityIndex = RARITY_ORDER[player.rarity] ?? 0;
   const retirementWarning = getRetirementWarning(player, rarityIndex);
   const upgradeHistory = tracked?.upgradeHistory ?? [];
@@ -316,6 +327,37 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
             )}
           </div>
 
+          {/* Rechenwege — collapsed by default */}
+          <div className="grid gap-2 md:grid-cols-2">
+            <CalculationDetails
+              title="True-Value"
+              formula="score = (current·w0 + ceiling·w1 + headroom·TV·life·w2 + life·w3) · 100"
+              rows={[
+                { label: 'current', value: `${current}/99`, note: `(w ${TRUE_VALUE_WEIGHTS[0]})` },
+                { label: 'ceiling', value: `${ceiling}/99`, note: `(w ${TRUE_VALUE_WEIGHTS[1]})` },
+                { label: 'headroom', value: `${headroom}`, note: `(w ${TRUE_VALUE_WEIGHTS[2]})` },
+                { label: 'training_value', value: player.training_value && player.training_value > 0 ? `${player.training_value}/8` : '—', note: player.training_value && player.training_value > 0 ? '' : '(MISSING → neutral 4/8)' },
+                { label: 'lifecycle', value: lifecycle.toFixed(2), note: `(w ${TRUE_VALUE_WEIGHTS[3]})` },
+                { label: 'confidence', value: `${trueValueResult.confidence}`, note: trueValueResult.basis },
+                { label: 'missing', value: trueValueResult.missing.length ? trueValueResult.missing.join(', ') : '—' },
+              ]}
+              result={`${trueValueResult.score} | basis: ${trueValueResult.basis}`}
+            />
+            <CalculationDetails
+              title="Upgrade-ROI"
+              formula="expected_gain = (ceiling − current) / upgradesRemaining"
+              rows={[
+                { label: 'current', value: `${current}` },
+                { label: 'ceiling', value: `${ceiling}` },
+                { label: 'remaining', value: `${upgradeRoi.upgrades_remaining}` },
+                { label: 'headroom', value: `${upgradeRoi.total_headroom}` },
+                { label: 'tier-cross', value: upgradeRoi.crosses_rarity_tier ? `JA → ${upgradeRoi.next_rarity}` : 'nein' },
+                { label: 'confidence', value: `${upgradeRoi.confidence}`, note: upgradeRoi.basis },
+              ]}
+              result={`${upgradeRoi.expected_gain_per_upgrade} / Upgrade · ${upgradeRoi.action}`}
+            />
+          </div>
+
           {/* Retirement Warning */}
           {retirementWarning && (
             <div className="rounded-lg bg-red-950/40 border border-red-900 px-2 py-1.5 text-[11px] text-red-300 flex items-start gap-1.5">
@@ -352,7 +394,7 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
             </div>
           </div>
 
-          {/* Potential-Bar from goalsverse aging data */}
+          {/* Potential-Bar from aging data */}
           <div className="rounded-lg bg-slate-800/50 p-2 text-xs space-y-2">
             <div className="flex items-center justify-between gap-3">
               <span className="text-slate-400">Potential</span>
@@ -402,7 +444,7 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
             </div>
           </div>
 
-          {/* Upgrade-Tracker ─────────────────────────────────────────────── */}
+          {/* Upgrade-Verlauf ─────────────────────────────────────────────── */}
           <div className="rounded-lg bg-slate-800/40 border border-slate-700 overflow-hidden">
             <div className="flex items-center justify-between px-2 py-1.5">
               <span className="text-xs text-slate-400 font-medium">

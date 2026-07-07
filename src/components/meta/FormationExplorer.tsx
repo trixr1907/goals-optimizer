@@ -21,7 +21,7 @@
  *   aus MetaPage (useMemo). Nur beim Klick auf eine Kachel wird für genau diese
  *   Formation lazy der beste Spieler pro Slot berechnet (solveOptimal, einzeln).
  *
- * R7 (Source-Constraint): Kein "goalsverse"/"tracker" im UI.
+ * R7 (Source-Constraint): Keine Datenquellen-Namen im UI.
  */
 
 import { useMemo, useState } from 'react';
@@ -34,6 +34,7 @@ import {
   recommendFormations,
 } from '@/lib/optimizer/formation-optimizer';
 import { shortPlayerName } from '@/lib/player-name';
+import { CalculationDetails } from '@/components/ui/CalculationDetails';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -125,6 +126,18 @@ function BestFitPanel({
         </div>
       </div>
 
+      <CalculationDetails
+        title="Squad-Match"
+        formula="squadMatch = average(slotFits)"
+        rows={[
+          { label: 'Slots besetzt', value: `${rec.assignments.length}/${rec.formation.slots.length}` },
+          { label: 'Summe Slot-Fit', value: rec.totalFit.toFixed(0) },
+          { label: 'Ø Slot-Fit', value: rec.averageFit.toFixed(1) },
+          { label: 'Sichtbarer Wert', value: `${rec.squadMatch.toFixed(0)}%`, note: 'Squad-Level-Aggregat' },
+        ]}
+        result={`${rec.squadMatch.toFixed(0)}% Squad-Fit`}
+      />
+
       {/* Slot list grouped by row */}
       <div className="space-y-2">
         {rows.map(({ label, items }) => (
@@ -166,6 +179,17 @@ function BestFitPanel({
                       <span className={`shrink-0 text-[10px] font-bold rounded px-1.5 py-0.5 ${fitBg(a.fit)}`}>
                         {Math.round(a.fit)}
                       </span>
+                      <details className="shrink-0 text-[10px] text-slate-500">
+                        <summary className="cursor-pointer list-none hover:text-slate-300">▸</summary>
+                        <div className="absolute z-20 mt-1 w-56 rounded-lg border border-slate-700 bg-slate-950 p-2 text-[10px] shadow-xl">
+                          <p className="font-semibold text-slate-300">Slot-Fit</p>
+                          <p className="font-mono text-slate-500">fit = positionFit(player, slot)</p>
+                          <p className="mt-1 text-slate-400">
+                            {shortPlayerName(a.player.name)} auf {slot.position}: {Math.round(a.fit)}
+                          </p>
+                          <p className="text-slate-600">Positions-Typ: {a.positionType}</p>
+                        </div>
+                      </details>
                     </>
                   ) : (
                     /* R3: Slot ohne Spieler — explizit anzeigen, kein Crash */
