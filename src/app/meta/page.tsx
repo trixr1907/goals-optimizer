@@ -322,9 +322,9 @@ export default function MetaPage() {
   const insufficientPlayers = !_hasHydrated || players.length < 11;
 
   return (
-    <div className="flex min-h-screen">
+    <div className="page-shell">
       <Sidebar />
-      <main className="flex-1 overflow-auto p-4 md:p-6">
+      <main className="page-main p-4 md:p-6">
         {insufficientPlayers ? (
           <div className="flex h-64 flex-col items-center justify-center gap-4 text-center">
             <p className="text-slate-400">

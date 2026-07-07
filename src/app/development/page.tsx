@@ -586,9 +586,9 @@ export default function DevelopmentPage() {
   }, [players, search, sortBy, filterPos, notesByPlayerId]);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="page-shell">
       <Sidebar />
-      <main className="flex-1 p-6 overflow-auto">
+      <main className="page-main p-6 overflow-auto">
         {!_hasHydrated || players.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
             <p className="text-slate-400">Noch keine Spieler importiert.</p>

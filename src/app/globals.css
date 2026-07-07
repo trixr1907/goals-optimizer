@@ -23,3 +23,32 @@ body {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/*
+ * Page shell: Sidebar + scrollable main content.
+ * min-h-screen alone causes scroll issues on mobile because the fixed
+ * top-bar (h-11) and bottom-nav (h-14) eat into 100vh but are NOT part
+ * of the scroll flow. Using min-h-dvh (dynamic viewport height) lets the
+ * browser subtract its own chrome, and overflow-y-auto on .page-main
+ * ensures the content area scrolls independently.
+ *
+ * Usage in every page:
+ *   <div className="page-shell">
+ *     <Sidebar />
+ *     <main className="page-main"> ... </main>
+ *   </div>
+ */
+.page-shell {
+  display: flex;
+  min-height: 100dvh;   /* dvh = dynamic viewport height, accounts for mobile browser chrome */
+  min-height: 100vh;    /* fallback for browsers without dvh */
+}
+
+.page-main {
+  flex: 1 1 0%;
+  min-width: 0;         /* prevent flex blowout on wide content */
+  overflow-y: auto;
+  /* On desktop the sidebar is visible — no extra padding needed.
+     On mobile the fixed top/bottom bars are handled by the body padding
+     already set above, so page-main just needs to scroll. */
+}

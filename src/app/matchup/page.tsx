@@ -65,7 +65,7 @@ export default function MatchupPage() {
 
   if (myPlayers.length === 0) {
     return (
-      <div className="flex min-h-screen">
+      <div className="page-shell">
         <Sidebar />
         <main className="flex-1 flex items-center justify-center pt-11 lg:pt-0">
           <div className="text-center space-y-4">
@@ -78,9 +78,9 @@ export default function MatchupPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="page-shell">
       <Sidebar />
-      <main className="flex-1 p-4 md:p-6 overflow-auto pt-14 lg:pt-4">
+      <main className="page-main p-4 md:p-6 pt-14 lg:pt-4">
         <div className="max-w-6xl mx-auto space-y-6">
 
           {/* Header */}

@@ -201,7 +201,7 @@ export default function AlternativeLineupsPage() {
 
   if (!_hasHydrated || players.length === 0) {
     return (
-      <div className="flex min-h-screen">
+      <div className="page-shell">
         <Sidebar />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
@@ -214,9 +214,9 @@ export default function AlternativeLineupsPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="page-shell">
       <Sidebar />
-      <main className="flex-1 overflow-auto">
+      <main className="page-main">
         <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
           <div>
             <h2 className="text-xl font-bold text-white">Alternative Aufstellungen</h2>

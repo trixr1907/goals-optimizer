@@ -439,7 +439,7 @@ export default function LineupPage() {
 
   if (!_hasHydrated || players.length === 0) {
     return (
-      <div className="flex min-h-screen">
+      <div className="page-shell">
         <Sidebar />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
@@ -462,9 +462,9 @@ export default function LineupPage() {
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActivePlayerId(null)}
     >
-      <div className="flex min-h-screen">
+      <div className="page-shell">
         <Sidebar />
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
+        <main className="page-main p-4 md:p-6">
           <div className="max-w-6xl mx-auto space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>

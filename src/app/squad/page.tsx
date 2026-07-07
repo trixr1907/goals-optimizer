@@ -440,7 +440,7 @@ export default function SquadPage() {
 
   if (!_hasHydrated || players.length === 0) {
     return (
-      <div className="flex min-h-screen">
+      <div className="page-shell">
         <Sidebar />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
@@ -453,9 +453,9 @@ export default function SquadPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="page-shell">
       <Sidebar />
-      <main className="flex-1 overflow-auto">
+      <main className="page-main">
 
         {/* Radar-Overlay */}
         {selectedPlayer && (
