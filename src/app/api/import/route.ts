@@ -32,6 +32,14 @@ function summarizeImport(players: ReturnType<typeof enrichPlayerWithScores>[]) {
     warnings: 0,
     positionSources: {} as Record<string, number>,
     roleRatingSources: {} as Record<string, number>,
+    // Sprint A: field coverage — tells UI how reliable development/scoring is
+    fieldCoverage: {
+      withAge: 0,
+      withAging: 0,
+      withXpCurrent: 0,
+      withTrainingValue: 0,
+      withFullStats: 0,
+    },
   };
 
   for (const player of players) {
@@ -43,6 +51,15 @@ function summarizeImport(players: ReturnType<typeof enrichPlayerWithScores>[]) {
     diagnostics.positionSources[positionSource] = (diagnostics.positionSources[positionSource] ?? 0) + 1;
     diagnostics.roleRatingSources[roleRatingsSource] = (diagnostics.roleRatingSources[roleRatingsSource] ?? 0) + 1;
     diagnostics.warnings += player.sourceWarnings?.length ?? 0;
+
+    // Field coverage: each counter reflects how many players have usable dev data
+    if (typeof player.age === 'number')                       diagnostics.fieldCoverage.withAge += 1;
+    if (player.aging != null)                                 diagnostics.fieldCoverage.withAging += 1;
+    if (typeof player.xp_current === 'number')               diagnostics.fieldCoverage.withXpCurrent += 1;
+    if (typeof player.training_value === 'number' && player.training_value > 0) {
+      diagnostics.fieldCoverage.withTrainingValue += 1;
+    }
+    if (player.dataQuality === 'full')                        diagnostics.fieldCoverage.withFullStats += 1;
   }
 
   return diagnostics;
