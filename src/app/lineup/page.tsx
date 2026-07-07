@@ -30,6 +30,7 @@ import { recommendationToLineup, recommendFormations, FormationAssignment } from
 import { OptimizationMode } from '@/lib/optimizer/hungarian-solver';
 import { explainFootFit, calcPositionFitScore } from '@/lib/scoring/position-fit';
 import { shortPlayerName } from '@/lib/player-name';
+import { avatarUrl } from '@/lib/player-id';
 import { TournamentReadinessCard } from '@/components/lineup/TournamentReadinessCard';
 import type { TournamentLineupResult } from '@/lib/tournaments/tournament-lineup-recommender';
 import { POSITION_COLORS } from '@/config/display-constants';
@@ -89,8 +90,7 @@ function assignmentsToLineup(assignments: FormationAssignment[]): Record<string,
 
 function playerImageUrl(player: PlayerWithScores): string | undefined {
   if (player.image_url) return player.image_url;
-  const rawId = player.id.startsWith('goalsverse-') ? player.id.slice('goalsverse-'.length) : player.id;
-  return rawId ? `https://cdn.playgoals.com/character/prod/${rawId}.png` : undefined;
+  return avatarUrl(player.id) || undefined;
 }
 
 function MiniAvatar({ player }: { player: PlayerWithScores }) {
@@ -439,7 +439,7 @@ export default function LineupPage() {
 
   if (!_hasHydrated || players.length === 0) {
     return (
-      <div className="flex h-screen">
+      <div className="flex min-h-screen">
         <Sidebar />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
@@ -462,7 +462,7 @@ export default function LineupPage() {
       onDragEnd={handleDragEnd}
       onDragCancel={() => setActivePlayerId(null)}
     >
-      <div className="flex h-screen">
+      <div className="flex min-h-screen">
         <Sidebar />
         <main className="flex-1 p-4 md:p-6 overflow-auto">
           <div className="max-w-6xl mx-auto space-y-6">

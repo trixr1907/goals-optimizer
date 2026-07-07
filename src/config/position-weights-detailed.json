@@ -37,7 +37,6 @@
     ],
     "stats_gk": [
       "div",
-      "kic",
       "reflexes",
       "positioning",
       "catching",
@@ -55,7 +54,6 @@
     "positioning": 1.8,
     "catching": 1.5,
     "parrying": 1.5,
-    "kic": 1.0,
     "throwing": 0.6,
     "kicking_power": 0.6,
     "command_of_area": 0.8,

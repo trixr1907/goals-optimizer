@@ -1,3 +1,8 @@
+import {
+  SECONDARY_STAT_PENALTY,
+  OUT_OF_POSITION_STAT_PENALTY,
+} from '@/lib/optimizer/optimizer-constants';
+
 export const ALL_POSITIONS = [
   'GK', 'CB', 'FB', 'WB',
   'DM', 'CM', 'AM', 'WM',
@@ -80,16 +85,15 @@ export interface PlayerStats {
 
   // ── Goalkeeping ──
   div: number;
-  kic: number;
   reflexes: number;
   positioning: number;
   catching: number;
   parrying: number;
+  kicking_power: number;
   rushing?: number;
   command_of_area?: number;
   penalty_saving?: number;
   throwing?: number;
-  kicking_power?: number;
 }
 
 export type DataQuality = 'full' | 'basic';
@@ -199,7 +203,10 @@ export function getPositionType(player: Player, position: Position): 'primary' |
  */
 export function getEffectiveStats(player: Player, position: Position): PlayerStats {
   const type = getPositionType(player, position);
-  const penalty = type === 'primary' ? 0 : type === 'secondary' ? 2 : 5;
+  const penalty =
+    type === 'primary' ? 0 :
+    type === 'secondary' ? SECONDARY_STAT_PENALTY :
+    OUT_OF_POSITION_STAT_PENALTY;
   const stats = { ...player.stats };
   (Object.keys(stats) as Array<keyof PlayerStats>).forEach((key) => {
     if (typeof stats[key] === 'number') {

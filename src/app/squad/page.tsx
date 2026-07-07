@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { topWeightedStats } from '@/lib/scoring/position-fit';
 import { analyzeSquad } from '@/lib/analysis/squad-analysis';
 import { RARITY_COLOR, RARITY_TEXT, RARITY_ORDER, STAT_LABEL } from '@/config/display-constants';
+import { extractRawId, avatarUrl } from '@/lib/player-id';
 
 const StatRadarChart = dynamic(
   () => import('@/components/charts/StatRadarChart').then((m) => m.StatRadarChart),
@@ -59,20 +60,14 @@ function getBestPos(player: PlayerWithScores): [Position, number] {
 // ── Avatar ───────────────────────────────────────────────────────────────────
 
 function rawIdForPlayer(player: PlayerWithScores): string | undefined {
-  const rawId = player.id.startsWith('goalsverse-')
-    ? player.id.slice('goalsverse-'.length)
-    : player.id;
-
-  return rawId || undefined;
+  return extractRawId(player.id) || undefined;
 }
 
 function imageUrlForPlayer(player: PlayerWithScores): string | undefined {
   if (player.image_url) return player.image_url;
 
   // Backfill for persisted squads imported before image_url existed.
-  const rawId = rawIdForPlayer(player);
-
-  return rawId ? `https://cdn.playgoals.com/character/prod/${rawId}.png` : undefined;
+  return avatarUrl(player.id) || undefined;
 }
 
 function playGoalsUrlForPlayer(player: PlayerWithScores): string | undefined {
@@ -445,7 +440,7 @@ export default function SquadPage() {
 
   if (!_hasHydrated || players.length === 0) {
     return (
-      <div className="flex h-screen">
+      <div className="flex min-h-screen">
         <Sidebar />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
@@ -458,7 +453,7 @@ export default function SquadPage() {
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 overflow-auto">
 

@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
+import { DisclaimerBanner } from '@/components/layout/DisclaimerBanner';
 
 export const metadata: Metadata = {
   title: 'GOALS Squad Optimizer',
-  description: 'Inoffizielles Community-Tool zur Optimierung deines GOALS-Kaders mit Formation-Analyse, Taktik-Tipps und Entwicklungs-Tracker.',
+  description:
+    'Unofficial community fan tool by ivo-tech for the game Goals. Not affiliated with, endorsed by, or connected to the Goals developers.',
 };
 
 export const viewport: Viewport = {
@@ -22,9 +24,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         lg:pt-0 lg:pb-0">
         <OnboardingModal />
         <div className="min-h-screen flex flex-col">
+          <DisclaimerBanner />
           <div className="flex-1">{children}</div>
-          <footer className="border-t border-slate-900/80 px-4 py-3 text-center text-[10px] leading-relaxed text-slate-600">
-            Inoffizielles Community-Tool — nicht verbunden mit GOALS AB.
+          <footer className="border-t border-slate-800 px-4 py-3 text-center text-xs leading-relaxed text-slate-500">
+            Unofficial community tool by{' '}
+            <span className="text-slate-400 font-medium">ivo-tech</span> /{' '}
+            <span className="text-slate-400 font-medium">trixr1907</span> — not affiliated with or
+            endorsed by the Goals developers.
           </footer>
         </div>
       </body>

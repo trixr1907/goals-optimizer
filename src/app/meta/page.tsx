@@ -254,8 +254,9 @@ export default function MetaPage() {
     let cancelled = false;
     fetch(apiPath('/api/meta'))
       .then((res) => res.json())
-      .then((data: LiveMetaSnapshot) => {
+      .then((json: { success: boolean; data: LiveMetaSnapshot }) => {
         if (cancelled) return;
+        const data = json.data;
         setLiveMeta(data);
         setMetaStatus(data.source === 'goalsverse' ? 'ok' : 'fallback');
       })
@@ -321,7 +322,7 @@ export default function MetaPage() {
   const insufficientPlayers = !_hasHydrated || players.length < 11;
 
   return (
-    <div className="flex h-screen">
+    <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 overflow-auto p-4 md:p-6">
         {insufficientPlayers ? (

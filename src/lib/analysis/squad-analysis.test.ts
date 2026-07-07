@@ -178,7 +178,7 @@ describe('hasFullStats — dataQuality backfill', () => {
        'close_dribbling','skills','agility','balance','first_touch',
        'defensive_iq','stand_tackle','slide_tackle','jockeying','interceptions',
        'blocking','strength','aggression','stamina','heading','jumping',
-       'div','kic','reflexes','positioning','catching','parrying',
+       'div','reflexes','kicking_power','positioning','catching','parrying',
       ].map((k) => [k, 0])
     );
     const p: Player = {

@@ -58,8 +58,9 @@ export function OnboardingModal() {
           </p>
 
           <p className="rounded-lg border border-amber-900/40 bg-amber-950/20 p-2 text-[10px] leading-relaxed text-amber-200/80">
-            Inoffizielles Community-Tool — nicht verbunden mit GOALS AB. Keine offiziellen GOALS-Assets,
-            keine Partnerschaft und kein offizieller Support durch GOALS AB.
+            Unofficial community tool by <strong className="text-amber-200">ivo-tech</strong> /
+            trixr1907 — not affiliated with, endorsed by, or connected to the Goals developers
+            (GOALS AB). No official partnership or support.
           </p>
         </div>
 

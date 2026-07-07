@@ -41,6 +41,7 @@ export function Sidebar() {
         <div className="p-4 border-b border-slate-800">
           <h1 className="text-lg font-bold text-white tracking-tight">GOALS</h1>
           <p className="text-xs text-slate-500">Squad Optimizer</p>
+          <p className="text-[10px] text-slate-600 mt-0.5">by ivo-tech · unofficial</p>
         </div>
         {/* Club-Info + Wechseln */}
         {clubId && (

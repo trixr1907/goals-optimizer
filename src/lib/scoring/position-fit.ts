@@ -1,6 +1,7 @@
 import { Player, PlayerWithScores, Position, ALL_POSITIONS, getPositionType, getEffectiveStats } from '@/lib/scraper/types';
 import type { PlayerStats } from '@/lib/scraper/types';
 import detailedWeights from '@/config/position-weights-detailed.json';
+import { SECONDARY_FIT_MULTIPLIER, OUT_OF_POSITION_FIT_MULTIPLIER } from '@/lib/optimizer/optimizer-constants';
 
 // Raw JSON has a _meta key we must exclude at runtime (filter in loop via `stat !== '_meta'`).
 // Double-cast through unknown to satisfy TS — the _meta object is never accessed as weights.
@@ -158,8 +159,8 @@ export function calcPositionFitScore(player: Player, position: Position, slotX?:
   // Primary: no penalty, Secondary: moderate, Out-of-position: significant
   const penaltyMultiplier =
     positionType === 'primary' ? 1.0 :
-    positionType === 'secondary' ? 0.88 :
-    0.72;
+    positionType === 'secondary' ? SECONDARY_FIT_MULTIPLIER :
+    OUT_OF_POSITION_FIT_MULTIPLIER;
 
   // Extra cap for GK playing outfield
   if (player.position === 'GK') {

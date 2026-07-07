@@ -61,7 +61,6 @@ export function inferFullStats(
 
     // Goalkeeping
     div: 25,
-    kic: 25,
     reflexes: 25,
     positioning: 25,
     catching: 25,

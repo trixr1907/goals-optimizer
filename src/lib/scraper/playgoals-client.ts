@@ -23,6 +23,7 @@
 
 import type { Position } from './types';
 import { ALL_POSITIONS } from './types';
+import { extractRawId } from '@/lib/player-id';
 
 const PLAYGOALS_BASE    = 'https://playgoals.com';
 const PLAYGOALS_TIMEOUT = 15_000;
@@ -120,9 +121,7 @@ export function extractPrimaryPositionFromHtml(
 export async function fetchPlayGoalsPlayerData(
   characterId: string,
 ): Promise<PlayGoalsFetchResult> {
-  const rawId = characterId.startsWith('goalsverse-')
-    ? characterId.slice('goalsverse-'.length)
-    : characterId;
+  const rawId = extractRawId(characterId);
 
   const url   = `${PLAYGOALS_BASE}/en/player/${rawId}`;
   const { signal, clear } = withTimeout(PLAYGOALS_TIMEOUT);

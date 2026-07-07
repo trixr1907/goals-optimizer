@@ -53,8 +53,8 @@ function MiniPitch({ assignments }: { assignments: FormationAssignment[] }) {
           key={slot.position + slot.x + slot.y}
           className="absolute flex flex-col items-center"
           style={{
-            left: `${slot.x * 100}%`,
-            top: `${slot.y * 100}%`,
+            left: `${slot.x}%`,
+            top: `${slot.y}%`,
             transform: 'translate(-50%, -50%)',
           }}
         >
@@ -201,7 +201,7 @@ export default function AlternativeLineupsPage() {
 
   if (!_hasHydrated || players.length === 0) {
     return (
-      <div className="flex h-screen">
+      <div className="flex min-h-screen">
         <Sidebar />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
@@ -214,7 +214,7 @@ export default function AlternativeLineupsPage() {
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">

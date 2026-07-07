@@ -41,7 +41,7 @@ function makeBasePlayer(overrides: Partial<Player> = {}): Player {
       sprint_dribbling: 64, close_dribbling: 62, skills: 52, agility: 67, balance: 65, first_touch: 68,
       defensive_iq: 77, stand_tackle: 76, slide_tackle: 75, jockeying: 74, interceptions: 76, blocking: 72,
       strength: 74, aggression: 70, stamina: 72, heading: 68, jumping: 71,
-      div: 30, kic: 30, reflexes: 30, positioning: 30, catching: 30, parrying: 30,
+      div: 30, kicking_power: 30, reflexes: 30, positioning: 30, catching: 30, parrying: 30,
     },
     positionSource:   'goalsverse',
     roleRatingsSource: 'goalsverse',

@@ -16,7 +16,7 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
           Erneut versuchen
         </button>
         <p className="pt-2 text-xs text-slate-600">
-          Inoffizielles Community-Tool — nicht verbunden mit GOALS AB.
+          Unofficial community tool by ivo-tech — not affiliated with Goals developers.
         </p>
       </div>
     </div>

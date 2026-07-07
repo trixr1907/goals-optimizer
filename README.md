@@ -1,9 +1,9 @@
 # GOALS Optimizer
 
-A player-focused squad optimizer for GOALS.
+> **⚠️ Unofficial community tool** — created by [ivo-tech](https://ivo-tech.com) / trixr1907.
+> Not affiliated with, endorsed by, or connected to the Goals developers (GOALS AB).
 
-GOALS Optimizer is an unofficial community/fan tool by trixr1907. It is not affiliated with,
-endorsed by, sponsored by, or connected to GOALS AB or the official GOALS team.
+A player-focused squad optimizer for GOALS.
 
 The app helps active GOALS players import their club, understand player fit, build stronger lineups, compare matchups, and track development priorities.
 

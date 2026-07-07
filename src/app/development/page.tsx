@@ -586,7 +586,7 @@ export default function DevelopmentPage() {
   }, [players, search, sortBy, filterPos, notesByPlayerId]);
 
   return (
-    <div className="flex h-screen">
+    <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 p-6 overflow-auto">
         {!_hasHydrated || players.length === 0 ? (

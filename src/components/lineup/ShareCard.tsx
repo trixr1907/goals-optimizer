@@ -6,6 +6,7 @@ import { LineupSlot } from '@/lib/store/lineup-store';
 import { shortPlayerName } from '@/lib/player-name';
 import { FormationAssignment } from '@/lib/optimizer/formation-optimizer';
 import { RARITY_HEX } from '@/config/display-constants';
+import { avatarUrl } from '@/lib/player-id';
 
 // ── Canvas constants ──────────────────────────────────────────────────────────
 
@@ -217,8 +218,7 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
 
 function playerImageUrl(player: PlayerWithScores): string {
   if (player.image_url) return player.image_url;
-  const rawId = player.id.startsWith('goalsverse-') ? player.id.slice('goalsverse-'.length) : player.id;
-  return `https://cdn.playgoals.com/character/prod/${rawId}.png`;
+  return avatarUrl(player.id);
 }
 
 // ── Main component ────────────────────────────────────────────────────────────

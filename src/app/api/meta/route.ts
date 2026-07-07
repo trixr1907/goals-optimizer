@@ -1,14 +1,20 @@
 import { NextResponse } from 'next/server';
 import { fetchGoalsverseLiveMeta } from '@/lib/meta/goalsverse-meta';
 import formationsData from '@/config/formations.json';
+import type { ApiResponse } from '@/lib/api-types';
+import type { LiveMetaSnapshot } from '@/lib/meta/goalsverse-meta';
 
-export const revalidate = 60 * 30; // 30 min
+/** ISR revalidation: refetch live meta every 30 minutes. */
+export const revalidate = 60 * 30;
 
 export async function GET() {
   try {
     const live = await fetchGoalsverseLiveMeta();
-    return NextResponse.json(live);
-  } catch (error) {
+    return NextResponse.json({
+      success: true,
+      data: live,
+    } satisfies ApiResponse<LiveMetaSnapshot>);
+  } catch {
     // Fallback only preserves known formation keys. It intentionally does not
     // invent winrates/usage values when goalsverse live meta is unavailable.
     const fallbackFormations = Object.keys(formationsData).map((key) => ({
@@ -27,10 +33,12 @@ export async function GET() {
     }));
 
     return NextResponse.json({
-      generatedAt: new Date().toISOString(),
-      source: 'fallback',
-      error: String(error),
-      formations: fallbackFormations,
-    });
+      success: true,
+      data: {
+        generatedAt: new Date().toISOString(),
+        source: 'fallback' as const,
+        formations: fallbackFormations,
+      },
+    } satisfies ApiResponse<LiveMetaSnapshot>);
   }
 }

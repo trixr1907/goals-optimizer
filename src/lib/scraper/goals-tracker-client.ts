@@ -28,6 +28,7 @@
  */
 
 import type { PlayerRoleRating, Position } from './types';
+import { extractRawId } from '@/lib/player-id';
 import { ALL_POSITIONS } from './types';
 
 const TRACKER_BASE       = 'https://goals-tracker.com';
@@ -285,9 +286,7 @@ async function fetchOnce(rawId: string): Promise<TrackerFetchResult> {
 export async function fetchTrackerPlayerData(
   characterId: string,
 ): Promise<TrackerFetchResult> {
-  const rawId = characterId.startsWith('goalsverse-')
-    ? characterId.slice('goalsverse-'.length)
-    : characterId;
+  const rawId = extractRawId(characterId);
 
   // Reasons worth retrying
   const retryable: Set<TrackerFetchFailReason> = new Set([

@@ -13,7 +13,7 @@ function emptyStats(): PlayerStats {
     sprint_dribbling: 0, close_dribbling: 0, skills: 0, agility: 0, balance: 0, first_touch: 0,
     defensive_iq: 0, stand_tackle: 0, slide_tackle: 0, jockeying: 0, interceptions: 0, blocking: 0,
     strength: 0, aggression: 0, stamina: 0, heading: 0, jumping: 0,
-    div: 0, kic: 0, reflexes: 0, positioning: 0, catching: 0, parrying: 0,
+    div: 0, kicking_power: 0, reflexes: 0, positioning: 0, catching: 0, parrying: 0,
   };
 }
 

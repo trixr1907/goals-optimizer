@@ -58,7 +58,21 @@ export function analyzeTactics(
   filled: FilledSlot[],
   customSettings: Record<string, string>
 ): TacticsAnalysis {
-  void customSettings;
+  // ── Aggregate user-chosen tactical focus ────────────────────────────────
+  // customSettings maps slotKey → TacticalFocus ('Attack'|'Balanced'|'Defend').
+  // When the user has explicitly chosen a dominant focus, offensive/defensive
+  // tips get adjusted priority so the analysis respects the intended game plan.
+  const focusCounts = { Attack: 0, Balanced: 0, Defend: 0 };
+  for (const val of Object.values(customSettings)) {
+    if (val === 'Attack' || val === 'Balanced' || val === 'Defend') {
+      focusCounts[val]++;
+    }
+  }
+  const dominantFocus =
+    focusCounts.Attack >= focusCounts.Defend && focusCounts.Attack > focusCounts.Balanced ? 'Attack'
+    : focusCounts.Defend > focusCounts.Balanced ? 'Defend'
+    : null;
+
   const tips: TacticsTip[] = [];
 
   const gkSlots  = byPos(filled, 'GK');
@@ -433,6 +447,22 @@ export function analyzeTactics(
     overallWarnings.push('Kein klarer Mittelfeldblock — Gegner kann Räume vor der Abwehr ausnutzen.');
   if (sts.length === 0)
     overallWarnings.push('Kein echter Stürmer in der Formation — offensive Druckentlastung fehlt.');
+
+  // ── Apply user tactical focus to tip priorities ──────────────────────────
+  // Boost offensive tips when user focuses on Attack, defensive tips for Defend.
+  const attackCategories: TipCategory[] = ['angriff'];
+  const defendCategories: TipCategory[] = ['verteidigung'];
+  if (dominantFocus === 'Attack') {
+    for (const t of tips) {
+      if (attackCategories.includes(t.category)) t.priority += 1;
+      if (defendCategories.includes(t.category)) t.priority = Math.max(0, t.priority - 1);
+    }
+  } else if (dominantFocus === 'Defend') {
+    for (const t of tips) {
+      if (defendCategories.includes(t.category)) t.priority += 1;
+      if (attackCategories.includes(t.category)) t.priority = Math.max(0, t.priority - 1);
+    }
+  }
 
   return {
     tips: tips.sort((a, b) => b.priority - a.priority),

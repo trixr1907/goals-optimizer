@@ -46,7 +46,7 @@ function makePlayerWS(opts: {
     sprint_dribbling: 70, close_dribbling: 70, skills: 65, agility: 70, balance: 70, first_touch: 70,
     defensive_iq: 65, stand_tackle: 65, slide_tackle: 65, jockeying: 65, interceptions: 65, blocking: 65,
     strength: 65, aggression: 65, stamina: 70, heading: 65, jumping: 65,
-    div: 0, kic: 0, reflexes: 0, positioning: 65, catching: 0, parrying: 0,
+    div: 0, kicking_power: 0, reflexes: 0, positioning: 65, catching: 0, parrying: 0,
   } as unknown as PlayerWithScores['stats'];
 
   const fit_scores = {} as Record<Position, number>;

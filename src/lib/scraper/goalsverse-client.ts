@@ -1,5 +1,7 @@
 import { Player, PlayerStats, Position, Rarity, PlayerRoleRating, PlayerAging, ALL_POSITIONS, PositionSource, RoleRatingsSource } from './types';
 import { fetchTrackerPlayerData, TRACKER_CONCURRENCY } from './goals-tracker-client';
+import { extractRawId, buildGoalsverseId } from '@/lib/player-id';
+import { SECONDARY_OVR_THRESHOLD } from '@/lib/optimizer/optimizer-constants';
 
 const GOALSVERSE_BASE = 'https://goalsverse.com';
 const CDN_BASE = 'https://cdn.playgoals.com/character/prod';
@@ -7,9 +9,7 @@ const USER_AGENT = 'Mozilla/5.0 (compatible; GOALS Squad Optimizer/1.0)';
 
 function characterImageUrl(characterId?: string): string | undefined {
   if (!characterId) return undefined;
-  const rawId = characterId.startsWith('goalsverse-')
-    ? characterId.slice('goalsverse-'.length)
-    : characterId;
+  const rawId = extractRawId(characterId);
   return `${CDN_BASE}/${rawId}.png?w=128`;
 }
 
@@ -323,7 +323,7 @@ export function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
     sprint_dribbling: 0, close_dribbling: 0, skills: 0, agility: 0, balance: 0, first_touch: 0,
     defensive_iq: 0, stand_tackle: 0, slide_tackle: 0, jockeying: 0, interceptions: 0, blocking: 0,
     strength: 0, aggression: 0, stamina: 0, heading: 0, jumping: 0,
-    div: 0, kic: 0, reflexes: 0, positioning: 0, catching: 0, parrying: 0,
+    div: 0, reflexes: 0, positioning: 0, catching: 0, parrying: 0, kicking_power: 0,
   };
 
   // Collect secondary positions from ovr_roles if present in the RSC payload
@@ -350,11 +350,11 @@ export function mapActivityPlayerToBasic(ap: ActivityPlayer): Player {
   );
 
   const secondaryPositions: Position[] = roleRatings
-    .filter((r) => r.overall >= overall - 10 && r.position !== mappedPosition)
+    .filter((r) => r.overall >= overall - SECONDARY_OVR_THRESHOLD && r.position !== mappedPosition)
     .map((r) => r.position);
 
   return {
-    id: `goalsverse-${rawId}`,
+    id: buildGoalsverseId(rawId),
     name,
     position: mappedPosition,
     overall,
@@ -531,11 +531,11 @@ export function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
   // Overall from equipped card
   const equippedOverall = overall;
 
-  // Secondary = all ovr_roles positions with OVR >= equippedOverall - 10, excluding primary.
+  // Secondary = all ovr_roles positions with OVR >= equippedOverall - SECONDARY_OVR_THRESHOLD, excluding primary.
   // Threshold is intentionally wide: GOALS players regularly play multiple positions with
   // significant OVR gaps (e.g. AM 85 → CF 81 → CM 80 are all valid secondary slots).
   const secondaryPositions: Position[] = roleRatings
-    .filter((r) => r.overall >= equippedOverall - 10 && r.position !== primaryPosition)
+    .filter((r) => r.overall >= equippedOverall - SECONDARY_OVR_THRESHOLD && r.position !== primaryPosition)
     .map((r) => r.position);
 
   // Aging data
@@ -606,7 +606,6 @@ export function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
 
     // Goalkeeping
     div:              extractStatValue(stats, ['goalkeeping', 'diving', 'weighted_value']),
-    kic:              extractStatValue(stats, ['goalkeeping', 'distribution', 'weighted_value']),
     reflexes:         extractStatValue(stats, ['goalkeeping', 'reflexes', 'weighted_value']),
     positioning:      extractStatValue(stats, ['goalkeeping', 'awareness', 'positioning', 'value']),
     catching:         extractStatValue(stats, ['goalkeeping', 'handling', 'catching', 'value']),
@@ -625,7 +624,7 @@ export function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
   }
 
   return {
-    id: `goalsverse-${rawId}`,
+    id: buildGoalsverseId(rawId),
     name,
     position: finalPosition,
     overall,
@@ -849,7 +848,7 @@ async function enrichWithTracker(players: Player[]): Promise<Player[]> {
       const newPosition  = td.primaryPosition!;
       const newRoleRatings = td.roleRatings;
       const newSecondary: Position[] = newRoleRatings
-        .filter((r) => r.overall >= player.overall - 10 && r.position !== newPosition)
+        .filter((r) => r.overall >= player.overall - SECONDARY_OVR_THRESHOLD && r.position !== newPosition)
         .map((r) => r.position);
 
       return {
@@ -911,7 +910,7 @@ async function enrichWithTracker(players: Player[]): Promise<Player[]> {
 
     // Recompute secondaryPositions
     const newSecondary: Position[] = finalRoleRatings
-      .filter((r) => r.overall >= player.overall - 10 && r.position !== finalPosition)
+      .filter((r) => r.overall >= player.overall - SECONDARY_OVR_THRESHOLD && r.position !== finalPosition)
       .map((r) => r.position);
 
     const allWarnings = [...(player.sourceWarnings ?? []), ...trackerWarnings];

@@ -198,9 +198,10 @@ export default function OnboardingPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ clubName: name }),
     });
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(importErrorMessage(data.errorCode, data.message ?? data.error));
+    const json = await res.json();
+    const data = json.data;
+    if (!json.success) {
+      throw new Error(importErrorMessage(json.errorCode, json.error));
     }
     const resolvedName = data.clubName && data.source === 'goalsverse'
       ? String(data.clubName)
@@ -332,7 +333,7 @@ export default function OnboardingPage() {
     : 'Kader importieren';
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 overflow-auto flex items-start justify-center p-6 pt-8">
         <div className="max-w-md w-full space-y-5">

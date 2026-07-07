@@ -2,14 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getClubRoster } from '@/lib/scraper/goalsverse-client';
 import { enrichPlayerWithScores } from '@/lib/scoring/position-fit';
 import { MOCK_PLAYERS } from '@/lib/scraper/mock-data';
+import type { ApiResponse } from '@/lib/api-types';
+
+/** Canonical error codes surfaced to the client. */
+const ERROR_CODES = {
+  club_not_found: 'club_not_found',
+  goalsverse_timeout: 'goalsverse_timeout',
+  rsc_payload_incomplete: 'rsc_payload_incomplete',
+  no_players_found: 'no_players_found',
+  network_error: 'network_error',
+  invalid_club_name: 'invalid_club_name',
+} as const;
 
 function importErrorMessage(code?: string, fallback = 'Live-Import fehlgeschlagen.'): string {
   switch (code) {
-    case 'club_not_found': return 'Club nicht gefunden.';
-    case 'goalsverse_timeout': return 'Goalsverse hat nicht rechtzeitig geantwortet.';
-    case 'rsc_payload_incomplete': return 'Goalsverse-Daten unvollständig: RSC-Payload enthält keinen Kader.';
-    case 'no_players_found': return 'Keine Spieler im Goalsverse-Kader gefunden.';
-    case 'network_error': return 'Netzwerk- oder Goalsverse-API-Fehler.';
+    case ERROR_CODES.club_not_found: return 'Club nicht gefunden.';
+    case ERROR_CODES.goalsverse_timeout: return 'Goalsverse hat nicht rechtzeitig geantwortet.';
+    case ERROR_CODES.rsc_payload_incomplete: return 'Goalsverse-Daten unvollständig: RSC-Payload enthält keinen Kader.';
+    case ERROR_CODES.no_players_found: return 'Keine Spieler im Goalsverse-Kader gefunden.';
+    case ERROR_CODES.network_error: return 'Netzwerk- oder Goalsverse-API-Fehler.';
     default: return fallback;
   }
 }
@@ -37,13 +48,20 @@ function summarizeImport(players: ReturnType<typeof enrichPlayerWithScores>[]) {
   return diagnostics;
 }
 
+function fail(error: string, status: number, errorCode?: string) {
+  return NextResponse.json(
+    { success: false, error, errorCode } satisfies ApiResponse<never>,
+    { status }
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     let body: unknown;
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json({ error: 'Ungültiges JSON.' }, { status: 400 });
+      return fail('Ungültiges JSON.', 400);
     }
 
     const clubName = typeof body === 'object' && body !== null && 'clubName' in body
@@ -52,19 +70,19 @@ export async function POST(req: NextRequest) {
     const normalizedClubName = String(clubName ?? '').trim();
 
     if (!normalizedClubName) {
-      return NextResponse.json({ error: 'clubName fehlt' }, { status: 400 });
+      return fail('clubName fehlt', 400);
     }
 
     if (normalizedClubName.length < 2) {
-      return NextResponse.json({ error: 'clubName ist zu kurz', errorCode: 'invalid_club_name' }, { status: 400 });
+      return fail('clubName ist zu kurz', 400, ERROR_CODES.invalid_club_name);
     }
 
     if (normalizedClubName.length > 100) {
-      return NextResponse.json({ error: 'clubName ist zu lang', errorCode: 'invalid_club_name' }, { status: 400 });
+      return fail('clubName ist zu lang', 400, ERROR_CODES.invalid_club_name);
     }
 
     if (!/^[\p{L}\p{N}\s'_.-]+$/u.test(normalizedClubName)) {
-      return NextResponse.json({ error: 'clubName enthält ungültige Zeichen', errorCode: 'invalid_club_name' }, { status: 400 });
+      return fail('clubName enthält ungültige Zeichen', 400, ERROR_CODES.invalid_club_name);
     }
 
     if (normalizedClubName.toLowerCase() === 'demo') {
@@ -72,12 +90,15 @@ export async function POST(req: NextRequest) {
         .map((player) => ({ ...player, dataQuality: 'full' as const, positionSource: 'heuristic' as const }))
         .map(enrichPlayerWithScores);
       return NextResponse.json({
-        players: enriched,
-        count: enriched.length,
-        source: 'demo',
-        message: 'Demo-Kader geladen.',
-        diagnostics: summarizeImport(enriched),
-      });
+        success: true,
+        data: {
+          players: enriched,
+          count: enriched.length,
+          source: 'demo' as const,
+          clubName: 'Demo',
+          diagnostics: summarizeImport(enriched),
+        },
+      } satisfies ApiResponse<unknown>);
     }
 
     const live = await getClubRoster(normalizedClubName);
@@ -85,31 +106,36 @@ export async function POST(req: NextRequest) {
     if (!live.players.length) {
       return NextResponse.json(
         {
-          players: [],
-          count: 0,
-          source: 'goalsverse',
-          clubId: live.clubId,
-          clubUrl: live.clubUrl,
-          clubName: live.clubName,
-          error: live.reason ?? 'Kein Live-Kader gefunden.',
-          errorCode: live.errorCode ?? 'no_players_found',
-          message: importErrorMessage(live.errorCode, live.reason),
-        },
+          success: false,
+          error: importErrorMessage(live.errorCode, live.reason),
+          errorCode: live.errorCode ?? ERROR_CODES.no_players_found,
+          data: {
+            players: [],
+            count: 0,
+            source: 'goalsverse' as const,
+            clubId: live.clubId,
+            clubUrl: live.clubUrl,
+            clubName: live.clubName,
+          },
+        } satisfies ApiResponse<unknown, unknown>,
         { status: 404 }
       );
     }
 
     const enriched = live.players.map(enrichPlayerWithScores);
     return NextResponse.json({
-      players: enriched,
-      count: enriched.length,
-      source: 'goalsverse',
-      clubId: live.clubId,
-      clubUrl: live.clubUrl,
-      clubName: live.clubName,
-      diagnostics: summarizeImport(enriched),
-    });
+      success: true,
+      data: {
+        players: enriched,
+        count: enriched.length,
+        source: 'goalsverse' as const,
+        clubId: live.clubId,
+        clubUrl: live.clubUrl,
+        clubName: live.clubName,
+        diagnostics: summarizeImport(enriched),
+      },
+    } satisfies ApiResponse<unknown>);
   } catch (err) {
-    return NextResponse.json({ error: String(err), source: 'goalsverse' }, { status: 500 });
+    return fail(String(err), 500);
   }
 }
