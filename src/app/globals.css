@@ -40,8 +40,8 @@ body {
  */
 .page-shell {
   display: flex;
-  min-height: 100dvh;   /* dvh = dynamic viewport height, accounts for mobile browser chrome */
-  min-height: 100vh;    /* fallback for browsers without dvh */
+  min-height: 100vh;    /* fallback: old browsers without dvh support */
+  min-height: 100dvh;  /* modern: dynamic viewport height — excludes mobile browser chrome */
 }
 
 .page-main {
