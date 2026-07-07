@@ -1,17 +1,11 @@
 /**
- * upgrade-roi.ts v1 — Upgrade-ROI ohne training_value (Goalsverse-only)
+ * upgrade-roi.ts v1 — Upgrade-ROI (Basis-Daten-only)
  * ==========================================================================
- * Sprint-B-Ergebnis: training_value existiert NICHT im Goalsverse-Payload
- * (Tracker-exklusiv, kommt nur bei Tracker-200). Trotzdem ist Upgrade-ROI
- * jetzt sinnvoll, weil Goalsverse liefert:
- *   - overall / roleRatings
- *   - aging.potentialRange / aging.upgradesRemaining
- *   - current_xp (13/18 Full-Spieler)
+ * Berechnet Upgrade-Priorität aus Potenzial-Daten (potentialRange,
+ * upgradesRemaining). Upgrade-Kosten (xp_next_upgrade) sind optionale
+ * Erweiterung — wenn nicht vorhanden: partial confidence, kein ROI-Wert.
  *
- * Nur die KOSTEN (xp_next_upgrade) sind Tracker-only — daher confidence-aware:
- * fehlen Kosten → partial + Hinweis, nicht NO_DATA.
- *
- * training_value verfeinert später nur den "erreichbarer Anteil"-Hebel (P1+).
+ * training_value verfeinert später den erreichbaren Anteil (P1+).
  *
  * Rarity-Tier-Arbitrage: überschreitet das nächste Upgrade eine Tier-Grenze
  * → INVEST_NOW (Karte wertet deutlich auf, oft günstigster Moment).
@@ -53,7 +47,7 @@ export interface UpgradeRoiV1 {
   /** True when the next upgrade is expected to cross a rarity tier boundary. */
   crosses_rarity_tier: boolean;
   next_rarity?: string;
-  /** OVR-gain per 100k XP — only available when xp_next_upgrade is known (Tracker). */
+  /** OVR-gain per 100k XP — only available when xp_next_upgrade is known. */
   roi?: number;
   /** 0..1 — how reliable is this recommendation? */
   confidence: number;
@@ -68,7 +62,7 @@ export interface UpgradeRoiV1 {
 /**
  * Computes Upgrade-ROI v1 for a player.
  * Inputs: Player from types.ts (same shape used everywhere in the app).
- * Does NOT require training_value (Tracker-only; added later as a refining lever).
+ * Does NOT require training_value (optional; added later as a refining lever).
  */
 export function upgradeRoiV1(
   player: Pick<Player, 'overall' | 'age' | 'roleRatings' | 'aging' | 'xp_next_upgrade' | 'upgrade_count'>,
@@ -104,7 +98,7 @@ export function upgradeRoiV1(
       confidence: 0,
       basis: 'thin',
       missing,
-      note: 'Kein aging/Potenzial im Payload — Goalsverse-Full-Daten fehlen.',
+      note: 'Kein Potenzial-Payload verfügbar — erweiterte Kader-Daten nicht geladen.',
     };
   }
 
@@ -181,7 +175,7 @@ export function upgradeRoiV1(
     confidence >= 0.9 ? 'full' : confidence >= 0.5 ? 'partial' : 'thin';
 
   const note = !hasCost
-    ? 'Kosten (xp_next_upgrade) Tracker-only — ROI erscheint sobald Tracker 200 liefert.'
+    ? 'Upgrade-Kosten noch nicht verfügbar — ROI erscheint sobald vollständige Kader-Daten geladen sind.'
     : undefined;
 
   return {

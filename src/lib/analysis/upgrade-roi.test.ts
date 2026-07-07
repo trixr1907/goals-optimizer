@@ -205,7 +205,7 @@ describe('upgradeRoiV1 — confidence', () => {
     expect(result.missing).toContain('xp_next_upgrade');
     expect(result.missing).toContain('age');
     expect(result.roi).toBeUndefined();
-    expect(result.note).toContain('Tracker-only');
+    expect(result.note).toContain('Upgrade-Kosten noch nicht verfügbar');
   });
 
   it('no cost alone → confidence 0.67 (2/3 pillars)', () => {
