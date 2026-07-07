@@ -16,7 +16,39 @@ body {
   }
 }
 
-/* Hide scrollbar for mobile quick-nav pill row */
+/* ── Root layout scroll chain ────────────────────────────────────────────────
+ *
+ * The scroll chain requires ONE definite height at the root, then min-height:0
+ * at every flex-item level below so items can shrink and overflow-y:auto fires.
+ *
+ * body.layout-root        height:100dvh (100vh fallback) — the single anchor
+ *   div.layout-children   flex:1; min-height:0 — fills body, allows shrink
+ *     div.layout-page-wrapper  flex:1; min-height:0 — passes height to page
+ *       div.page-shell    flex:1; min-height:0 — ROW: Sidebar + Content
+ *         main.page-main  flex:1; min-height:0; overflow-y:auto — SCROLLS
+ *
+ * footer has shrink-0 so it stays visible and doesn't fight for flex space.
+ */
+
+.layout-root {
+  height: 100vh;    /* fallback */
+  height: 100dvh;  /* dynamic: excludes mobile browser chrome (address bar etc.) */
+}
+
+.layout-children {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 100%;    /* fill the body exactly */
+}
+
+.layout-page-wrapper {
+  flex: 1 1 0%;
+  min-height: 0;
+  display: flex;   /* passes flex context to page-shell */
+  flex-direction: column;
+}
+
+
 .scrollbar-none {
   scrollbar-width: none;
 }
@@ -26,29 +58,35 @@ body {
 
 /*
  * Page shell: Sidebar + scrollable main content.
- * min-h-screen alone causes scroll issues on mobile because the fixed
- * top-bar (h-11) and bottom-nav (h-14) eat into 100vh but are NOT part
- * of the scroll flow. Using min-h-dvh (dynamic viewport height) lets the
- * browser subtract its own chrome, and overflow-y-auto on .page-main
- * ensures the content area scrolls independently.
  *
- * Usage in every page:
- *   <div className="page-shell">
- *     <Sidebar />
- *     <main className="page-main"> ... </main>
- *   </div>
+ * Root cause of the scroll bug:
+ * Flex items have default min-height:auto, which means they refuse to shrink
+ * below their content height. Without min-height:0 throughout the chain, the
+ * content div grows to match all 53 players and overflow-y:auto never fires
+ * because the container has no definite (bounded) height to overflow against.
+ *
+ * Fix chain:
+ * - .layout-root (set in layout.tsx):  height:100dvh  <- single definite height
+ * - .layout-children:                  flex:1; min-height:0  <- shrinks into layout-root
+ * - .page-shell:                       flex:1; min-height:0  <- row, shrinks
+ * - .page-main:                        flex:1; min-height:0; overflow-y:auto  <- ONLY scroll container
+ *
+ * Rule: every flex-item in a vertical chain needs min-height:0 to allow shrinking,
+ * except the root where height is explicitly defined.
  */
+
+/* Page-level row: Sidebar + Content.
+   Gets flex:1 + min-height:0 from its parent (.layout-children). */
 .page-shell {
   display: flex;
-  min-height: 100vh;    /* fallback: old browsers without dvh support */
-  min-height: 100dvh;  /* modern: dynamic viewport height — excludes mobile browser chrome */
+  flex: 1 1 0%;
+  min-height: 0;        /* allow shrinking — critical for overflow to engage */
 }
 
+/* The scrollable content column next to the sidebar. */
 .page-main {
   flex: 1 1 0%;
-  min-width: 0;         /* prevent flex blowout on wide content */
+  min-width: 0;         /* prevent horizontal flex blowout on wide tables */
+  min-height: 0;        /* allow vertical shrinking so overflow-y:auto fires */
   overflow-y: auto;
-  /* On desktop the sidebar is visible — no extra padding needed.
-     On mobile the fixed top/bottom bars are handled by the body padding
-     already set above, so page-main just needs to scroll. */
 }

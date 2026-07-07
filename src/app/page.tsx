@@ -333,9 +333,9 @@ export default function OnboardingPage() {
     : 'Kader importieren';
 
   return (
-    <div className="flex min-h-screen">
+    <div className="page-shell">
       <Sidebar />
-      <main className="flex-1 overflow-auto flex items-start justify-center p-6 pt-8">
+      <main className="page-main flex items-start justify-center p-6 pt-8">
         <div className="max-w-md w-full space-y-5">
 
           {/* Header */}
