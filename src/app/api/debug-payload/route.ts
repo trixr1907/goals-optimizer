@@ -53,25 +53,6 @@ function extractPlayersFromRsc(rscText: string): unknown[] {
   return [];
 }
 
-function resolveClubId(rscText: string): string | null {
-  const chunks = rscText.split(/\n/);
-  for (const chunk of chunks) {
-    const colon = chunk.indexOf(':');
-    if (colon < 0) continue;
-    const json = chunk.slice(colon + 1).trim();
-    if (!json.startsWith('{')) continue;
-    try {
-      const parsed = JSON.parse(json) as Record<string, unknown>;
-      // Club search response has items[].id or club.id
-      if (Array.isArray(parsed.items)) {
-        const first = (parsed.items as Record<string, unknown>[])[0];
-        if (first?.id) return String(first.id);
-      }
-    } catch { /* skip */ }
-  }
-  return null;
-}
-
 export async function GET(req: NextRequest) {
   const clubName = req.nextUrl.searchParams.get('club') ?? "txr'";
 
