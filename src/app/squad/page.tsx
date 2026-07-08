@@ -110,7 +110,16 @@ function PlayerAvatar({
 
 // ── Stat-Bar ─────────────────────────────────────────────────────────────────
 
-function StatBar({ label, value }: { label: string; value: number }) {
+function StatBar({ label, value, missing = false }: { label: string; value: number; missing?: boolean }) {
+  if (missing) {
+    return (
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span className="text-[10px] text-slate-400 w-28 shrink-0 truncate">{label}</span>
+        <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden min-w-[40px]" />
+        <span className="text-[10px] font-mono text-slate-600 w-6 text-right shrink-0">—</span>
+      </div>
+    );
+  }
   return (
     <div className="flex items-center gap-1.5 min-w-0">
       <span className="text-[10px] text-slate-400 w-28 shrink-0 truncate">{label}</span>
@@ -125,8 +134,10 @@ function StatBar({ label, value }: { label: string; value: number }) {
 // ── Inline Details-Panel ─────────────────────────────────────────────────────
 
 function DetailsPanel({ player }: { player: PlayerWithScores }) {
-  const stats  = player.stats as unknown as Record<string, number>;
-  const isGK   = player.position === 'GK';
+  const stats   = player.stats as unknown as Record<string, number>;
+  const isGK    = player.position === 'GK';
+  // basic = only role/OVR data, no individual stats available
+  const isBasic = player.dataQuality === 'basic';
 
   // top-5 contributing stats for this player's position
   const top5 = topWeightedStats(player, player.position, 5);
@@ -189,6 +200,11 @@ function DetailsPanel({ player }: { player: PlayerWithScores }) {
 
       {/* ── Alle Einzelstats – gruppiert ── */}
       <div className="overflow-x-auto">
+        {isBasic && (
+          <p className="text-[10px] text-amber-500/80 mb-2">
+            Nur Positions-OVR verfügbar — Einzelstats nicht geladen.
+          </p>
+        )}
         <div className={`grid gap-x-6 gap-y-3 min-w-[280px] ${
           isGK ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
         }`}>
@@ -200,7 +216,7 @@ function DetailsPanel({ player }: { player: PlayerWithScores }) {
               <div className="space-y-1">
                 {group.keys.map((key) => {
                   const val = stats[key] ?? 0;
-                  return <StatBar key={key} label={STAT_LABEL[key] ?? key} value={val} />;
+                  return <StatBar key={key} label={STAT_LABEL[key] ?? key} value={val} missing={isBasic} />;
                 })}
               </div>
             </div>

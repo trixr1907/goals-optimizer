@@ -304,16 +304,22 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
                   {player.overall}
                 </span>
                 <span className="text-xs text-slate-500">{displayPosition(player.position)}</span>
-                <span className={`text-xs font-mono font-bold ${fitColor}`}>
+                <span
+                  className={`text-xs font-mono font-bold ${fitColor}`}
+                  title="Meta = Fit-Score auf aktueller Position (0–100). Dev = Entwicklungs-Potenzial-Score."
+                >
                   Meta {mainFit.toFixed(0)}
                 </span>
-                  <span className="text-xs font-mono text-cyan-300">Dev {developmentScore}</span>
+                  <span className="text-xs font-mono text-cyan-300" title="Dev = Entwicklungs-Score: Headroom × Training-Value × Lifecycle (0–100).">Dev {developmentScore}</span>
                 </div>
               </div>
             </div>
             <div className="text-right text-xs text-slate-500">
               <p>Beste Pos.</p>
-              <p className="font-bold text-emerald-400">
+              <p
+                className="font-bold text-emerald-400"
+                title="Beste Position: Position mit höchstem Fit-Score. Zahl in Klammer = Fit-Score (0–100, kein OVR)."
+              >
                 {bestPos?.[0] ? displayPosition(bestPos[0] as Position) : "-"} ({bestPos?.[1].toFixed(0)})
               </p>
             </div>
@@ -331,7 +337,10 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
               {advice.label}
             </span>
             {advice.tournamentValue?.hasValue && (
-              <span className="text-[10px] px-2 py-0.5 rounded bg-amber-900 text-amber-200 font-medium">
+              <span
+                className="text-[10px] px-2 py-0.5 rounded bg-amber-900 text-amber-200 font-medium cursor-help"
+                title={`Turnierwert: Spieler passt in mindestens ein Turnier-OVR-Fenster (z.B. unter Cap oder über Minimum). Relevant für: ${advice.tournamentValue.relevantTournaments?.join(', ') || 'Aktuelle Turniere'}.`}
+              >
                 🏆 Turnierwert
               </span>
             )}
@@ -385,11 +394,15 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
           <div className="rounded-lg bg-slate-800/50 p-2 text-xs grid grid-cols-3 gap-2">
             <div>
               <p className="text-slate-500">Spielzeit</p>
-              <p className="text-white font-mono">{tracked?.minutesPlayed ?? 0}m</p>
+              <p className="text-white font-mono">
+                {tracked?.minutesPlayed != null ? `${tracked.minutesPlayed}m` : '—'}
+              </p>
             </div>
             <div>
               <p className="text-slate-500">XP grob</p>
-              <p className="text-white font-mono">{tracked?.xpEstimate ?? 0}</p>
+              <p className="text-white font-mono">
+                {tracked?.xpEstimate != null ? tracked.xpEstimate : '—'}
+              </p>
             </div>
             <div>
               <p className="text-slate-500">Status</p>
