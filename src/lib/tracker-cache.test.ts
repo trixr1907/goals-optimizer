@@ -188,9 +188,9 @@ describe('pruneExpiredEntries', () => {
   });
 });
 
-// ── Extractor stubs (pattern validation) ────────────────────────────────────
-// These test the known candidate regex patterns. Real HTML fixtures from a
-// live Tracker page must be added once available (TODO: html-audit).
+// ── Extractor tests (verified against real Tracker HTML, 2026-07-08) ────────
+// Audit result: training_value = NOT in Tracker HTML (always undefined)
+//               xp_next_upgrade = from RSC payload "nextUpgradeXpRequirement"
 
 import {
   extractTrainingValueFromHtml,
@@ -198,55 +198,37 @@ import {
 } from './scraper/goals-tracker-client';
 
 describe('extractTrainingValueFromHtml', () => {
-  it('extracts value from "Training Value 5" pattern', () => {
-    const html = '<span>Training Value</span><span>5</span>';
-    // Pattern A looks for "Training Value ...digit" in one string pass — this may not match
-    // depending on whether the digit is on the same line. The real HTML may differ.
-    // For now: confirm the function at least returns undefined rather than crashing.
-    const v = extractTrainingValueFromHtml(html);
-    expect(v === undefined || (v >= 1 && v <= 8)).toBe(true);
-  });
-
-  it('extracts value from inline "Training Value<!-- --> 5" pattern', () => {
-    const html = '>Training Value<!-- --> 5<';
-    const v = extractTrainingValueFromHtml(html);
-    expect(v).toBe(5);
-  });
-
-  it('extracts value from data attribute', () => {
-    const html = '<div data-training-value="3">...</div>';
-    expect(extractTrainingValueFromHtml(html)).toBe(3);
-  });
-
-  it('rejects out-of-range values', () => {
-    const html = '>Training Value<!-- --> 9<';
-    expect(extractTrainingValueFromHtml(html)).toBeUndefined();
-  });
-
-  it('returns undefined when pattern absent', () => {
-    expect(extractTrainingValueFromHtml('<html><body>no training here</body></html>')).toBeUndefined();
+  it('always returns undefined — field does not exist in Tracker HTML', () => {
+    // Confirmed by live audit: word "training" not present anywhere on goals-tracker.com
+    expect(extractTrainingValueFromHtml('<html>Training Value 5 bolt lightning</html>')).toBeUndefined();
+    expect(extractTrainingValueFromHtml('')).toBeUndefined();
+    expect(extractTrainingValueFromHtml('data-training-value="3"')).toBeUndefined();
   });
 });
 
 describe('extractXpNextUpgradeFromHtml', () => {
-  it('extracts from "Next Upgrade ... 12,500 XP" pattern', () => {
-    const html = '<p>Next Upgrade</p><p>12,500 XP</p>';
-    const v = extractXpNextUpgradeFromHtml(html);
-    // May or may not match depending on whitespace — confirm no crash
-    expect(v === undefined || v > 0).toBe(true);
+  it('extracts from RSC payload with escaped quotes (real Tracker format)', () => {
+    // Real format: "nextUpgradeXpRequirement\":1500000
+    const html = 'self.__next_f.push([1,"...\\\"nextUpgradeXpRequirement\\\":1500000,..."])';
+    expect(extractXpNextUpgradeFromHtml(html)).toBe(1500000);
   });
 
-  it('extracts from inline "Next Upgrade 8000 XP" pattern', () => {
-    const html = 'Next Upgrade cost: 8000 XP';
-    expect(extractXpNextUpgradeFromHtml(html)).toBe(8000);
+  it('extracts from unescaped JSON (e.g. when already parsed)', () => {
+    const html = '"nextUpgradeXpRequirement":1500000';
+    expect(extractXpNextUpgradeFromHtml(html)).toBe(1500000);
   });
 
-  it('extracts from data attribute', () => {
-    const html = '<div data-xp-next="12500">...</div>';
-    expect(extractXpNextUpgradeFromHtml(html)).toBe(12500);
+  it('returns undefined for maxed player (sentinel 4294967295)', () => {
+    // Jonathan Jones (maxed): nextUpgradeXpRequirement = 4294967295
+    const html = '"nextUpgradeXpRequirement\\":4294967295';
+    expect(extractXpNextUpgradeFromHtml(html)).toBeUndefined();
   });
 
-  it('returns undefined when pattern absent', () => {
-    expect(extractXpNextUpgradeFromHtml('<html><body>nothing here</body></html>')).toBeUndefined();
+  it('returns undefined when field absent', () => {
+    expect(extractXpNextUpgradeFromHtml('<html>nothing here</html>')).toBeUndefined();
+  });
+
+  it('returns undefined for zero or negative values', () => {
+    expect(extractXpNextUpgradeFromHtml('"nextUpgradeXpRequirement":0')).toBeUndefined();
   });
 });

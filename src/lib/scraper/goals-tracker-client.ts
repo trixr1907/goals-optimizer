@@ -203,63 +203,52 @@ export function extractMatchStatsFromHtml(html: string): TrackerPlayerData['matc
 /**
  * Extract the training_value (Bolt 1–8) from Tracker HTML.
  *
- * TODO(html-audit): Pattern needs verification against a real Tracker 200 response.
- * The Tracker page renders a "Bolt" or lightning icon next to the training value.
- * Known candidate patterns (to verify with /debug or a saved HTML fixture):
+ * AUDIT RESULT (2026-07-08): The word "training" does NOT appear anywhere in
+ * goals-tracker.com player pages — neither as rendered HTML text nor as a
+ * field in the RSC JSON payload (self.__next_f.push blocks).
  *
- *   <span ...>Bolt</span> ... <span ...>5</span>
- *   data-training-value="5"
- *   >Training Value<!-- --> 5</
+ * Conclusion: training_value is NOT a Tracker field. It lives in the Goalsverse
+ * API payload at raw.potential.training_value (see goalsverse-client.ts line 636).
+ * The Goalsverse API currently returns null/undefined for most players, which is
+ * why coverage is 0/53.
  *
- * Returns undefined when the pattern is absent (Tracker page may not show it for all players).
+ * This function is retained as a stub for future-proofing, but will always
+ * return undefined with real Tracker HTML.
  */
-export function extractTrainingValueFromHtml(html: string): number | undefined {
-  // Pattern A: explicit "Training Value" label followed by a digit 1–8
-  // Covers: "Training Value<!-- --> 5" or ">Training Value 5<"
-  const labelMatch = html.match(
-    /Training\s+Value\s*(?:<!--[^>]*-->\s*)?(\d)/i,
-  );
-  if (labelMatch) {
-    const v = parseInt(labelMatch[1], 10);
-    if (v >= 1 && v <= 8) return v;
-  }
-
-  // Pattern B: data attribute (future-proof if Tracker adds it)
-  const dataMatch = html.match(/data-training-value="(\d)"/i);
-  if (dataMatch) {
-    const v = parseInt(dataMatch[1], 10);
-    if (v >= 1 && v <= 8) return v;
-  }
-
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function extractTrainingValueFromHtml(_html: string): number | undefined {
+  // No pattern found in live Tracker HTML audit.
+  // training_value must be sourced from Goalsverse raw.potential.training_value.
   return undefined;
 }
 
 /**
  * Extract xp_next_upgrade from Tracker HTML.
  *
- * TODO(html-audit): Pattern needs verification against a real Tracker 200 response.
- * Known candidate patterns:
+ * AUDIT RESULT (2026-07-08): The Tracker page is a Next.js app that delivers
+ * data via RSC payload (self.__next_f.push JSON blocks), not as readable HTML
+ * text. The field is called "nextUpgradeXpRequirement" in the RSC JSON.
  *
- *   "Next Upgrade" ... "12,500 XP"
- *   data-xp-next="12500"
+ * This function parses the RSC payload embedded in the HTML page to extract
+ * nextUpgradeXpRequirement. Special case: 4294967295 (0xFFFFFFFF = MAX_UINT32)
+ * means the player is fully maxed — we return undefined in that case.
  *
- * Returns undefined when not found.
+ * Verified against real Tracker HTTP 200 responses:
+ *   - Wendelin Pietsch (upgrading): nextUpgradeXpRequirement = 1500000
+ *   - Jonathan Jones   (maxed):     nextUpgradeXpRequirement = 4294967295 → undefined
  */
 export function extractXpNextUpgradeFromHtml(html: string): number | undefined {
-  // Pattern A: "Next Upgrade" label followed by a number (with optional commas) + XP
-  const labelMatch = html.match(
-    /Next\s+Upgrade[^<]{0,80}?([\d,]+)\s*XP/i,
-  );
-  if (labelMatch) {
-    const v = parseInt(labelMatch[1].replace(/,/g, ''), 10);
-    if (!isNaN(v) && v > 0) return v;
-  }
+  const MAXED_SENTINEL = 4294967295; // MAX_UINT32 — Tracker uses this for fully upgraded players
 
-  // Pattern B: data attribute
-  const dataMatch = html.match(/data-xp-next="([\d]+)"/i);
-  if (dataMatch) {
-    const v = parseInt(dataMatch[1], 10);
-    if (!isNaN(v) && v > 0) return v;
+  // The RSC payload embeds JSON inside self.__next_f.push([1,"..."]) blocks with
+  // backslash-escaped quotes: \\\"nextUpgradeXpRequirement\\\":1500000
+  // We skip exact escaping by matching the field name followed by any non-digit
+  // chars up to the colon, then the number.
+  const rscMatch = html.match(/nextUpgradeXpRequirement[^:]*:\s*(\d+)/);
+  if (rscMatch) {
+    const v = parseInt(rscMatch[1], 10);
+    if (!isNaN(v) && v > 0 && v !== MAXED_SENTINEL) return v;
+    return undefined; // maxed or invalid
   }
 
   return undefined;
