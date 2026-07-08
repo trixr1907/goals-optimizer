@@ -633,6 +633,12 @@ export function mapPlayerFromGoalsverse(raw: Record<string, unknown>): Player {
     age,
     height_cm: height,
     preferred_foot: foot === 1 ? 'left' : foot === 2 ? 'right' : undefined,
+    // training_value: sourced from Goalsverse raw.potential.training_value.
+    // AUDIT 2026-07-08: Goalsverse API currently returns null/undefined for this field
+    // for most players (coverage 0/53). This is a Goalsverse-side data gap — NOT a
+    // parsing error. The Tracker HTML does NOT contain this field at all.
+    // Resolution: either Goalsverse exposes it on a detail endpoint we haven't tried,
+    // or we accept missing and show partial confidence. Do NOT invent/infer values.
     training_value: typeof raw.potential === 'object' && raw.potential !== null
       ? (raw.potential as Record<string, unknown>).training_value as number | undefined
       : undefined,
