@@ -29,6 +29,8 @@ import { WeightsPanel } from '@/components/development/WeightsPanel';
 import { useWeightsStore, toTrueValueTuple } from '@/lib/store/weights-store';
 import { CURRENT_TOURNAMENTS } from '@/config/tournaments';
 import { RARITY_COLOR, RARITY_ORDER, STAT_LABEL } from '@/config/display-constants';
+import { useManualOverridesStore } from '@/lib/store/overrides-store';
+import { Pencil, Check, X } from 'lucide-react';
 
 // ── Konstanten ──────────────────────────────────────────────────────────────
 
@@ -199,7 +201,12 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
   const { notesByPlayerId, setPriority, setNotes, resetPlayer, addUpgrade } =
     useDevelopmentStore();
   const { weights } = useWeightsStore();
+  const { trainingValueByPlayerId, setTrainingValueOverride, clearTrainingValueOverride } =
+    useManualOverridesStore();
   const tvWeights = toTrueValueTuple(weights.trueValue);
+  const trainingValueOverride = trainingValueByPlayerId[player.id];
+  const hasApiTrainingValue = typeof player.training_value === 'number' && player.training_value > 0;
+  const effectiveTrainingValue = hasApiTrainingValue ? player.training_value : trainingValueOverride;
   const tracked = notesByPlayerId[player.id];
   const priority = tracked?.priority ?? suggestPriority(player);
   const statEntries = Object.entries(player.stats) as [string, number][];
@@ -208,7 +215,7 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
   const fitColor =
     mainFit >= 85 ? 'text-emerald-400' : mainFit >= 70 ? 'text-amber-400' : 'text-red-400';
   const developmentScore = getDevelopmentScore(player);
-  const trueValueResult = trueValue(player, tvWeights);
+  const trueValueResult = trueValue(player, tvWeights, { trainingValueOverride });
   const upgradeRoiRaw = upgradeRoiV1(player);
   // Apply ROI toggles from weights store
   const upgradeRoi = (() => {
@@ -240,6 +247,19 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
   const [showHistory, setShowHistory] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [showAllStats, setShowAllStats] = useState(false);
+  const [editingTrainingValue, setEditingTrainingValue] = useState(false);
+  const [trainingValueDraft, setTrainingValueDraft] = useState(
+    () => String(effectiveTrainingValue ?? 4),
+  );
+
+  function saveTrainingValueOverride() {
+    const parsed = Number(trainingValueDraft);
+    if (!Number.isFinite(parsed)) return;
+    const clamped = Math.max(1, Math.min(8, Math.round(parsed)));
+    setTrainingValueOverride(player.id, clamped);
+    setTrainingValueDraft(String(clamped));
+    setEditingTrainingValue(false);
+  }
 
   // Compute development advice
   const advice = useMemo(() => adviseDevelopment(player, allPlayers, CURRENT_TOURNAMENTS), [player, allPlayers]);
@@ -360,13 +380,64 @@ function PlayerDevCard({ player, allPlayers }: { player: PlayerWithScores; allPl
                 { label: 'current', value: `${current}/99`, note: `(w ${tvWeights[0]})` },
                 { label: 'ceiling', value: `${ceiling}/99`, note: `(w ${tvWeights[1]})` },
                 { label: 'headroom', value: `${headroom}`, note: `(w ${tvWeights[2]})` },
-                { label: 'training_value', value: player.training_value && player.training_value > 0 ? `${player.training_value}/8` : '—', note: player.training_value && player.training_value > 0 ? '' : '(MISSING → neutral 4/8)' },
+                {
+                  label: 'training_value',
+                  value: effectiveTrainingValue ? `${effectiveTrainingValue}/8` : '—',
+                  note: hasApiTrainingValue
+                    ? ''
+                    : trainingValueOverride
+                      ? '(manual override)'
+                      : '(MISSING → neutral 4/8)',
+                },
                 { label: 'lifecycle', value: lifecycle.toFixed(2), note: `(w ${tvWeights[3]})` },
                 { label: 'confidence', value: `${trueValueResult.confidence}`, note: trueValueResult.basis },
                 { label: 'missing', value: trueValueResult.missing.length ? trueValueResult.missing.join(', ') : '—' },
               ]}
               result={`${trueValueResult.score} | basis: ${trueValueResult.basis}`}
             />
+            {!hasApiTrainingValue && (
+              <div className="md:col-span-2 rounded-lg border border-amber-900/50 bg-amber-950/20 p-2 text-[11px] text-amber-100">
+                {editingTrainingValue ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-amber-200">training_value Override</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={8}
+                      value={trainingValueDraft}
+                      onChange={(event) => setTrainingValueDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') saveTrainingValueOverride();
+                        if (event.key === 'Escape') setEditingTrainingValue(false);
+                      }}
+                      className="w-16 rounded border border-amber-700 bg-slate-950 px-2 py-1 font-mono text-amber-50 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                      autoFocus
+                    />
+                    <button type="button" onClick={saveTrainingValueOverride} className="rounded bg-emerald-700 p-1 text-white hover:bg-emerald-600" aria-label="training_value Override speichern">
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={() => setEditingTrainingValue(false)} className="rounded border border-slate-700 p-1 text-slate-300 hover:bg-slate-800" aria-label="training_value Override abbrechen">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span>API liefert keinen training_value. Aktuell: {trainingValueOverride ? `${trainingValueOverride}/8 manuell` : 'neutral 4/8'}.</span>
+                    <div className="flex items-center gap-2">
+                      {trainingValueOverride && (
+                        <button type="button" onClick={() => clearTrainingValueOverride(player.id)} className="text-[10px] text-slate-400 hover:text-slate-200">
+                          Override löschen
+                        </button>
+                      )}
+                      <button type="button" onClick={() => { setTrainingValueDraft(String(effectiveTrainingValue ?? 4)); setEditingTrainingValue(true); }} className="inline-flex items-center gap-1 rounded border border-amber-800 px-2 py-1 text-amber-200 hover:bg-amber-900/40">
+                        <Pencil className="h-3 w-3" />
+                        Edit
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <CalculationDetails
               title="Upgrade-ROI"
               formula="expected_gain = (ceiling − current) / upgradesRemaining"

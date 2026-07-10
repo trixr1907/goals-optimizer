@@ -41,6 +41,11 @@ const HEADROOM_NORM = 60;
 /** Wie verlässlich ist der berechnete Score? */
 export type TrueValueBasis = 'full' | 'partial' | 'thin';
 
+export interface TrueValueOptions {
+  /** User-provided replacement for missing API training_value (1..8). */
+  trainingValueOverride?: number | null;
+}
+
 /** Ausgabe von trueValue() — IMMER mit Confidence, nie stille Degradation. */
 export interface TrueValueResult {
   /** 0..100 — je höher desto wertvoller für Besitz & Entwicklung. */
@@ -96,12 +101,19 @@ export function currentRating(player: Pick<Player, 'overall' | 'roleRatings'>): 
 export function trueValue(
   player: Pick<Player, 'overall' | 'age' | 'training_value' | 'aging' | 'roleRatings'>,
   w: [number, number, number, number] = [0.40, 0.20, 0.25, 0.15],
+  options: TrueValueOptions = {},
 ): TrueValueResult {
   const missing: string[] = [];
+  const override = options.trainingValueOverride;
+  const hasTrainingValueOverride = typeof override === 'number' && override >= 1 && override <= 8;
+  const normalizedTrainingValueOverride = hasTrainingValueOverride
+    ? Math.max(1, Math.min(8, Math.round(override)))
+    : null;
 
   // ── Feld-Verfügbarkeit prüfen ────────────────────────────────────────────
   const hasAge = typeof player.age === 'number';
-  const hasTrainingValue = typeof player.training_value === 'number' && player.training_value > 0;
+  const hasTrainingValue =
+    (typeof player.training_value === 'number' && player.training_value > 0) || hasTrainingValueOverride;
   const hasAging = player.aging != null;
 
   if (!hasAge)           missing.push('age');
@@ -140,7 +152,7 @@ export function trueValue(
 
   // TV-Hebel: training_value fehlt → 0.5 (neutral, nicht 0!)
   // training_value = 0 im Payload heißt: Feld nicht gemappt, nicht "kein Training"
-  const tvRaw = hasTrainingValue ? player.training_value! : 4; // 4/8 = 0.5
+  const tvRaw = hasTrainingValueOverride ? normalizedTrainingValueOverride! : hasTrainingValue ? player.training_value! : 4; // 4/8 = 0.5
   const tvLeverage = tvRaw / 8; // 0.125..1.0
 
   // ── Score berechnen ───────────────────────────────────────────────────────

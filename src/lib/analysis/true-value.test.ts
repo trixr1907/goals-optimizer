@@ -228,6 +228,53 @@ describe('trueValue score sanity', () => {
   });
 });
 
+// ── trueValue — manual training_value overrides ───────────────────────────────
+
+describe('trueValue manual training_value overrides', () => {
+  it('uses an override as complete data when training_value is the only missing field', () => {
+    const result = trueValue(PARTIAL_PLAYER, undefined, { trainingValueOverride: 6 });
+
+    expect(result.confidence).toBe(1.0);
+    expect(result.basis).toBe('full');
+    expect(result.missing).not.toContain('training_value');
+  });
+
+  it('scores a missing training_value player with override leverage instead of neutral 4/8', () => {
+    const player = makePlayer({
+      overall: 60,
+      age: 21,
+      training_value: undefined,
+      aging: {
+        currentAge: 21,
+        targetRating: 75,
+        upgradesRemaining: 3,
+        potentialRange: [75, 90],
+      },
+    });
+    const neutral = trueValue(player);
+    const overridden = trueValue(player, undefined, { trainingValueOverride: 8 });
+
+    expect(overridden.score).toBeGreaterThan(neutral.score);
+  });
+
+  it('rounds decimal overrides before scoring', () => {
+    const rounded = trueValue(PARTIAL_PLAYER, undefined, { trainingValueOverride: 6 });
+    const decimal = trueValue(PARTIAL_PLAYER, undefined, { trainingValueOverride: 5.6 });
+
+    expect(decimal.score).toBe(rounded.score);
+    expect(decimal.confidence).toBe(1.0);
+  });
+
+  it('ignores out-of-range overrides and keeps missing metadata explicit', () => {
+    const result = trueValue(PARTIAL_PLAYER, undefined, { trainingValueOverride: 9 });
+
+    expect(result.confidence).toBe(0.5);
+    expect(result.basis).toBe('partial');
+    expect(result.missing).toContain('training_value');
+  });
+});
+
+
 // ── devTag ────────────────────────────────────────────────────────────────────
 
 describe('devTag', () => {
