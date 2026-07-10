@@ -7,6 +7,7 @@ import { shortPlayerName } from '@/lib/player-name';
 import { FormationAssignment } from '@/lib/optimizer/formation-optimizer';
 import { RARITY_HEX } from '@/config/display-constants';
 import { avatarUrl } from '@/lib/player-id';
+import { formatLineupShareText } from './share-text';
 
 // ── Canvas constants ──────────────────────────────────────────────────────────
 
@@ -248,6 +249,8 @@ export function ShareCard({
   const [rendered, setRendered] = useState(false);
   const [copying,  setCopying]  = useState(false);
   const [copyOk,   setCopyOk]   = useState(false);
+  const [copyingText, setCopyingText] = useState(false);
+  const [copyTextOk, setCopyTextOk] = useState(false);
 
   const playerById = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
 
@@ -342,6 +345,21 @@ export function ShareCard({
     }
   }
 
+  async function handleCopyText() {
+    if (!navigator.clipboard?.writeText || slotPlayers.length === 0) return;
+    setCopyingText(true);
+    try {
+      const hostname = typeof window !== 'undefined' ? window.location.hostname : 'goals.ivo-tech.com';
+      await navigator.clipboard.writeText(formatLineupShareText(slotPlayers, hostname));
+      setCopyTextOk(true);
+      setTimeout(() => setCopyTextOk(false), 2000);
+    } catch {
+      // Clipboard API not available or denied — silently ignore
+    } finally {
+      setCopyingText(false);
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
@@ -385,7 +403,14 @@ export function ShareCard({
             disabled={!rendered || copying}
             className="px-5 py-2 rounded-lg border border-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-800 disabled:opacity-40 transition-colors"
           >
-            {copyOk ? '✓ Kopiert!' : copying ? 'Kopiere…' : '📋 In Zwischenablage'}
+            {copyOk ? '✓ Bild kopiert!' : copying ? 'Kopiere…' : '📋 Bild kopieren'}
+          </button>
+          <button
+            onClick={handleCopyText}
+            disabled={slotPlayers.length === 0 || copyingText}
+            className="px-5 py-2 rounded-lg border border-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-800 disabled:opacity-40 transition-colors"
+          >
+            {copyTextOk ? '✓ Text kopiert!' : copyingText ? 'Kopiere…' : '📝 Text kopieren'}
           </button>
           <p className="ml-auto text-xs text-slate-600">1200 × 630 px · PNG</p>
         </div>

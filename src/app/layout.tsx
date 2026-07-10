@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
 import { DisclaimerBanner } from '@/components/layout/DisclaimerBanner';
+import { MarketValueFAQ } from '@/components/layout/MarketValueFAQ';
 
 export const metadata: Metadata = {
   title: 'GOALS Squad Optimizer',
@@ -28,11 +29,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="layout-children flex flex-col">
           <DisclaimerBanner />
           <div className="layout-page-wrapper">{children}</div>
-          <footer className="border-t border-slate-800 px-4 py-3 text-center text-xs leading-relaxed text-slate-500 shrink-0">
-            Unofficial community tool by{' '}
-            <span className="text-slate-400 font-medium">ivo-tech</span> /{' '}
-            <span className="text-slate-400 font-medium">trixr1907</span> — not affiliated with or
-            endorsed by the Goals developers.
+          <footer className="space-y-3 border-t border-slate-800 px-4 py-3 text-center text-xs leading-relaxed text-slate-500 shrink-0">
+            <MarketValueFAQ />
+            <p>
+              Unofficial community tool by{' '}
+              <span className="text-slate-400 font-medium">ivo-tech</span> /{' '}
+              <span className="text-slate-400 font-medium">trixr1907</span> — not affiliated with or
+              endorsed by the Goals developers.
+            </p>
           </footer>
         </div>
       </body>
