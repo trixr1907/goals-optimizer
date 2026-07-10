@@ -848,7 +848,9 @@ async function enrichWithTracker(players: Player[]): Promise<Player[]> {
       trackerData.roleRatings.length > 0;
 
     if (trackerFullSuccess) {
-      // Both position and roleRatings from Tracker — best case
+      // Both position and roleRatings from Tracker — best case. If this player
+      // came from the profile list only, still fetch PlayGOALS once to upgrade
+      // the previously basic placeholder stats to real individual stats.
       const td = trackerData!;
       const warnings: string[] = [...(player.sourceWarnings ?? [])];
       const newPosition    = td.primaryPosition!;
@@ -856,9 +858,19 @@ async function enrichWithTracker(players: Player[]): Promise<Player[]> {
       const newSecondary: Position[] = newRoleRatings
         .filter((r) => r.overall >= player.overall - SECONDARY_OVR_THRESHOLD && r.position !== newPosition)
         .map((r) => r.position);
+      const pgStatsResult = player.dataQuality !== 'full'
+        ? await fetchPlayGoalsPlayerData(rawId)
+        : null;
+      const pgStats = pgStatsResult?.data?.stats;
+      if (player.dataQuality !== 'full' && !pgStats) {
+        const pgFail = pgStatsResult?.failReason ?? 'parse_stats_missing';
+        const pgDetail = pgStatsResult?.failDetail ? ` (${pgStatsResult.failDetail})` : '';
+        warnings.push(`playgoals: ${pgFail}${pgDetail} stats für ${rawId}`);
+      }
 
       return {
         ...player,
+        ...(pgStats ? { stats: pgStats, dataQuality: 'full' as const } : {}),
         position:          newPosition,
         roleRatings:       newRoleRatings,
         secondaryPositions: newSecondary,
@@ -897,10 +909,13 @@ async function enrichWithTracker(players: Player[]): Promise<Player[]> {
     const finalRoleRatings               = trackerRatings.length > 0 ? trackerRatings : player.roleRatings;
     const finalRrsSource: RoleRatingsSource = trackerRatings.length > 0 ? 'goals-tracker' : 'goalsverse';
 
-    if (trackerPos === null) {
-      // Tracker couldn't give us a position — try PlayGOALS
+    let playGoalsStats: PlayerStats | undefined;
+    if (trackerPos === null || player.dataQuality !== 'full') {
+      // Tracker couldn't give us a position or the player still only has
+      // profile-level placeholder stats — try PlayGOALS detail page.
       const pgResult = await fetchPlayGoalsPlayerData(rawId);
-      if (pgResult.data !== null) {
+      playGoalsStats = pgResult.data?.stats;
+      if (trackerPos === null && pgResult.data !== null) {
         finalPosition  = pgResult.data.primaryPosition;
         finalPosSource = 'playgoals';
         trackerWarnings.push(
@@ -909,11 +924,17 @@ async function enrichWithTracker(players: Player[]): Promise<Player[]> {
         trackerWarnings.push(
           `goals-tracker: roleRatings nicht verfügbar, nutze Goalsverse`,
         );
-      } else {
+      } else if (trackerPos === null) {
         // Both Tracker and PlayGOALS failed — Goalsverse position stays
         const pgFail   = pgResult.failReason ?? 'network_error';
         const pgDetail = pgResult.failDetail ? ` (${pgResult.failDetail})` : '';
         trackerWarnings.push(`playgoals: ${pgFail}${pgDetail} für ${rawId}, nutze Goalsverse`);
+      }
+
+      if (player.dataQuality !== 'full' && !playGoalsStats) {
+        const pgFail = pgResult.failReason ?? 'parse_stats_missing';
+        const pgDetail = pgResult.failDetail ? ` (${pgResult.failDetail})` : '';
+        trackerWarnings.push(`playgoals: ${pgFail}${pgDetail} stats für ${rawId}`);
       }
     }
 
@@ -926,6 +947,7 @@ async function enrichWithTracker(players: Player[]): Promise<Player[]> {
 
     return {
       ...player,
+      ...(playGoalsStats ? { stats: playGoalsStats, dataQuality: 'full' as const } : {}),
       position:          finalPosition,
       roleRatings:       finalRoleRatings,
       secondaryPositions: newSecondary,

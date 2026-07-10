@@ -21,7 +21,7 @@
  * so it adds no new information. Only primaryPosition is extracted.
  */
 
-import type { Position } from './types';
+import type { PlayerStats, Position } from './types';
 import { ALL_POSITIONS } from './types';
 import { extractRawId } from '@/lib/player-id';
 
@@ -53,7 +53,8 @@ export type PlayGoalsFetchFailReason =
   | 'http_status'
   | 'network_error'
   | 'empty_html'
-  | 'parse_primary_missing';
+  | 'parse_primary_missing'
+  | 'parse_stats_missing';
 
 export interface PlayGoalsPlayerData {
   characterId: string;
@@ -61,6 +62,8 @@ export interface PlayGoalsPlayerData {
   primaryPosition: Position;
   /** Overall rating from ovr.overall_rating */
   overall: number;
+  /** Individual player stats from playerInfo.stats when present on the page. */
+  stats?: PlayerStats;
 }
 
 export interface PlayGoalsFetchResult {
@@ -110,6 +113,131 @@ export function extractPrimaryPositionFromHtml(
   return { position, overall };
 }
 
+
+interface JsonResult {
+  value: unknown;
+  endIndex: number;
+}
+
+function extractJsonObject(text: string, startIndex: number): JsonResult | null {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let objStart = -1;
+
+  for (let i = startIndex; i < text.length; i++) {
+    const ch = text[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === '\\') { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+
+    if (ch === '{' || ch === '[') {
+      if (depth === 0) objStart = i;
+      depth++;
+    } else if (ch === '}' || ch === ']') {
+      if (depth === 0) continue;
+      depth--;
+      if (depth === 0 && objStart >= 0) {
+        try {
+          return { value: JSON.parse(text.slice(objStart, i + 1)), endIndex: i };
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function statValue(stats: Record<string, unknown>, path: string[]): number {
+  let current: unknown = stats;
+  for (const key of path) {
+    if (current && typeof current === 'object' && !Array.isArray(current)) {
+      current = (current as Record<string, unknown>)[key];
+    } else {
+      return 0;
+    }
+  }
+  return typeof current === 'number' ? Math.round(current) : 0;
+}
+
+function mapPlayGoalsStats(stats: Record<string, unknown>): PlayerStats {
+  return {
+    pac: statValue(stats, ['pace', 'weighted_value']),
+    acceleration: statValue(stats, ['pace', 'acceleration', 'value']),
+    sprint_speed: statValue(stats, ['pace', 'sprint_speed', 'value']),
+
+    sho: statValue(stats, ['shooting', 'weighted_value']),
+    finishing: statValue(stats, ['shooting', 'finishing', 'value']),
+    shot_power: statValue(stats, ['shooting', 'shot_power', 'value']),
+    long_shots: statValue(stats, ['shooting', 'long_shots', 'value']),
+    penalties: statValue(stats, ['shooting', 'penalties', 'value']),
+    weak_foot: statValue(stats, ['shooting', 'weak_foot', 'value']),
+    attacking_iq: statValue(stats, ['shooting', 'attacking_iq', 'value']),
+
+    pas: statValue(stats, ['passing', 'weighted_value']),
+    ground_pass: statValue(stats, ['passing', 'ground_pass', 'value']),
+    lofted_pass: statValue(stats, ['passing', 'lofted_pass', 'value']),
+    through_pass: statValue(stats, ['passing', 'through_pass', 'value']),
+    crossing: statValue(stats, ['passing', 'crossing', 'value']),
+    curve: statValue(stats, ['passing', 'curve', 'value']),
+    free_kick_accuracy: statValue(stats, ['passing', 'free_kicks', 'value']),
+
+    dri: statValue(stats, ['dribbling', 'weighted_value']),
+    sprint_dribbling: statValue(stats, ['dribbling', 'sprint_dribbling', 'value']),
+    close_dribbling: statValue(stats, ['dribbling', 'close_dribbling', 'value']),
+    skills: statValue(stats, ['dribbling', 'skills', 'value']),
+    agility: statValue(stats, ['dribbling', 'agility', 'value']),
+    balance: statValue(stats, ['dribbling', 'balance', 'value']),
+    first_touch: statValue(stats, ['dribbling', 'first_touch', 'value']),
+
+    def: statValue(stats, ['defending', 'weighted_value']),
+    defensive_iq: statValue(stats, ['defending', 'defensive_iq', 'value']),
+    stand_tackle: statValue(stats, ['defending', 'stand_tackle', 'value']),
+    slide_tackle: statValue(stats, ['defending', 'slide_tackle', 'value']),
+    jockeying: statValue(stats, ['defending', 'jockeying', 'value']),
+    interceptions: statValue(stats, ['defending', 'interceptions', 'value']),
+    blocking: statValue(stats, ['defending', 'blocking', 'value']),
+
+    phy: statValue(stats, ['physicality', 'weighted_value']),
+    strength: statValue(stats, ['physicality', 'strength', 'value']),
+    aggression: statValue(stats, ['physicality', 'aggression', 'value']),
+    stamina: statValue(stats, ['physicality', 'stamina', 'value']),
+    heading: statValue(stats, ['physicality', 'heading', 'value']),
+    jumping: statValue(stats, ['physicality', 'jumping', 'value']),
+
+    div: statValue(stats, ['goalkeeping', 'diving', 'weighted_value']),
+    reflexes: statValue(stats, ['goalkeeping', 'reflexes', 'weighted_value']),
+    positioning: statValue(stats, ['goalkeeping', 'awareness', 'positioning', 'value']),
+    catching: statValue(stats, ['goalkeeping', 'handling', 'catching', 'value']),
+    parrying: statValue(stats, ['goalkeeping', 'handling', 'parrying', 'value']),
+    rushing: statValue(stats, ['goalkeeping', 'awareness', 'rushing', 'value']),
+    command_of_area: statValue(stats, ['goalkeeping', 'awareness', 'command_of_area', 'value']),
+    penalty_saving: statValue(stats, ['goalkeeping', 'awareness', 'penalty_saving', 'value']),
+    throwing: statValue(stats, ['goalkeeping', 'distribution', 'throwing', 'value']),
+    kicking_power: statValue(stats, ['goalkeeping', 'distribution', 'kicking_power', 'value']),
+  };
+}
+
+export function extractStatsFromHtml(html: string): PlayerStats | null {
+  // Next embeds playerInfo as an escaped string. Decoding quote escapes turns it
+  // back into JSON-like text where the existing balanced-object scanner works.
+  const decoded = html.replace(/\\"/g, '"');
+  const statsIdx = decoded.indexOf('"stats":');
+  if (statsIdx < 0) return null;
+
+  const parsed = extractJsonObject(decoded, statsIdx + 8);
+  if (!parsed || !parsed.value || typeof parsed.value !== 'object' || Array.isArray(parsed.value)) {
+    return null;
+  }
+
+  const mapped = mapPlayGoalsStats(parsed.value as Record<string, unknown>);
+  const hasUsableStats = Object.values(mapped).some((value) => typeof value === 'number' && value > 0);
+  return hasUsableStats ? mapped : null;
+}
+
 // ── Fetch ──────────────────────────────────────────────────────────────────
 
 /**
@@ -156,6 +284,7 @@ export async function fetchPlayGoalsPlayerData(
     }
 
     const parsed = extractPrimaryPositionFromHtml(html);
+    const stats = extractStatsFromHtml(html);
     if (!parsed) {
       return {
         data:       null,
@@ -169,6 +298,7 @@ export async function fetchPlayGoalsPlayerData(
         characterId: rawId,
         primaryPosition: parsed.position,
         overall:         parsed.overall,
+        ...(stats ? { stats } : {}),
       },
     };
   } catch (err) {

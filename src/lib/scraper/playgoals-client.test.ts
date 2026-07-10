@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   extractPrimaryPositionFromHtml,
+  extractStatsFromHtml,
 } from './playgoals-client';
 import type { PlayGoalsFetchFailReason, PlayGoalsFetchResult } from './playgoals-client';
 import {
@@ -72,6 +73,26 @@ describe('PlayGOALS regression: Tracker-403 fallback players', () => {
   });
 });
 
+// ── Individual stat extraction ────────────────────────────────────────────────
+
+describe('extractStatsFromHtml (PlayGOALS)', () => {
+  it('extracts individual stats from the playerInfo.stats payload', () => {
+    const stats = extractStatsFromHtml(FIXTURE_PG_WENDELIN_PIETSCH.html);
+
+    expect(stats).not.toBeNull();
+    expect(stats?.pac).toBe(94);
+    expect(stats?.acceleration).toBe(95);
+    expect(stats?.sprint_speed).toBe(94);
+    expect(stats?.crossing).toBe(75);
+    expect(stats?.defensive_iq).toBe(81);
+    expect(stats?.stamina).toBe(90);
+  });
+
+  it('returns null when the page has no stats block', () => {
+    expect(extractStatsFromHtml('<html><body>no stats here</body></html>')).toBeNull();
+  });
+});
+
 // ── PlayGoalsFetchResult type structure ───────────────────────────────────────
 
 describe('PlayGoalsFetchResult — error taxonomy', () => {
@@ -82,10 +103,12 @@ describe('PlayGoalsFetchResult — error taxonomy', () => {
       'network_error',
       'empty_html',
       'parse_primary_missing',
+      'parse_stats_missing',
     ];
-    expect(validReasons).toHaveLength(5);
+    expect(validReasons).toHaveLength(6);
     expect(validReasons).toContain('timeout');
     expect(validReasons).toContain('parse_primary_missing');
+    expect(validReasons).toContain('parse_stats_missing');
   });
 
   it('success result shape: data with position, no failReason', () => {

@@ -42,6 +42,16 @@ function buildFragment(
 
   // Core fragment (mirrors the actual __next_f.push encoding):
   //   \"playerInfo\":{\"id\":\"...\",\"first_name\":\"...\", ... \"ovr\":{...}}
+  const statsBlock = [
+    `${esc('pace')}:{${esc('acceleration')}:{${esc('value')}:95},${esc('sprint_speed')}:{${esc('value')}:94},${esc('weighted_value')}:94}`,
+    `${esc('shooting')}:{${esc('attacking_iq')}:{${esc('value')}:43},${esc('finishing')}:{${esc('value')}:26},${esc('shot_power')}:{${esc('value')}:42},${esc('long_shots')}:{${esc('value')}:59},${esc('weak_foot')}:{${esc('value')}:41},${esc('penalties')}:{${esc('value')}:30},${esc('weighted_value')}:40}`,
+    `${esc('passing')}:{${esc('ground_pass')}:{${esc('value')}:62},${esc('lofted_pass')}:{${esc('value')}:71},${esc('through_pass')}:{${esc('value')}:72},${esc('crossing')}:{${esc('value')}:75},${esc('free_kicks')}:{${esc('value')}:74},${esc('curve')}:{${esc('value')}:77},${esc('weighted_value')}:72}`,
+    `${esc('dribbling')}:{${esc('sprint_dribbling')}:{${esc('value')}:74},${esc('close_dribbling')}:{${esc('value')}:54},${esc('first_touch')}:{${esc('value')}:69},${esc('agility')}:{${esc('value')}:75},${esc('balance')}:{${esc('value')}:71},${esc('skills')}:{${esc('value')}:68},${esc('weighted_value')}:69}`,
+    `${esc('defending')}:{${esc('defensive_iq')}:{${esc('value')}:81},${esc('blocking')}:{${esc('value')}:59},${esc('stand_tackle')}:{${esc('value')}:72},${esc('slide_tackle')}:{${esc('value')}:70},${esc('jockeying')}:{${esc('value')}:73},${esc('interceptions')}:{${esc('value')}:77},${esc('weighted_value')}:74}`,
+    `${esc('physicality')}:{${esc('strength')}:{${esc('value')}:66},${esc('aggression')}:{${esc('value')}:70},${esc('stamina')}:{${esc('value')}:90},${esc('heading')}:{${esc('value')}:55},${esc('jumping')}:{${esc('value')}:65},${esc('weighted_value')}:69}`,
+    `${esc('goalkeeping')}:{${esc('diving')}:{${esc('weighted_value')}:30},${esc('handling')}:{${esc('catching')}:{${esc('value')}:30},${esc('parrying')}:{${esc('value')}:30},${esc('weighted_value')}:30},${esc('distribution')}:{${esc('kicking_power')}:{${esc('value')}:30},${esc('throwing')}:{${esc('value')}:30},${esc('weighted_value')}:30},${esc('reflexes')}:{${esc('reflexes')}:{${esc('value')}:30},${esc('weighted_value')}:30},${esc('awareness')}:{${esc('positioning')}:{${esc('value')}:30},${esc('command_of_area')}:{${esc('value')}:30},${esc('rushing')}:{${esc('value')}:30},${esc('penalty_saving')}:{${esc('value')}:30},${esc('weighted_value')}:30}}`,
+  ].join(',');
+
   const inner = [
     `${esc('id')}:${esc(uuid)}`,
     `${esc('first_name')}:${esc(firstName)}`,
@@ -53,6 +63,7 @@ function buildFragment(
     // The crucial field — what the parser reads:
     `${esc('ovr')}:{${esc('overall_rating')}:${n(overall)},${esc('role')}:${esc(role)}}`,
     `${esc('ovr_roles')}:[{${esc('role')}:${esc(role)},${esc('overall_rating')}:${n(overall)}}]`,
+    `${esc('stats')}:{${statsBlock}` + '}',
   ].join(',');
 
   const playerInfoBlock = `${esc('playerInfo')}:{${inner}}`;
