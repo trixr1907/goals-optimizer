@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calcPositionFitScore, enrichPlayerWithScores, topWeightedStats, weakestWeightedStat } from './position-fit';
-import { Player } from '@/lib/scraper/types';
+import { ALL_POSITIONS, Player } from '@/lib/scraper/types';
 import { inferFullStats } from '@/lib/scraper/infer-stats';
 
 function makePlayer(overrides: Partial<Player> & { id: string; name: string; position: Player['position']; overall: number }): Player {
@@ -140,6 +140,40 @@ describe('enrichPlayerWithScores — basic player without full stats', () => {
     // 85/99*100 ≈ 86
     expect(enriched.fit_scores['GK']).toBeGreaterThan(80);
     expect(enriched.fit_scores['ST']).toBe(1); // unrelated position
+  });
+
+  it('computes meta scores for every position once real detail stats are present', () => {
+    const player: Player = {
+      id: 'playgoals-detail-1',
+      name: 'Detail Enriched FB',
+      position: 'FB',
+      overall: 80,
+      rarity: 'Rare',
+      dataQuality: 'full',
+      stats: {
+        ...inferFullStats(94, 40, 72, 69, 74, 69),
+        acceleration: 95,
+        sprint_speed: 94,
+        crossing: 75,
+        defensive_iq: 81,
+        stamina: 90,
+      },
+      roleRatings: [
+        { position: 'FB', overall: 80 },
+        { position: 'WB', overall: 77 },
+        { position: 'CB', overall: 74 },
+      ],
+      secondaryPositions: ['WB', 'CB'],
+    };
+
+    const enriched = enrichPlayerWithScores(player);
+
+    expect(Object.keys(enriched.fit_scores).sort()).toEqual([...ALL_POSITIONS].sort());
+    for (const pos of ALL_POSITIONS) {
+      expect(enriched.fit_scores[pos], `${pos} score`).toBeGreaterThan(1);
+      expect(enriched.fit_scores[pos], `${pos} score`).toBeLessThanOrEqual(99);
+      expect(enriched.effectiveStats[pos].acceleration, `${pos} effective stats`).toBeGreaterThan(0);
+    }
   });
 });
 
