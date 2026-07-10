@@ -7,7 +7,7 @@ import { PlayerWithScores, Position, ALL_POSITIONS, displayPosition } from '@/li
 import { Sidebar } from '@/components/layout/Sidebar';
 import { appPath } from '@/lib/app-url';
 import { Input } from '@/components/ui/input';
-import { topWeightedStats } from '@/lib/scoring/position-fit';
+import { topWeightedStats, weakestWeightedStat } from '@/lib/scoring/position-fit';
 import { analyzeSquad } from '@/lib/analysis/squad-analysis';
 import { RARITY_COLOR, RARITY_TEXT, RARITY_ORDER, STAT_LABEL } from '@/config/display-constants';
 import { extractRawId, avatarUrl } from '@/lib/player-id';
@@ -131,6 +131,65 @@ function StatBar({ label, value, missing = false }: { label: string; value: numb
   );
 }
 
+function FitScorePopover({
+  position,
+  topStats,
+  weakest,
+}: {
+  position: Position;
+  topStats: ReturnType<typeof topWeightedStats>;
+  weakest: ReturnType<typeof weakestWeightedStat>;
+}) {
+  const [open, setOpen] = useState(false);
+
+  if (topStats.length === 0 && !weakest) return null;
+
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        className="rounded-full border border-slate-700 bg-slate-900/80 px-2.5 py-1 text-[10px] uppercase tracking-widest text-slate-300 hover:border-emerald-700 hover:text-emerald-300 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+        aria-expanded={open}
+      >
+        Fit-Score erklären
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-xl border border-slate-700 bg-slate-950 p-3 shadow-2xl shadow-black/50">
+          <p className="text-[10px] uppercase tracking-widest text-slate-500">
+            Warum dieser Fit für {displayPosition(position)}?
+          </p>
+          {topStats.length > 0 && (
+            <div className="mt-2 space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-400">Top-Beiträge</p>
+              {topStats.map(({ stat, value, contribution }) => (
+                <div key={stat} className="flex items-center justify-between gap-2 rounded bg-slate-900/80 px-2 py-1">
+                  <span className="truncate text-[11px] text-slate-300">{STAT_LABEL[stat] ?? stat}</span>
+                  <span className="shrink-0 font-mono text-[11px] text-emerald-300">
+                    {value} <span className="text-slate-600">+{contribution.toFixed(0)}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {weakest && (
+            <div className="mt-3 rounded-lg border border-red-900/60 bg-red-950/25 px-2 py-2">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-red-300">Bremst den Score:</p>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <span className="truncate text-[11px] text-red-100">{STAT_LABEL[weakest.stat] ?? weakest.stat}</span>
+                <span className="shrink-0 font-mono text-[11px] text-red-200">
+                  {weakest.value} <span className="text-red-400/70">−{weakest.missingContribution.toFixed(0)}</span>
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Inline Details-Panel ─────────────────────────────────────────────────────
 
 function DetailsPanel({ player }: { player: PlayerWithScores }) {
@@ -139,8 +198,9 @@ function DetailsPanel({ player }: { player: PlayerWithScores }) {
   // basic = only role/OVR data, no individual stats available
   const isBasic = player.dataQuality === 'basic';
 
-  // top-5 contributing stats for this player's position
+  // Fit-score transparency: top contributors + biggest weighted gap.
   const top5 = topWeightedStats(player, player.position, 5);
+  const weakest = weakestWeightedStat(player, player.position);
 
   // Meta-scores sorted desc, find best alternative
   const metaEntries = (Object.entries(player.fit_scores) as [Position, number][])
@@ -180,23 +240,11 @@ function DetailsPanel({ player }: { player: PlayerWithScores }) {
         </div>
       </div>
 
-      {/* ── Top-5 Beitrags-Stats ── */}
-      {top5.length > 0 && (
-        <div>
-          <p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">
-            Top-5 Stats für {displayPosition(player.position)}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {top5.map(({ stat, value, contribution }) => (
-              <div key={stat} className="flex items-center gap-1 bg-slate-800/70 rounded px-2 py-1">
-                <span className="text-[10px] text-slate-300">{STAT_LABEL[stat] ?? stat}</span>
-                <span className="text-[10px] font-mono text-emerald-400">{value}</span>
-                <span className="text-[9px] text-slate-600">(+{contribution.toFixed(0)})</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* ── Fit-Score-Erklärung: kompakt per Popover statt permanentem Block ── */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`font-mono text-sm font-semibold ${metaColor(mainMeta)}`}>Fit {mainMeta.toFixed(0)}</span>
+        <FitScorePopover position={player.position} topStats={top5} weakest={weakest} />
+      </div>
 
       {/* ── Alle Einzelstats – gruppiert ── */}
       <div className="overflow-x-auto">

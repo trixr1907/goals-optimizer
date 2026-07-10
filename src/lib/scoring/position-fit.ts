@@ -267,29 +267,65 @@ export function explainFootFit(player: Player, position: Position, slotX?: numbe
 // Debug helper: returns top-N weighted stats for a player/pos
 // ─────────────────────────────────────────────────────────────
 
-export function topWeightedStats(
+export interface WeightedStatContribution {
+  stat: string;
+  value: number;
+  weight: number;
+  contribution: number;
+  missingContribution: number;
+}
+
+function weightedStatContributions(
   player: Player,
   position: Position,
-  n = 5,
   slotX?: number,
-): Array<{ stat: string; value: number; weight: number; contribution: number }> {
+): WeightedStatContribution[] {
   const base = WEIGHTS[position as string];
   if (!base) return [];
 
   const w = applyContextModifiers(base, player, position, slotX);
   const stats = player.stats as unknown as Record<string, number>;
 
-  const entries = Object.entries(w)
+  return Object.entries(w)
     .filter(([stat, weight]) => weight > 0 && stat !== '_meta')
-    .map(([stat, weight]) => ({
-      stat,
-      value:        stats[stat] ?? 0,
-      weight,
-      contribution: (stats[stat] ?? 0) * weight,
-    }))
-    .sort((a, b) => b.contribution - a.contribution);
+    .map(([stat, weight]) => {
+      const value = stats[stat] ?? 0;
+      return {
+        stat,
+        value,
+        weight,
+        contribution: value * weight,
+        // How many weighted points this stat leaves on the table vs. a perfect 99.
+        // This identifies the biggest brake, not just the lowest raw stat.
+        missingContribution: Math.max(0, 99 - value) * weight,
+      };
+    });
+}
 
-  return entries.slice(0, n);
+export function topWeightedStats(
+  player: Player,
+  position: Position,
+  n = 5,
+  slotX?: number,
+): WeightedStatContribution[] {
+  return weightedStatContributions(player, position, slotX)
+    .sort((a, b) => b.contribution - a.contribution)
+    .slice(0, n);
+}
+
+export function weakestWeightedStat(
+  player: Player,
+  position: Position,
+  slotX?: number,
+): WeightedStatContribution | null {
+  const entries = weightedStatContributions(player, position, slotX);
+  if (entries.length === 0) return null;
+
+  return entries.sort((a, b) => {
+    const gap = b.missingContribution - a.missingContribution;
+    if (gap !== 0) return gap;
+    return b.weight - a.weight;
+  })[0] ?? null;
 }
 
 // Re-export PlayerStats so callers can import it from this module

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calcPositionFitScore, enrichPlayerWithScores } from './position-fit';
+import { calcPositionFitScore, enrichPlayerWithScores, topWeightedStats, weakestWeightedStat } from './position-fit';
 import { Player } from '@/lib/scraper/types';
 import { inferFullStats } from '@/lib/scraper/infer-stats';
 
@@ -140,5 +140,62 @@ describe('enrichPlayerWithScores — basic player without full stats', () => {
     // 85/99*100 ≈ 86
     expect(enriched.fit_scores['GK']).toBeGreaterThan(80);
     expect(enriched.fit_scores['ST']).toBe(1); // unrelated position
+  });
+});
+
+describe('weighted stat transparency helpers', () => {
+  it('keeps topWeightedStats sorted by actual contribution', () => {
+    const striker = makePlayer({
+      id: 'st-top',
+      name: 'Transparent ST',
+      position: 'ST',
+      overall: 82,
+      stats: {
+        ...inferFullStats(70, 70, 70, 70, 70, 70),
+        finishing: 95,
+        acceleration: 80,
+        sprint_speed: 75,
+      },
+    });
+
+    const top = topWeightedStats(striker, 'ST', 3);
+
+    expect(top).toHaveLength(3);
+    expect(top[0].contribution).toBeGreaterThanOrEqual(top[1].contribution);
+    expect(top[1].contribution).toBeGreaterThanOrEqual(top[2].contribution);
+    expect(top[0]).toMatchObject({ stat: 'finishing', value: 95, weight: 2.0 });
+  });
+
+  it('identifies the stat that leaves the most weighted points on the table', () => {
+    const striker = makePlayer({
+      id: 'st-weak',
+      name: 'Needs Finishing',
+      position: 'ST',
+      overall: 82,
+      stats: {
+        ...inferFullStats(85, 80, 72, 78, 45, 74),
+        finishing: 35,
+        sprint_speed: 92,
+        acceleration: 90,
+        attacking_iq: 88,
+        shot_power: 86,
+      },
+    });
+
+    const weakest = weakestWeightedStat(striker, 'ST');
+
+    expect(weakest).toMatchObject({ stat: 'finishing', value: 35, weight: 2.0 });
+    expect(weakest?.missingContribution).toBe((99 - 35) * 2.0);
+  });
+
+  it('returns null when a position has no weight config', () => {
+    const striker = makePlayer({
+      id: 'st-none',
+      name: 'No Config',
+      position: 'ST',
+      overall: 82,
+    });
+
+    expect(weakestWeightedStat(striker, 'UNKNOWN' as Player['position'])).toBeNull();
   });
 });
