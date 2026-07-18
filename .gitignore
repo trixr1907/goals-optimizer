@@ -59,3 +59,13 @@ research/
 /playwright-report/
 /test-results/
 /playwright/.cache/
+
+
+# Agent briefings / internal process docs (never commit)
+UX_Restructure_Brief_Hermes.md
+*_Hermes*.md
+agent_instructions.md
+openhands-*-audit*.md
+*:Zone.Identifier
+*Zone.Identifier
+AGENTS.md
