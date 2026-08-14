@@ -1,7 +1,7 @@
 /**
  * upgrade-roi.test.ts — Unit tests for upgrade-roi.ts v1
  *
- * Covers all scenarios verified by OpenHands:
+ * Covers all scenarios verified by automated analysis:
  *   - Full headroom + near tier → INVEST_NOW
  *   - Tier cross (Uncommon→Rare at 79.x) → INVEST_NOW
  *   - Old player (≥34) → SELL_OR_LEGEND

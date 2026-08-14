@@ -3,7 +3,7 @@
 /**
  * FormationExplorer — alle 15 Formationen als wählbare Kacheln.
  *
- * Design-Entscheidungen (aus StepB_RiskAddendum_Hermes.md):
+ * Design-Entscheidungen (aus der Risiko-Analyse für Step B):
  *
  * R1 (REPLACE-Risiko): Bestätigungs-Dialog im onApply-Callback der MetaPage —
  *   der Explorer selbst kennt den Lineup-State nicht, delegiert nach oben.
